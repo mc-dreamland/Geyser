@@ -236,7 +236,6 @@ public abstract class BlockTranslator {
 
         BlockMapping.AIR = JAVA_RUNTIME_ID_TO_BLOCK_MAPPING.get(JAVA_AIR_ID);
 
-        BlockTranslator1_17_0.init();
         BlockTranslator1_17_10.init();
         BLOCKS_JSON = null; // We no longer require this so let it garbage collect away
     }

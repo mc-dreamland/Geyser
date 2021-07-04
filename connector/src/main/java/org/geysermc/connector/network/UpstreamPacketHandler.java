@@ -36,7 +36,6 @@ import org.geysermc.connector.configuration.GeyserConfiguration;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslatorRegistry;
 import org.geysermc.connector.network.translators.item.ItemRegistry;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator1_17_0;
 import org.geysermc.connector.network.translators.world.block.BlockTranslator1_17_10;
 import org.geysermc.connector.utils.*;
 
@@ -72,7 +71,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         session.getUpstream().getSession().setPacketCodec(packetCodec);
 
         // Set the block translation based off of version
-        session.setBlockTranslator(loginPacket.getProtocolVersion() >= 448 ? BlockTranslator1_17_10.INSTANCE : BlockTranslator1_17_0.INSTANCE);
+        session.setBlockTranslator(BlockTranslator1_17_10.INSTANCE);
 
         LoginEncryptionUtils.encryptPlayerConnection(connector, session, loginPacket);
 

@@ -37,14 +37,17 @@ import com.nukkitx.protocol.bedrock.data.SoundEvent;
 import com.nukkitx.protocol.bedrock.data.inventory.ComponentItemData;
 import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
 import com.nukkitx.protocol.bedrock.packet.StartGamePacket;
-import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import org.geysermc.connector.GeyserConnector;
 import org.geysermc.connector.network.translators.effect.EffectRegistry;
 import org.geysermc.connector.network.translators.world.block.BlockTranslator;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator1_17_0;
+import org.geysermc.connector.network.translators.world.block.BlockTranslator1_17_10;
 import org.geysermc.connector.utils.FileUtils;
 
 import java.io.ByteArrayInputStream;
@@ -256,7 +259,7 @@ public class ItemRegistry {
             throw new AssertionError("Unable to load Java runtime item IDs", e);
         }
 
-        BlockTranslator blockTranslator = BlockTranslator1_17_0.INSTANCE;
+        BlockTranslator blockTranslator = BlockTranslator1_17_10.INSTANCE;
 
         int itemIndex = 0;
         int javaFurnaceMinecartId = 0;
