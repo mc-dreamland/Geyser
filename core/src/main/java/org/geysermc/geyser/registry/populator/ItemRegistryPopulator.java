@@ -76,14 +76,7 @@ import org.geysermc.geyser.util.collection.FixedInt2IntMap;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Populates the item registries.
@@ -95,10 +88,9 @@ public class ItemRegistryPopulator {
 
     public static void populate() {
 
-        Map<String, String> V1_18_30 = new HashMap<>();
         Map<String, PaletteVersion> paletteVersions = new Object2ObjectOpenHashMap<>();
         paletteVersions.put("1_18_30", new PaletteVersion(Bedrock_v503.V503_CODEC.getProtocolVersion(),
-                V1_18_30));
+                Collections.emptyMap()));
         paletteVersions.put("1_19_0", new PaletteVersion(Bedrock_v527.V527_CODEC.getProtocolVersion(),
                 Collections.singletonMap("minecraft:trader_llama_spawn_egg", "minecraft:llama_spawn_egg")));
         paletteVersions.put("1_19_10", new PaletteVersion(Bedrock_v534.V534_CODEC.getProtocolVersion(), Collections.emptyMap()));

@@ -126,6 +126,7 @@ import org.geysermc.geyser.inventory.recipe.GeyserStonecutterData;
 import org.geysermc.geyser.level.JavaDimension;
 import org.geysermc.geyser.level.WorldManager;
 import org.geysermc.geyser.level.physics.CollisionManager;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.network.netty.LocalSession;
 import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.registry.type.BlockMappings;
@@ -1533,6 +1534,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         startGamePacket.getBlockProperties().addAll(this.blockMappings.getBlockProperties());
 
         // See https://learn.microsoft.com/en-us/minecraft/creator/documents/experimentalfeaturestoggle for info on each experiment
+        startGamePacket.getExperiments().add(new ExperimentData("vanilla_experiments", true));
         // data_driven_items (Holiday Creator Features) is needed for blocks and items
         startGamePacket.getExperiments().add(new ExperimentData("data_driven_items", true));
         // Needed for block properties for states

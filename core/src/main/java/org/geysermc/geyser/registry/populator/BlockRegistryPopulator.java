@@ -155,14 +155,7 @@ public final class BlockRegistryPopulator {
         }
         return null;
     };
-    public static void populate() {
-        registerJavaBlocks();
-        registerBedrockBlocks();
 
-        BLOCKS_JSON = null;
-    }
-
-    private static void registerBedrockBlocks() {
     public static void registerBedrockBlocks() {
         BiFunction<String, NbtMapBuilder, String> emptyMapper = (bedrockIdentifier, statesBuilder) -> null;
         ImmutableMap<ObjectIntPair<String>, BiFunction<String, NbtMapBuilder, String>> blockMappers = ImmutableMap.<ObjectIntPair<String>, BiFunction<String, NbtMapBuilder, String>>builder()
