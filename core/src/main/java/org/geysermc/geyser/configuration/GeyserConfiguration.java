@@ -184,6 +184,9 @@ public interface GeyserConfiguration {
 
     boolean isQuickSwitchDimension();
 
+
+    boolean isOnlineMode();
+
     int getConfigVersion();
 
     static void checkGeyserConfiguration(GeyserConfiguration geyserConfig, GeyserLogger geyserLogger) {

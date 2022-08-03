@@ -278,6 +278,9 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
     @JsonProperty("quick-switch-dimension")
     private boolean quickSwitchDimension = false;
 
+    @JsonProperty("online-mode")
+    private boolean onlineMode = false;
+
     @JsonProperty("config-version")
     private int configVersion = 0;
 
