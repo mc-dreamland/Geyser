@@ -30,6 +30,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.github.steveice10.mc.auth.service.MsaAuthenticationService;
+import com.netease.mc.authlib.Profile;
+import com.netease.mc.authlib.TokenChain;
 import com.nimbusds.jose.JWSObject;
 import com.nimbusds.jose.shaded.json.JSONObject;
 import com.nimbusds.jose.shaded.json.JSONValue;
@@ -132,18 +134,26 @@ public class LoginEncryptionUtils {
         encryptConnectionWithCert(session, loginPacket.getSkinData().toString(), certChainData);
     }
 
+    private static boolean validateNeteaseChainData(JsonNode chain) {
+        if (chain.size() != 3) {
+            return false;
+        }
+        Profile profile = TokenChain.check(new String[]{chain.get(1).asText(), chain.get(2).asText()});
+        return profile != null;
+    }
+
     private static void encryptConnectionWithCert(GeyserSession session, String clientData, JsonNode certChainData) {
         try {
             GeyserImpl geyser = session.getGeyser();
 
-            boolean validChain = validateChainData(certChainData);
+            boolean validNeteaseChainData = validateNeteaseChainData(certChainData);
 
-            geyser.getLogger().debug(String.format("Is player data valid? %s", validChain));
+            geyser.getLogger().debug(String.format("Is player data valid? %s", validNeteaseChainData));
 
-//            if (!validChain && !session.getGeyser().getConfig().isEnableProxyConnections()) {
-//                session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
-//                return;
-//            }
+            if (!validNeteaseChainData && !session.getGeyser().getConfig().isOnlineMode()) {
+                session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
+                return;
+            }
             JWSObject jwt = JWSObject.parse(certChainData.get(certChainData.size() - 1).asText());
             JsonNode payload = JSON_MAPPER.readTree(jwt.getPayload().toBytes());
 
