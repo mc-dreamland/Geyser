@@ -28,7 +28,10 @@ package org.geysermc.geyser.translator.protocol.java;
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
+import com.google.gson.Gson;
+import com.nukkitx.protocol.bedrock.packet.NeteaseCustomPacket;
 import com.nukkitx.protocol.bedrock.packet.TransferPacket;
+import lombok.NonNull;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.GeyserLogger;
@@ -39,12 +42,19 @@ import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.cumulus.Form;
 import org.geysermc.cumulus.Forms;
 import org.geysermc.cumulus.util.FormType;
+import org.msgpack.MessagePack;
+import org.msgpack.type.ArrayValue;
+import org.msgpack.type.Value;
 
+import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 
 @Translator(packet = ClientboundCustomPayloadPacket.class)
 public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCustomPayloadPacket> {
     private final GeyserLogger logger = GeyserImpl.getInstance().getLogger();
+    private static final Gson gson = new Gson();
 
     @Override
     public void translate(GeyserSession session, ClientboundCustomPayloadPacket packet) {
@@ -102,6 +112,28 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             transferPacket.setAddress(address);
             transferPacket.setPort(port);
             session.sendUpstreamPacket(transferPacket);
+        } else if (channel.equals(PluginMessageChannels.NeteaseCustom)) {
+            byte[] data = packet.getData();
+            NeteaseCustomPacket neteaseCustomPacket = new NeteaseCustomPacket();
+            MessagePack messagePack = new MessagePack();
+            try {
+                Value originJson = messagePack.read(data);
+                Value unConvert = messagePack.unconvert("value");
+                ArrayValue values = originJson.asMapValue().get(unConvert).asArrayValue();
+                if (!values.get(0).toString().equals("\"ModEventC2S\"") && !values.get(0).toString().equals("\"ModEventS2C\"")) return;
+                ArrayValue packData = values.get(1).asMapValue().get(unConvert).asArrayValue();
+                neteaseCustomPacket.setModName(packData.get(0).toString().replace("\"", ""));
+                neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
+                neteaseCustomPacket.setEventName(packData.get(2).toString().replace("\"", ""));
+                if (packData.get(3).isMapValue()) {
+                    neteaseCustomPacket.setData(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
+                    neteaseCustomPacket.setJson(originJson);
+                }
+                session.sendUpstreamPacketImmediately(neteaseCustomPacket);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
         }
     }
 }
