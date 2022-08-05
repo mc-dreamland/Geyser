@@ -27,6 +27,7 @@ package org.geysermc.geyser.text;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Getter;
 import org.geysermc.geyser.GeyserImpl;
@@ -56,6 +57,7 @@ public class MinecraftLocale {
         localesFolder.mkdir();
 
         // Download the latest asset list and cache it
+        loadLocale("zh_cn");
         generateAssetCache().whenComplete((aVoid, ex) -> downloadAndLoadLocale(GeyserLocale.getDefaultLocale()));
     }
 
@@ -101,12 +103,21 @@ public class MinecraftLocale {
                         // No need to cache non-language assets as we don't use them
                         continue;
                     }
-
-                    Asset asset = GeyserImpl.JSON_MAPPER.treeToValue(entry.getValue(), Asset.class);
-                    ASSET_MAP.put(entry.getKey(), asset);
+                    if (entry.getKey().contains("minecraft/lang/zh_cn.json")) {
+                        Asset asset = GeyserImpl.JSON_MAPPER.treeToValue(entry.getValue(), Asset.class);
+                        ASSET_MAP.put(entry.getKey(), asset);
+                    }
                 }
             } catch (Exception e) {
                 GeyserImpl.getInstance().getLogger().error(GeyserLocale.getLocaleStringLog("geyser.locale.fail.asset_cache", (!e.getMessage().isEmpty() ? e.getMessage() : e.getStackTrace())));
+                try {
+                    JsonNode jsonNode = GeyserImpl.JSON_MAPPER.readTree("{\"hash\": \"6a6d8e677ba05be15db08002fc4fa5df13b9442b\", \"size\": 409916}");
+                    Asset asset = GeyserImpl.JSON_MAPPER.treeToValue(jsonNode, Asset.class);
+                    ASSET_MAP.put("minecraft/lang/zh_cn.json", asset);
+                    System.out.println(ASSET_MAP);
+                } catch (JsonProcessingException ex) {
+                    ex.printStackTrace();
+                }
             }
             return null;
         });
