@@ -42,6 +42,7 @@ public class NeteaseCustomPacket extends BedrockPacket {
     private String eventName;
     private HashMap<String, Object> data;
     private Value json;
+    private long unKnowId;
 
     @Override
     public boolean handle(BedrockPacketHandler handler) {
