@@ -26,8 +26,8 @@
 package org.geysermc.geyser.pack;
 
 import org.geysermc.geyser.GeyserImpl;
-import org.geysermc.geyser.util.FileUtils;
 import org.geysermc.geyser.text.GeyserLocale;
+import org.geysermc.geyser.util.FileUtils;
 
 import java.io.File;
 import java.util.HashMap;
@@ -39,11 +39,11 @@ import java.util.zip.ZipFile;
 /**
  * This represents a resource pack and all the data relevant to it
  */
-public class ResourcePack {
+public class BehaviorPack {
     /**
      * The list of loaded resource packs
      */
-    public static final Map<String, ResourcePack> PACKS = new HashMap<>();
+    public static final Map<String, BehaviorPack> PACKS = new HashMap<>();
 
     /**
      * The size of each chunk to use when sending the resource packs to clients in bytes
@@ -52,14 +52,14 @@ public class ResourcePack {
 
     private byte[] sha256;
     private File file;
-    private ResourcePackManifest manifest;
-    private ResourcePackManifest.Version version;
+    private BehaviorPackManifest manifest;
+    private BehaviorPackManifest.Version version;
 
     /**
      * Loop through the packs directory and locate valid resource pack files
      */
     public static void loadPacks() {
-        File directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/ResourcePack").toFile();
+        File directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/BehaviorPack").toFile();
 
         if (!directory.exists()) {
             directory.mkdir();
@@ -70,9 +70,9 @@ public class ResourcePack {
 
         for (File file : directory.listFiles()) {
             if (file.getName().endsWith(".zip") || file.getName().endsWith(".mcpack")) {
-                ResourcePack resourcePack = new ResourcePack();
+                BehaviorPack behaviorPack = new BehaviorPack();
 
-                resourcePack.sha256 = FileUtils.calculateSHA256(file);
+                behaviorPack.sha256 = FileUtils.calculateSHA256(file);
 
                 Stream<? extends ZipEntry> stream = null;
                 try {
@@ -82,15 +82,15 @@ public class ResourcePack {
                     stream.forEach((x) -> {
                         if (x.getName().contains("manifest.json") || x.getName().contains("pack_manifest.json")) {
                             try {
-                                ResourcePackManifest manifest = FileUtils.loadJson(zip.getInputStream(x), ResourcePackManifest.class);
+                                BehaviorPackManifest manifest = FileUtils.loadJson(zip.getInputStream(x), BehaviorPackManifest.class);
                                 // Sometimes a pack_manifest file is present and not in a valid format,
                                 // but a manifest file is, so we null check through that one
                                 if (manifest.getHeader().getUuid() != null) {
-                                    resourcePack.file = file;
-                                    resourcePack.manifest = manifest;
-                                    resourcePack.version = ResourcePackManifest.Version.fromArray(manifest.getHeader().getVersion());
+                                    behaviorPack.file = file;
+                                    behaviorPack.manifest = manifest;
+                                    behaviorPack.version = BehaviorPackManifest.Version.fromArray(manifest.getHeader().getVersion());
 
-                                    PACKS.put(resourcePack.getManifest().getHeader().getUuid().toString(), resourcePack);
+                                    PACKS.put(behaviorPack.getManifest().getHeader().getUuid().toString(), behaviorPack);
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -117,11 +117,11 @@ public class ResourcePack {
         return file;
     }
 
-    public ResourcePackManifest getManifest() {
+    public BehaviorPackManifest getManifest() {
         return manifest;
     }
 
-    public ResourcePackManifest.Version getVersion() {
+    public BehaviorPackManifest.Version getVersion() {
         return version;
     }
 }

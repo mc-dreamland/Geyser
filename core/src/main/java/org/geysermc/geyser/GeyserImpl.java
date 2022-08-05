@@ -60,6 +60,7 @@ import org.geysermc.geyser.configuration.GeyserConfiguration;
 import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.level.WorldManager;
 import org.geysermc.geyser.network.ConnectorServerEventHandler;
+import org.geysermc.geyser.pack.BehaviorPack;
 import org.geysermc.geyser.pack.ResourcePack;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
@@ -227,6 +228,7 @@ public class GeyserImpl implements GeyserApi {
         SkinProvider.registerCacheImageTask(this);
 
         ResourcePack.loadPacks();
+        BehaviorPack.loadPacks();
 
         if (platformType != PlatformType.STANDALONE && config.getRemote().getAddress().equals("auto")) {
             // Set the remote address to localhost since that is where we are always connecting
