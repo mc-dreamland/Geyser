@@ -114,7 +114,6 @@ public class MinecraftLocale {
                     JsonNode jsonNode = GeyserImpl.JSON_MAPPER.readTree("{\"hash\": \"6a6d8e677ba05be15db08002fc4fa5df13b9442b\", \"size\": 409916}");
                     Asset asset = GeyserImpl.JSON_MAPPER.treeToValue(jsonNode, Asset.class);
                     ASSET_MAP.put("minecraft/lang/zh_cn.json", asset);
-                    System.out.println(ASSET_MAP);
                 } catch (JsonProcessingException ex) {
                     ex.printStackTrace();
                 }

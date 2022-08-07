@@ -104,10 +104,8 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         geyser.getSessionManager().addPendingSession(session);
 
         ResourcePacksInfoPacket resourcePacksInfo = new ResourcePacksInfoPacket();
-        System.out.println("send Pack");
         for(BehaviorPack behaviorPack : BehaviorPack.PACKS.values()) {
             BehaviorPackManifest.Header header = behaviorPack.getManifest().getHeader();
-            System.out.println(header);
             resourcePacksInfo.getBehaviorPackInfos().add(new ResourcePacksInfoPacket.Entry(
                     header.getUuid().toString(), header.getVersionString(), behaviorPack.getFile().length(),
                     "", "", "", false, false));
@@ -118,7 +116,6 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                     header.getUuid().toString(), header.getVersionString(), resourcePack.getFile().length(),
                             "", "", "", false, false));
         }
-        System.out.println(resourcePacksInfo);
         resourcePacksInfo.setForcedToAccept(GeyserImpl.getInstance().getConfig().isForceResourcePacks());
         session.sendUpstreamPacket(resourcePacksInfo);
 
