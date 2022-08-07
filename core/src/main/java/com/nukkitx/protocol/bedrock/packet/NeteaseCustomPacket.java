@@ -43,6 +43,7 @@ public class NeteaseCustomPacket extends BedrockPacket {
     private HashMap<String, Object> data;
     private Value json;
     private long unKnowId;
+    private byte[] msgPackBytes;
 
     @Override
     public boolean handle(BedrockPacketHandler handler) {

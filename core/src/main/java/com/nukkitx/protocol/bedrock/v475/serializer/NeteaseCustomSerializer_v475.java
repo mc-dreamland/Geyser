@@ -29,6 +29,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.nimbusds.jose.shaded.json.JSONObject;
+import com.nimbusds.jose.shaded.json.parser.JSONParser;
 import com.nukkitx.protocol.bedrock.BedrockPacketHelper;
 import com.nukkitx.protocol.bedrock.BedrockPacketSerializer;
 import com.nukkitx.protocol.bedrock.packet.NeteaseCustomPacket;
@@ -41,8 +42,12 @@ import org.msgpack.MessagePack;
 import org.msgpack.type.ArrayValue;
 import org.msgpack.type.Value;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.zip.GZIPInputStream;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class NeteaseCustomSerializer_v475 implements BedrockPacketSerializer<NeteaseCustomPacket>{
@@ -52,20 +57,23 @@ public class NeteaseCustomSerializer_v475 implements BedrockPacketSerializer<Net
     @SneakyThrows
     @Override
     public void serialize(ByteBuf buffer, BedrockPacketHelper helper, NeteaseCustomPacket packet) {
-        MessagePack messagePack = new MessagePack();
-        Object[] objects = new Object[]{
-                "ModEventS2C",
-                new Object[]{
-                        packet.getModName(),
-                        packet.getSystem(),
-                        packet.getEventName(),
-                        new JSONObject(packet.getData())
-                },
-                null
-        };
-        JsonElement v = JsonParser.parseString(gson.toJsonTree(objects).toString());
-        byte[] write = messagePack.write(v);
-        helper.writeByteArray(buffer, write);
+//        MessagePack messagePack = new MessagePack();
+//        Object[] objects = new Object[]{
+//                "ModEventS2C",
+//                new Object[]{
+//                        packet.getModName(),
+//                        packet.getSystem(),
+//                        packet.getEventName(),
+//                        new JSONObject(packet.getData())
+//                },
+//                null
+//        };
+//        Object parse = new JSONParser().parse(gson.toJsonTree(objects).toString());
+////        JsonElement v = JsonParser.parseString(gson.toJsonTree(objects).toString());
+////        System.out.println(v);
+//        byte[] write = messagePack.write(parse);
+        byte[] msgPackData = packet.getMsgPackBytes();
+        helper.writeByteArray(buffer, msgPackData);
         buffer.writeBytes(Unpooled.wrappedBuffer(new byte[]{8, -44, -108, 0}));
     }
 
