@@ -45,11 +45,15 @@ import org.geysermc.cumulus.util.FormType;
 import org.msgpack.MessagePack;
 import org.msgpack.type.ArrayValue;
 import org.msgpack.type.Value;
+import org.msgpack.type.ValueType;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.zip.GZIPInputStream;
 
 @Translator(packet = ClientboundCustomPayloadPacket.class)
 public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCustomPayloadPacket> {
@@ -116,24 +120,63 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             byte[] data = packet.getData();
             NeteaseCustomPacket neteaseCustomPacket = new NeteaseCustomPacket();
             MessagePack messagePack = new MessagePack();
+
+            byte[] msgPackData = unGZipBytes(data);
+            neteaseCustomPacket.setMsgPackBytes(msgPackData);
             try {
-                Value originJson = messagePack.read(data);
+                Value originJson = messagePack.read(msgPackData);
                 Value unConvert = messagePack.unconvert("value");
-                ArrayValue values = originJson.asMapValue().get(unConvert).asArrayValue();
-                if (!values.get(0).toString().equals("\"ModEventC2S\"") && !values.get(0).toString().equals("\"ModEventS2C\"")) return;
-                ArrayValue packData = values.get(1).asMapValue().get(unConvert).asArrayValue();
-                neteaseCustomPacket.setModName(packData.get(0).toString().replace("\"", ""));
-                neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
-                neteaseCustomPacket.setEventName(packData.get(2).toString().replace("\"", ""));
-                if (packData.get(3).isMapValue()) {
-                    neteaseCustomPacket.setData(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
-                    neteaseCustomPacket.setJson(originJson);
+                if (originJson.getType().equals(ValueType.MAP)) {
+                    ArrayValue values = originJson.asMapValue().get(unConvert).asArrayValue();
+                    if (!values.get(0).toString().contains("ModEventC2S") && !values.get(0).toString().contains("ModEventS2C")) return;
+                    ArrayValue packData = values.get(1).asMapValue().get(unConvert).asArrayValue();
+                    neteaseCustomPacket.setModName(packData.get(0).toString().replace("\"", ""));
+                    neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
+                    neteaseCustomPacket.setEventName(packData.get(2).toString().replace("\"", ""));
+                    if (packData.get(3).isMapValue()) {
+                        neteaseCustomPacket.setData(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
+                        neteaseCustomPacket.setJson(originJson);
+                    }
+                } else if (originJson.getType().equals(ValueType.ARRAY)) {
+                    ArrayValue values = originJson.asArrayValue();
+                    if (!values.get(0).toString().contains("ModEventC2S") && !values.get(0).toString().contains("ModEventS2C")) return;
+                    ArrayValue packData = values.get(1).asArrayValue();
+                    neteaseCustomPacket.setModName(packData.get(0).toString().replace("\"", ""));
+                    neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
+                    neteaseCustomPacket.setEventName(packData.get(2).toString().replace("\"", ""));
+                    if (packData.get(3).isMapValue()) {
+                        neteaseCustomPacket.setData(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
+                        neteaseCustomPacket.setJson(originJson);
+                    }
                 }
-                session.sendUpstreamPacketImmediately(neteaseCustomPacket);
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            session.sendUpstreamPacketImmediately(neteaseCustomPacket);
 
         }
+    }
+
+
+    public static byte[] unGZipBytes(byte[] data) {
+        byte[] b = null;
+        try {
+            ByteArrayInputStream bis = new ByteArrayInputStream(data);
+            GZIPInputStream gzip = new GZIPInputStream(bis);
+            byte[] buf = new byte[1024];
+            int num = -1;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            while ((num = gzip.read(buf, 0, buf.length)) != -1) {
+                baos.write(buf, 0, num);
+            }
+            b = baos.toByteArray();
+            baos.flush();
+            baos.close();
+            gzip.close();
+            bis.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return b;
     }
 }
