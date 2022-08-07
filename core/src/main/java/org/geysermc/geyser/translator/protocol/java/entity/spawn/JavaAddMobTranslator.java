@@ -52,6 +52,7 @@ public class JavaAddMobTranslator extends PacketTranslator<ClientboundAddMobPack
         Entity entity = definition.factory().create(session, packet.getEntityId(), session.getEntityCache().getNextEntityId().incrementAndGet(),
                 packet.getUuid(), definition, position, motion, packet.getYaw(), packet.getPitch(), packet.getHeadYaw()
         );
+        entity.setGeyserId(packet.getEntityId());
         session.getEntityCache().spawnEntity(entity);
     }
 }

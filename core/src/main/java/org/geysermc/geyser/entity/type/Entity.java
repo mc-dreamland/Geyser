@@ -62,7 +62,7 @@ public class Entity {
     protected final GeyserSession session;
 
     protected int entityId;
-    protected final long geyserId;
+    protected long geyserId;
     protected UUID uuid;
 
     protected Vector3f position;

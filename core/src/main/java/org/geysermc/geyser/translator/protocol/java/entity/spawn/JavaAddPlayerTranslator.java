@@ -58,6 +58,7 @@ public class JavaAddPlayerTranslator extends PacketTranslator<ClientboundAddPlay
                 return;
             }
 
+            entity.setGeyserId(packet.getEntityId());
             entity.setEntityId(packet.getEntityId());
             entity.setPosition(position);
             entity.setYaw(yaw);
