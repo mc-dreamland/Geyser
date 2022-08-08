@@ -47,7 +47,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class ConnectorServerEventHandler implements BedrockServerEventHandler {
-    private static final boolean PRINT_DEBUG_PINGS = Boolean.parseBoolean(System.getProperty("Geyser.PrintPingsInDebugMode", "true"));
+    private static final boolean PRINT_DEBUG_PINGS = Boolean.parseBoolean(System.getProperty("Geyser.PrintPingsInDebugMode", "false"));
 
     /*
     The following constants are all used to ensure the ping does not reach a length where it is unparsable by the Bedrock client

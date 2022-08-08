@@ -83,8 +83,8 @@ import lombok.NonNull;
 import lombok.Setter;
 import org.checkerframework.common.value.qual.IntRange;
 import org.geysermc.common.PlatformType;
-import org.geysermc.cumulus.Form;
-import org.geysermc.cumulus.util.FormBuilder;
+import org.geysermc.cumulus.form.Form;
+import org.geysermc.cumulus.form.util.FormBuilder;
 import org.geysermc.floodgate.crypto.FloodgateCipher;
 import org.geysermc.floodgate.util.BedrockData;
 import org.geysermc.geyser.Constants;
@@ -1373,7 +1373,7 @@ public class GeyserSession implements GeyserConnection, CommandSender {
         formCache.showForm(form);
     }
 
-    public void sendForm(FormBuilder<?, ?> formBuilder) {
+    public void sendForm(FormBuilder<?, ?, ?> formBuilder) {
         formCache.showForm(formBuilder.build());
     }
 

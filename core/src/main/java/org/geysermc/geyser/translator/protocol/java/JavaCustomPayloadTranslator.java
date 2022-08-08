@@ -31,7 +31,8 @@ import com.google.common.base.Charsets;
 import com.google.gson.Gson;
 import com.nukkitx.protocol.bedrock.packet.NeteaseCustomPacket;
 import com.nukkitx.protocol.bedrock.packet.TransferPacket;
-import lombok.NonNull;
+import org.geysermc.cumulus.form.Form;
+import org.geysermc.cumulus.form.util.FormType;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.GeyserLogger;
@@ -39,9 +40,7 @@ import org.geysermc.geyser.session.auth.AuthType;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
-import org.geysermc.cumulus.Form;
 import org.geysermc.cumulus.Forms;
-import org.geysermc.cumulus.util.FormType;
 import org.msgpack.MessagePack;
 import org.msgpack.type.ArrayValue;
 import org.msgpack.type.Value;
@@ -75,7 +74,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             // receive: first byte is form type, second and third are the id, remaining is the form data
             // respond: first and second byte id, remaining is form response data
 
-            FormType type = FormType.getByOrdinal(data[0]);
+            FormType type = FormType.fromOrdinal(data[0]);
             if (type == null) {
                 throw new NullPointerException(
                         "Got type " + data[0] + " which isn't a valid form type!");
@@ -83,8 +82,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
 
             String dataString = new String(data, 3, data.length - 3, Charsets.UTF_8);
 
-            Form form = Forms.fromJson(dataString, type);
-            form.setResponseHandler(response -> {
+            Form form = Forms.fromJson(dataString, type, (ignored, response) -> {
                 byte[] raw = response.getBytes(StandardCharsets.UTF_8);
                 byte[] finalData = new byte[raw.length + 2];
 
