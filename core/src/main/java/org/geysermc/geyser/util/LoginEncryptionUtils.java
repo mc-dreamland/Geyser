@@ -69,6 +69,8 @@ public class LoginEncryptionUtils {
 
     private static boolean HAS_SENT_ENCRYPTION_MESSAGE = false;
 
+    public static final String ENV_STANDARD = "obt";
+
     private static boolean validateChainData(JsonNode data) throws Exception {
         if (data.size() != 3) {
             return false;
@@ -139,7 +141,11 @@ public class LoginEncryptionUtils {
             return false;
         }
         Profile profile = TokenChain.check(new String[]{chain.get(1).asText(), chain.get(2).asText()});
-        return profile != null;
+        if (!profile.env.equals(ENV_STANDARD)){
+            return false;
+        }
+//        Preconditions.checkState(profile.env.equals(ENV_STANDARD),"Invalid player profile");
+        return true;
     }
 
     private static void encryptConnectionWithCert(GeyserSession session, String clientData, JsonNode certChainData) {
@@ -150,7 +156,7 @@ public class LoginEncryptionUtils {
 
             geyser.getLogger().debug(String.format("Is player data valid? %s", validNeteaseChainData));
 
-            if (!validNeteaseChainData && !session.getGeyser().getConfig().isOnlineMode()) {
+            if (!validNeteaseChainData && session.getGeyser().getConfig().isOnlineMode()) {
                 session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
                 return;
             }
