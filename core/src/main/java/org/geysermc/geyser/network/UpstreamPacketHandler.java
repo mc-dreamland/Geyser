@@ -140,18 +140,37 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                 for(String id : packet.getPackIds()) {
                     ResourcePackDataInfoPacket data = new ResourcePackDataInfoPacket();
                     String[] packID = id.split("_");
-                    ResourcePack pack = ResourcePack.PACKS.get(packID[0]);
-                    ResourcePackManifest.Header header = pack.getManifest().getHeader();
+                    ResourcePack resourcePack = ResourcePack.PACKS.get(packID[0]);
+                    BehaviorPack behaviorPack = BehaviorPack.PACKS.get(packID[0]);
 
-                    data.setPackId(header.getUuid());
-                    int chunkCount = (int) Math.ceil((int) pack.getFile().length() / (double) ResourcePack.CHUNK_SIZE);
-                    data.setChunkCount(chunkCount);
-                    data.setCompressedPackSize(pack.getFile().length());
-                    data.setMaxChunkSize(ResourcePack.CHUNK_SIZE);
-                    data.setHash(pack.getSha256());
-                    data.setPackVersion(packID[1]);
-                    data.setPremium(false);
-                    data.setType(ResourcePackType.RESOURCE);
+                    if (resourcePack == null) {
+
+                        BehaviorPackManifest.Header header = behaviorPack.getManifest().getHeader();
+
+                        data.setPackId(header.getUuid());
+                        int chunkCount = (int) Math.ceil((int) behaviorPack.getFile().length() / (double) ResourcePack.CHUNK_SIZE);
+                        data.setChunkCount(chunkCount);
+                        data.setCompressedPackSize(behaviorPack.getFile().length());
+                        data.setMaxChunkSize(ResourcePack.CHUNK_SIZE);
+                        data.setHash(behaviorPack.getSha256());
+                        data.setPackVersion(packID[1]);
+                        data.setPremium(false);
+                        data.setType(ResourcePackType.BEHAVIOR);
+                    } else {
+
+                        ResourcePackManifest.Header header = resourcePack.getManifest().getHeader();
+
+                        data.setPackId(header.getUuid());
+                        int chunkCount = (int) Math.ceil((int) resourcePack.getFile().length() / (double) ResourcePack.CHUNK_SIZE);
+                        data.setChunkCount(chunkCount);
+                        data.setCompressedPackSize(resourcePack.getFile().length());
+                        data.setMaxChunkSize(ResourcePack.CHUNK_SIZE);
+                        data.setHash(resourcePack.getSha256());
+                        data.setPackVersion(packID[1]);
+                        data.setPremium(false);
+                        data.setType(ResourcePackType.RESOURCE);
+                    }
+
 
                     session.sendUpstreamPacket(data);
                 }
@@ -243,24 +262,41 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     @Override
     public boolean handle(ResourcePackChunkRequestPacket packet) {
         ResourcePackChunkDataPacket data = new ResourcePackChunkDataPacket();
-        ResourcePack pack = ResourcePack.PACKS.get(packet.getPackId().toString());
+        ResourcePack resourcePack = ResourcePack.PACKS.get(packet.getPackId().toString());
+        BehaviorPack behaviorPack = BehaviorPack.PACKS.get(packet.getPackId().toString());
+
 
         data.setChunkIndex(packet.getChunkIndex());
         data.setProgress(packet.getChunkIndex() * ResourcePack.CHUNK_SIZE);
         data.setPackVersion(packet.getPackVersion());
         data.setPackId(packet.getPackId());
 
-        int offset = packet.getChunkIndex() * ResourcePack.CHUNK_SIZE;
-        byte[] packData = new byte[(int) MathUtils.constrain(pack.getFile().length() - offset, 0, ResourcePack.CHUNK_SIZE)];
+        int offset = packet.getChunkIndex() * BehaviorPack.CHUNK_SIZE;
 
-        try (InputStream inputStream = new FileInputStream(pack.getFile())) {
-            inputStream.skip(offset);
-            inputStream.read(packData, 0, packData.length);
-        } catch (Exception e) {
-            e.printStackTrace();
+        byte[] packData;
+        if (resourcePack == null) {
+            packData = new byte[(int) MathUtils.constrain(behaviorPack.getFile().length() - offset, 0, BehaviorPack.CHUNK_SIZE)];
+
+            try (InputStream inputStream = new FileInputStream(behaviorPack.getFile())) {
+                inputStream.skip(offset);
+                inputStream.read(packData, 0, packData.length);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        } else {
+            packData = new byte[(int) MathUtils.constrain(resourcePack.getFile().length() - offset, 0, ResourcePack.CHUNK_SIZE)];
+
+            try (InputStream inputStream = new FileInputStream(resourcePack.getFile())) {
+                inputStream.skip(offset);
+                inputStream.read(packData, 0, packData.length);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
         }
-
         data.setData(packData);
+
 
         session.sendUpstreamPacket(data);
         return true;
