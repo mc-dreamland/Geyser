@@ -209,7 +209,7 @@ use-direct-connection: true
 
 # 是否快速切换世界
 # 暂时还不清楚这样操作是否会有问题
-quick-switch-dimension: false
+quick-switch-dimension: true
 
 # 启用网易验证
 online-mode: true

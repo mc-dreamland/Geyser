@@ -33,6 +33,8 @@ import com.nukkitx.protocol.bedrock.packet.AdventureSettingsPacket;
 import com.nukkitx.protocol.bedrock.packet.GameRulesChangedPacket;
 import com.nukkitx.protocol.bedrock.packet.SetPlayerGameTypePacket;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
+import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.configuration.GeyserConfiguration;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.auth.AuthType;
@@ -56,7 +58,11 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         String newDimension = DimensionUtils.getNewDimension(packet.getDimension());
         if (session.isSpawned()) {
             String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), newDimension);
-            DimensionUtils.switchDimension(session, fakeDim);
+
+            GeyserConfiguration config = GeyserImpl.getInstance().getConfig();
+            if (!config.isQuickSwitchDimension()) {
+                DimensionUtils.switchDimension(session, fakeDim);
+            }
 
             session.getWorldCache().removeScoreboard();
         }

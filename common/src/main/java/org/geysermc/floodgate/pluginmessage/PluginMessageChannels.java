@@ -32,8 +32,9 @@ public final class PluginMessageChannels {
     public static final String FORM = "floodgate:form";
     public static final String TRANSFER = "floodgate:transfer";
     public static final String NeteaseCustom = "floodgate:netease";
+    public static final String CUSTOM = "floodgate:custom";
 
-    private static final byte[] FLOODGATE_REGISTER_DATA = String.join("\0", SKIN, FORM, TRANSFER, NeteaseCustom).getBytes(Charsets.UTF_8);
+    private static final byte[] FLOODGATE_REGISTER_DATA = String.join("\0", SKIN, FORM, TRANSFER, NeteaseCustom, CUSTOM).getBytes(Charsets.UTF_8);
 
     /**
      * Get the prebuilt register data as a byte array

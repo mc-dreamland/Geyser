@@ -276,7 +276,7 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
     private boolean useDirectConnection = true;
 
     @JsonProperty("quick-switch-dimension")
-    private boolean quickSwitchDimension = false;
+    private boolean quickSwitchDimension = true;
 
     @JsonProperty("online-mode")
     private boolean onlineMode = false;
