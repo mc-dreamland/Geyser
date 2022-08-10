@@ -14,14 +14,10 @@ public class TextSerializer_v332 implements BedrockPacketSerializer<TextPacket> 
     @Override
     public void serialize(ByteBuf buffer, BedrockPacketHelper helper, TextPacket packet) {
         TextPacket.Type type = packet.getType();
-        if (packet.getSourceName().equals("")) {
-            type = TextPacket.Type.RAW;
-        }
         buffer.writeByte(type.ordinal());
         buffer.writeBoolean(packet.isNeedsTranslation());
 
         switch (type) {
-            case CHAT:
             case WHISPER:
             case ANNOUNCEMENT:
                 helper.writeString(buffer, packet.getSourceName());
@@ -32,11 +28,17 @@ public class TextSerializer_v332 implements BedrockPacketSerializer<TextPacket> 
             case OBJECT_WHISPER:
                 helper.writeString(buffer, packet.getMessage());
                 break;
+            case CHAT:
+                helper.writeString(buffer, packet.getSourceName());
             case TRANSLATION:
-            case POPUP:
             case JUKEBOX_POPUP:
                 helper.writeString(buffer, packet.getMessage());
                 helper.writeArray(buffer, packet.getParameters(), helper::writeString);
+                break;
+            case POPUP:
+                helper.writeString(buffer, packet.getMessage());
+                helper.writeArray(buffer, packet.getParameters(), helper::writeString);
+                helper.writeString(buffer, packet.getSourceName());
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported TextType " + type);
