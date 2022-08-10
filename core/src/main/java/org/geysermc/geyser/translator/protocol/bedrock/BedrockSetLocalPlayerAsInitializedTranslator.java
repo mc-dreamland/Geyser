@@ -46,7 +46,6 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
     @Override
     public void translate(GeyserSession session, SetLocalPlayerAsInitializedPacket packet) {
         if (session.getPlayerEntity().getGeyserId() == packet.getRuntimeEntityId()) {
-            System.out.println(session.getPlayerEntity().getGeyserId() == packet.getRuntimeEntityId());
             if (!session.getUpstream().isInitialized()) {
                 session.getUpstream().setInitialized(true);
 
