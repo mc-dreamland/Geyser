@@ -14,8 +14,12 @@ public class TextSerializer_v332 implements BedrockPacketSerializer<TextPacket> 
     @Override
     public void serialize(ByteBuf buffer, BedrockPacketHelper helper, TextPacket packet) {
         TextPacket.Type type = packet.getType();
+        if (packet.getSourceName().equals("") || type.equals(TextPacket.Type.CHAT)) {
+            type = TextPacket.Type.RAW;
+        }
         buffer.writeByte(type.ordinal());
         buffer.writeBoolean(packet.isNeedsTranslation());
+
 
         switch (type) {
             case WHISPER:
