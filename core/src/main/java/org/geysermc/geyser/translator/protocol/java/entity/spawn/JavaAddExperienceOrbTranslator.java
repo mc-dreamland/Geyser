@@ -44,7 +44,11 @@ public class JavaAddExperienceOrbTranslator extends PacketTranslator<Clientbound
                 session, packet.getExp(), packet.getEntityId(), session.getEntityCache().getNextEntityId().incrementAndGet(), position
         );
 
-        entity.setGeyserId(packet.getEntityId());
+        if (session.getPlayerEntity().getGeyserId() == entity.getEntityId() && entity.getEntityId() != 1) {
+            entity.setGeyserId(entity.getGeyserId() * 2000000L + 99999);
+        } else {
+            entity.setGeyserId(packet.getEntityId());
+        }
         session.getEntityCache().spawnEntity(entity);
     }
 }
