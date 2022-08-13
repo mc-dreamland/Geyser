@@ -83,7 +83,9 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
         String newDimension = DimensionUtils.getNewDimension(packet.getDimension());
 
         GeyserConfiguration config = GeyserImpl.getInstance().getConfig();
-        if (!config.isQuickSwitchDimension()) {
+        if (config.isQuickSwitchDimension()) {
+            DimensionUtils.clearSomeCache(session, newDimension);
+        } else {
             if (!session.getDimension().equals(newDimension) || !packet.getWorldName().equals(session.getWorldName())) {
                 // Switching to a new world (based off the world name change); send a fake dimension change
                 if (!packet.getWorldName().equals(session.getWorldName()) && (session.getDimension().equals(newDimension)
@@ -96,7 +98,6 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
                 session.setWorldName(packet.getWorldName());
                 DimensionUtils.switchDimension(session, newDimension);
             }
-
             ChunkUtils.loadDimensionTag(session, packet.getDimension());
         }
     }

@@ -57,6 +57,54 @@ public class DimensionUtils {
      */
     public static final String THE_END = "minecraft:the_end";
 
+    public static void clearSomeCache(GeyserSession session, String javaDimension) {
+
+        Entity player = session.getPlayerEntity();
+
+        session.getChunkCache().clear();
+        session.getEntityCache().removeAllEntities();
+        session.getItemFrameCache().clear();
+        if (session.getLecternCache() != null) {
+            session.getLecternCache().clear();
+        }
+        session.getLodestoneCache().clear();
+        session.getPistonCache().clear();
+        session.getSkullCache().clear();
+
+        Vector3f pos = Vector3f.from(0, 64, 0);
+
+        session.setDimension(javaDimension);
+        player.setPosition(pos);
+        session.setSpawned(false);
+        session.setLastChunkPosition(null);
+
+        Set<Effect> entityEffects = session.getEffectCache().getEntityEffects();
+        for (Effect effect : entityEffects) {
+            MobEffectPacket mobEffectPacket = new MobEffectPacket();
+            mobEffectPacket.setEvent(MobEffectPacket.Event.REMOVE);
+            mobEffectPacket.setRuntimeEntityId(player.getGeyserId());
+            mobEffectPacket.setEffectId(EntityUtils.toBedrockEffectId(effect));
+            session.sendUpstreamPacket(mobEffectPacket);
+        }
+        // Effects are re-sent from server
+        entityEffects.clear();
+
+        //let java server handle portal travel sound
+        StopSoundPacket stopSoundPacket = new StopSoundPacket();
+        stopSoundPacket.setStoppingAllSound(true);
+        stopSoundPacket.setSoundName("");
+        session.sendUpstreamPacket(stopSoundPacket);
+
+        // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
+        // The client wants sections sent to it before it can successfully respawn.
+        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 1, true);
+
+        // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
+        // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
+        // thinks they are in the end dimension.
+
+    }
+
     public static void switchDimension(GeyserSession session, String javaDimension) {
         int bedrockDimension = javaToBedrock(javaDimension);
         int previousDimension = javaToBedrock(session.getDimension());
@@ -112,13 +160,11 @@ public class DimensionUtils {
 
         GeyserConfiguration config = GeyserImpl.getInstance().getConfig();
 
-        if (!config.isQuickSwitchDimension()) {
-            if (BEDROCK_NETHER_ID == 2) {
-                if (NETHER.equals(javaDimension)) {
-                    session.sendFog("minecraft:fog_hell");
-                } else if (previousDimension == BEDROCK_NETHER_ID) {
-                    session.removeFog("minecraft:fog_hell");
-                }
+        if (BEDROCK_NETHER_ID == 2) {
+            if (NETHER.equals(javaDimension)) {
+                session.sendFog("minecraft:fog_hell");
+            } else if (previousDimension == BEDROCK_NETHER_ID) {
+                session.removeFog("minecraft:fog_hell");
             }
         }
     }
