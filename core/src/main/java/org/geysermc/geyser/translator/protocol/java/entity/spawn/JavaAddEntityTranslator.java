@@ -83,11 +83,12 @@ public class JavaAddEntityTranslator extends PacketTranslator<ClientboundAddEnti
             entity = definition.factory().create(session, entityId, session.getEntityCache().getNextEntityId().incrementAndGet(),
                     packet.getUuid(), definition, position, motion, yaw, pitch, 0f);
         }
-        if (entityId == 1) {
-            entity.setGeyserId(1000000000L);
+        if (session.getPlayerEntity().getGeyserId() == entity.getEntityId() && entity.getEntityId() != 1) {
+            entity.setGeyserId(entity.getGeyserId() * 1000000L + 99999);
         } else {
-            entity.setGeyserId(entityId);
+            entity.setGeyserId(packet.getEntityId());
         }
+
         session.getEntityCache().spawnEntity(entity);
     }
 }
