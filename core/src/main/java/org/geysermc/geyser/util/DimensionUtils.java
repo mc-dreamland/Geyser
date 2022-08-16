@@ -71,7 +71,7 @@ public class DimensionUtils {
         session.getPistonCache().clear();
         session.getSkullCache().clear();
 
-        Vector3f pos = Vector3f.from(0, 64, 0);
+        Vector3f pos = Vector3f.from(0, 256, 0);
 
         session.setDimension(javaDimension);
         player.setPosition(pos);
@@ -97,7 +97,7 @@ public class DimensionUtils {
 
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
-        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 1, true);
+        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
         // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
         // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
@@ -121,7 +121,7 @@ public class DimensionUtils {
         session.getPistonCache().clear();
         session.getSkullCache().clear();
 
-        Vector3f pos = Vector3f.from(0, 64, 0);
+        Vector3f pos = Vector3f.from(0, 256, 0);
 
         ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
         changeDimensionPacket.setDimension(bedrockDimension);

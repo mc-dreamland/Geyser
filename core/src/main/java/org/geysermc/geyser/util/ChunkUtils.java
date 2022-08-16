@@ -38,16 +38,14 @@ import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import lombok.experimental.UtilityClass;
 import org.geysermc.geyser.entity.type.ItemFrameEntity;
-import org.geysermc.geyser.entity.type.player.SkullPlayerEntity;
+import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.level.block.BlockStateValues;
 import org.geysermc.geyser.level.chunk.BlockStorage;
 import org.geysermc.geyser.level.chunk.GeyserChunkSection;
 import org.geysermc.geyser.level.chunk.bitarray.SingletonBitArray;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.text.GeyserLocale;
-import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
 
 import static org.geysermc.geyser.level.block.BlockStateValues.JAVA_AIR_ID;
@@ -88,7 +86,7 @@ public class ChunkUtils {
 
         byteBuf = Unpooled.buffer();
         try {
-            for (int i = 0; i < 32; i++) {
+            for (int i = 0; i < 25; i++) {
                 byteBuf.writeBytes(EMPTY_BIOME_DATA);
             }
 

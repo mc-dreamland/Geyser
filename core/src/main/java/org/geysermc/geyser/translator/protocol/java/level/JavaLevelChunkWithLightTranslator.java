@@ -52,6 +52,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.geysermc.geyser.entity.type.ItemFrameEntity;
+import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.level.block.BlockStateValues;
 import org.geysermc.geyser.level.chunk.BlockStorage;
 import org.geysermc.geyser.level.chunk.GeyserChunkSection;
@@ -60,7 +61,6 @@ import org.geysermc.geyser.level.chunk.bitarray.BitArrayVersion;
 import org.geysermc.geyser.level.chunk.bitarray.SingletonBitArray;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.translator.level.BiomeTranslator;
 import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
 import org.geysermc.geyser.translator.level.block.entity.BlockEntityTranslator;
@@ -76,7 +76,8 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
-import static org.geysermc.geyser.util.ChunkUtils.*;
+import static org.geysermc.geyser.util.ChunkUtils.SERIALIZED_CHUNK_DATA;
+import static org.geysermc.geyser.util.ChunkUtils.indexYZXtoXZY;
 
 @Translator(packet = ClientboundLevelChunkWithLightPacket.class)
 public class JavaLevelChunkWithLightTranslator extends PacketTranslator<ClientboundLevelChunkWithLightPacket> {
@@ -339,7 +340,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 BiomeTranslator.toNewBedrockBiome(session, javaBiomes[i + (dimensionOffset - yOffset)]).writeToNetwork(byteBuf);
             }
 
-            byteBuf.writeByte(0); // Border blocks - Edu edition only
+//            byteBuf.writeByte(0); // Border blocks - Edu edition only
             VarInts.writeUnsignedInt(byteBuf, 0); // extra data length, 0 for now
 
             // Encode tile entities into buffer
