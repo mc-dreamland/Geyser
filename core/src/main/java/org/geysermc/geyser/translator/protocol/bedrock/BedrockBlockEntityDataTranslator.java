@@ -30,11 +30,14 @@ import com.github.steveice10.mc.protocol.packet.ingame.serverbound.inventory.Ser
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.level.ServerboundSignUpdatePacket;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.protocol.bedrock.packet.BlockEntityDataPacket;
+import com.nukkitx.protocol.bedrock.v475.Bedrock_v475;
 import com.nukkitx.protocol.bedrock.v503.Bedrock_v503;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.SignUtils;
+
+import java.util.Arrays;
 
 @Translator(packet = BlockEntityDataPacket.class)
 public class BedrockBlockEntityDataTranslator extends PacketTranslator<BlockEntityDataPacket> {
@@ -50,7 +53,7 @@ public class BedrockBlockEntityDataTranslator extends PacketTranslator<BlockEnti
             // So if the latest update does not match the last cached update then it's still being edited
             // TODO check 1.19:
             // Bedrock only sends one packet as of 1.18.30. I (Camotoy) am suspicious this is a bug, but if it's permanent then we don't need the lastSignMessage variable.
-            if (session.getUpstream().getProtocolVersion() < Bedrock_v503.V503_CODEC.getProtocolVersion() && !text.equals(session.getLastSignMessage())) {
+            if (session.getUpstream().getProtocolVersion() < Bedrock_v475.V475_CODEC.getProtocolVersion() && !text.equals(session.getLastSignMessage())) {
                 session.setLastSignMessage(text);
                 return;
             }
