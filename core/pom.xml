@@ -147,7 +147,7 @@
         <dependency>
             <groupId>com.nukkitx.network</groupId>
             <artifactId>raknet</artifactId>
-            <version>1.6.28-20211202.034102-5</version>
+            <version>1.6.28-SNAPSHOT</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>

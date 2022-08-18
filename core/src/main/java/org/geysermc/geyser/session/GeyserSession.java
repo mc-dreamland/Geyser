@@ -248,6 +248,12 @@ public class GeyserSession implements GeyserConnection, CommandSender {
      */
     private final Set<Vector3i> lecternCache;
 
+    private final Set<Vector2i> oldLoadedChunkCache;
+    private final Set<Vector2i> loadedChunkCache;
+
+    @Setter
+    private boolean startClearChunkCache;
+
     /**
      * A list of all players that have a player head on with a custom texture.
      * Our workaround for these players is to give them a custom skin and geometry to emulate wearing a custom skull.
@@ -550,6 +556,9 @@ public class GeyserSession implements GeyserConnection, CommandSender {
 
         this.spawned = false;
         this.loggedIn = false;
+        this.oldLoadedChunkCache = new HashSet<>();
+        this.loadedChunkCache = new HashSet<>();
+
 
         if (geyser.getWorldManager().shouldExpectLecternHandled()) {
             // Unneeded on these platforms

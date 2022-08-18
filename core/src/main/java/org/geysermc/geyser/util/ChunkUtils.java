@@ -50,6 +50,8 @@ import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
 
+import java.util.Arrays;
+
 import static org.geysermc.geyser.level.block.BlockStateValues.JAVA_AIR_ID;
 
 @UtilityClass
@@ -199,6 +201,7 @@ public class ChunkUtils {
         data.setChunkX(chunkX);
         data.setChunkZ(chunkZ);
         data.setSubChunksLength(0);
+//        byte[] test = new byte[]{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         data.setData(EMPTY_CHUNK_DATA);
         data.setCachingEnabled(false);
         session.sendUpstreamPacket(data);

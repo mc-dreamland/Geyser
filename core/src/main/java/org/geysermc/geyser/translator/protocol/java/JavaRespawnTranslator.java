@@ -86,10 +86,10 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
                     // Can likely be removed if the Above Bedrock Nether Building option can be removed
                     || DimensionUtils.javaToBedrock(session.getDimension()) == DimensionUtils.javaToBedrock(newDimension))) {
                 String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), newDimension);
-                DimensionUtils.switchDimension(session, fakeDim);
+                DimensionUtils.switchDimension(session, fakeDim, true);
             }
             session.setWorldName(packet.getWorldName());
-            DimensionUtils.switchDimension(session, newDimension);
+            DimensionUtils.switchDimension(session, newDimension, true);
         }
 
         ChunkUtils.loadDimensionTag(session, packet.getDimension());
