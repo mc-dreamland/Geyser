@@ -84,7 +84,7 @@ public class JavaAddEntityTranslator extends PacketTranslator<ClientboundAddEnti
                     packet.getUuid(), definition, position, motion, yaw, pitch, 0f);
         }
         if (session.getPlayerEntity().getGeyserId() == entity.getEntityId() && entity.getEntityId() != 1) {
-            entity.setGeyserId(entity.getGeyserId() * 1000000L + 99999);
+            entity.setGeyserId(entity.getEntityId() * 1000000L + 99999);
         } else {
             entity.setGeyserId(packet.getEntityId());
         }

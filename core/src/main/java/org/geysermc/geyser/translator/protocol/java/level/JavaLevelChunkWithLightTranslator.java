@@ -76,8 +76,7 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
-import static org.geysermc.geyser.util.ChunkUtils.SERIALIZED_CHUNK_DATA;
-import static org.geysermc.geyser.util.ChunkUtils.indexYZXtoXZY;
+import static org.geysermc.geyser.util.ChunkUtils.*;
 
 @Translator(packet = ClientboundLevelChunkWithLightPacket.class)
 public class JavaLevelChunkWithLightTranslator extends PacketTranslator<ClientboundLevelChunkWithLightPacket> {

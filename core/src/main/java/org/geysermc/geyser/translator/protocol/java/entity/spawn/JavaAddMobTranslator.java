@@ -53,7 +53,7 @@ public class JavaAddMobTranslator extends PacketTranslator<ClientboundAddMobPack
                 packet.getUuid(), definition, position, motion, packet.getYaw(), packet.getPitch(), packet.getHeadYaw()
         );
         if (session.getPlayerEntity().getGeyserId() == entity.getEntityId() && entity.getEntityId() != 1) {
-            entity.setGeyserId(entity.getGeyserId() * 3000000L + 99999);
+            entity.setGeyserId(entity.getEntityId() * 3000000L + 99999);
         } else {
             entity.setGeyserId(packet.getEntityId());
         }
