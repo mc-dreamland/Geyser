@@ -79,18 +79,19 @@ public class WebUtils {
         }
     }
 
+    private static int ONLINE = 0;
     /**
-     *
+     * 获取总在线
      */
     public static int getTotalOnline(){
         try {
             String body = getBody(
                     GeyserImpl.getInstance().getConfig().getService().getUrl(),
                     Map.of("X-Auth", GeyserImpl.getInstance().getConfig().getService().getToken()));
-            if (Objects.isNull(body)) return -1;
-            return GeyserImpl.JSON_MAPPER.readTree(body).get("data").asInt();
+            if (Objects.isNull(body)) return ONLINE;
+            return ONLINE = GeyserImpl.JSON_MAPPER.readTree(body).get("data").asInt();
         }catch (Exception ignored){}
-        return -1;
+        return ONLINE;
     }
 
     /**
