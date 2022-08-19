@@ -28,8 +28,11 @@ package org.geysermc.geyser.translator.protocol.java;
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
 import com.nukkitx.protocol.bedrock.packet.NeteaseCustomPacket;
+import com.nukkitx.protocol.bedrock.packet.NeteaseMarketOpenPacket;
 import com.nukkitx.protocol.bedrock.packet.TransferPacket;
 import org.geysermc.cumulus.form.Form;
 import org.geysermc.cumulus.form.util.FormType;
@@ -51,6 +54,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 
@@ -152,6 +156,28 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             }
             session.sendUpstreamPacketImmediately(neteaseCustomPacket);
 
+        }
+        else if (channel.equals("floodgate:packet")) {
+            byte[] data = packet.getData();
+            int packetId = 0;
+            String check = null;
+            ByteArrayDataInput packetBytes = ByteStreams.newDataInput(data);
+            try {
+                packetBytes.readByte();
+                packetId = packetBytes.readInt();
+                check = packetBytes.readUTF();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            if (packetId != 0 && check!= null && check.equals("NeteaseMarketOpen")) {
+                if (packetId == 203) {
+                    NeteaseMarketOpenPacket neteaseMarketPacket = new NeteaseMarketOpenPacket();
+                    neteaseMarketPacket.setCategory(packetBytes.readUTF());
+                    neteaseMarketPacket.setEventName(packetBytes.readUTF());
+                    session.sendUpstreamPacket(neteaseMarketPacket);
+                }
+            }
         }
     }
 
