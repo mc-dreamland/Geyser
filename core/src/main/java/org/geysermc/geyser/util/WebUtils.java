@@ -26,6 +26,7 @@
 package org.geysermc.geyser.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
 
 import java.io.*;
@@ -37,6 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
+import java.util.Objects;
 
 public class WebUtils {
 
@@ -59,6 +61,36 @@ public class WebUtils {
         } catch (Exception e) {
             return e.getMessage();
         }
+    }
+
+    public static String getBody(String reqURL,Map<String,String> property) {
+        try {
+            URL url = new URL(reqURL);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("GET");
+            con.setRequestProperty("User-Agent", "Geyser-" + GeyserImpl.getInstance().getPlatformType().toString() + "/" + GeyserImpl.VERSION); // Otherwise Java 8 fails on checking updates
+            property.forEach(con::setRequestProperty);
+
+            con.setConnectTimeout(10000);
+            con.setReadTimeout(10000);
+            return connectionToString(con);
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
+    /**
+     *
+     */
+    public static int getTotalOnline(){
+        try {
+            String body = getBody(
+                    GeyserImpl.getInstance().getConfig().getService().getUrl(),
+                    Map.of("X-Auth", GeyserImpl.getInstance().getConfig().getService().getToken()));
+            if (Objects.isNull(body)) return -1;
+            return GeyserImpl.JSON_MAPPER.readTree(body).get("data").asInt();
+        }catch (Exception ignored){}
+        return -1;
     }
 
     /**

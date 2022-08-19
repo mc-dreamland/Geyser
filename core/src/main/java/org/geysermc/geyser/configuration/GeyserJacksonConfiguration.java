@@ -61,6 +61,7 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
 
     private BedrockConfiguration bedrock = new BedrockConfiguration();
     private RemoteConfiguration remote = new RemoteConfiguration();
+    private ServiceConfiguration service = new ServiceConfiguration();
 
     @JsonProperty("saved-user-logins")
     private List<String> savedUserLogins = Collections.emptyList();
@@ -239,6 +240,19 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
 
         @JsonProperty("microsoft-account")
         private boolean microsoftAccount = false;
+    }
+
+    @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ServiceConfiguration implements IServiceConfiguration {
+
+        @JsonProperty("url")
+        private String url = "http://localhost:8081/api";
+
+        @JsonProperty("token")
+        private String token = "114514";
+        @JsonProperty("multiple")
+        private double multiple = 1.45d;
     }
 
     @Getter

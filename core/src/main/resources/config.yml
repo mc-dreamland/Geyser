@@ -215,3 +215,9 @@ quick-switch-dimension: true
 online-mode: true
 
 config-version: 4
+
+service:
+  url: http://localhost:8080/api/
+  token: 114514
+  # 倍率
+  multiple: 1.0

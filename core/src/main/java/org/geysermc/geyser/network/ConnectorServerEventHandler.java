@@ -40,6 +40,7 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.ping.IGeyserPingPassthrough;
 import org.geysermc.geyser.text.GeyserLocale;
+import org.geysermc.geyser.util.WebUtils;
 
 import javax.annotation.Nonnull;
 import java.net.InetSocketAddress;
@@ -126,8 +127,9 @@ public class ConnectorServerEventHandler implements BedrockServerEventHandler {
             pong.setPlayerCount(pingInfo.getPlayers().getOnline());
             pong.setMaximumPlayerCount(pingInfo.getPlayers().getMax());
         } else {
-            pong.setPlayerCount(geyser.getSessionManager().getSessions().size());
+            pong.setPlayerCount((int) ((WebUtils.getTotalOnline()==-1?geyser.getSessionManager().getSessions().size():WebUtils.getTotalOnline()) * geyser.getConfig().getService().getMultiple()));
             pong.setMaximumPlayerCount(config.getMaxPlayers());
+            geyser.getLogger().debug("pong web online: "+pong.getPlayerCount());
         }
 
         // Fallbacks to prevent errors and allow Bedrock to see the server
