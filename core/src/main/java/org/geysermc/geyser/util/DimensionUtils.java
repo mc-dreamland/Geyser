@@ -43,6 +43,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 public class DimensionUtils {
 
@@ -79,14 +80,13 @@ public class DimensionUtils {
         session.getLoadedChunkCache().clear();
 
         if (!session.isStartClearChunkCache()) {
-            session.setStartClearChunkCache(true);
-            Timer mTimer = new Timer();
-            mTimer.schedule(new TimerTask() {
+            GeyserImpl.getInstance().getScheduledThread().schedule(new Runnable() {
                 @Override
                 public void run() {
                     clearLoadedChunks(session);
                 }
-            }, 1000);
+            }, 1000, TimeUnit.MILLISECONDS);
+            session.setStartClearChunkCache(true);
         }
 
         Entity player = session.getPlayerEntity();
@@ -134,16 +134,23 @@ public class DimensionUtils {
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
 //        ChunkUtils.sendEmptyChunks(session, Vector3i.from(0, 64, 0), 3, true);
-        if (changeWorld) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 2, true);
+        System.out.println(changeWorld);
+        if (changeWorld) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 //        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
         // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
         // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
         // thinks they are in the end dimension.
+        if (true) {
+            return;
+        }
         if (BEDROCK_NETHER_ID == 2) {
+            System.out.println("#1");
             if (NETHER.equals(javaDimension)) {
+                System.out.println("#2");
                 session.sendFog("minecraft:fog_hell");
             } else if (previousDimension == BEDROCK_NETHER_ID) {
+                System.out.println("#3");
                 session.removeFog("minecraft:fog_hell");
             }
         }

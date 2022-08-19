@@ -44,11 +44,7 @@ public class JavaAddPaintingTranslator extends PacketTranslator<ClientboundAddPa
                 session.getEntityCache().getNextEntityId().incrementAndGet(), packet.getUuid(),
                 position, PaintingType.getByPaintingType(packet.getPaintingType()), packet.getDirection().getHorizontalIndex());
 
-        if (session.getPlayerEntity().getGeyserId() == entity.getEntityId() && entity.getEntityId() != 1) {
-            entity.setGeyserId(entity.getEntityId() * 4000000L + 99999);
-        } else {
-            entity.setGeyserId(packet.getEntityId());
-        }
+        entity.setGeyserId(packet.getEntityId());
         session.getEntityCache().spawnEntity(entity);
     }
 }
