@@ -728,4 +728,12 @@ public interface BedrockPacketHandler extends PacketHandler {
     default boolean handle(NeteaseCustomPacket packet) {
         return false;
     }
+
+    default boolean handle(NeteaseMarketReceivePacket packet) {
+        return false;
+    }
+
+    default boolean handle(NeteaseMarketOpenPacket packet) {
+        return false;
+    }
 }

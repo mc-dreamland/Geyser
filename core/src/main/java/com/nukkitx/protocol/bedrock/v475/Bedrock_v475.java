@@ -29,9 +29,7 @@ import com.nukkitx.protocol.bedrock.v465.serializer.*;
 import com.nukkitx.protocol.bedrock.v471.serializer.EventSerializer_v471;
 import com.nukkitx.protocol.bedrock.v471.serializer.PhotoInfoRequestSerializer_v471;
 import com.nukkitx.protocol.bedrock.v471.serializer.SubChunkRequestSerializer_v471;
-import com.nukkitx.protocol.bedrock.v475.serializer.NeteaseCustomSerializer_v475;
-import com.nukkitx.protocol.bedrock.v475.serializer.StartGameSerializer_v475;
-import com.nukkitx.protocol.bedrock.v475.serializer.SubChunkSerializer_v475;
+import com.nukkitx.protocol.bedrock.v475.serializer.*;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -213,5 +211,7 @@ public class Bedrock_v475 {
             .registerPacket(SubChunkPacket.class, SubChunkSerializer_v475.INSTANCE, 174)
             .registerPacket(SubChunkRequestPacket.class, SubChunkRequestSerializer_v471.INSTANCE, 175)
             .registerPacket(NeteaseCustomPacket.class, NeteaseCustomSerializer_v475.INSTANCE, 200)
+            .registerPacket(NeteaseMarketReceivePacket.class, NeteaseMarketReceiveSerializer_v475.INSTANCE, 202)
+            .registerPacket(NeteaseMarketOpenPacket.class, NeteaseMarketOpenSerializer_v475.INSTANCE, 203)
             .build();
 }
