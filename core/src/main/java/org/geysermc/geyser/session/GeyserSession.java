@@ -886,7 +886,7 @@ public class GeyserSession implements GeyserConnection, CommandSender {
                             encryptedData = cipher.encryptFromString(BedrockData.of(
                                     clientData.getGameVersion(),
                                     authData.name(),
-                                    authData.xuid(),
+                                    authData.uuid().toString(),
                                     clientData.getDeviceOs().ordinal(),
                                     clientData.getLanguageCode(),
                                     clientData.getUiProfile().ordinal(),
@@ -935,10 +935,18 @@ public class GeyserSession implements GeyserConnection, CommandSender {
                 }
 
                 UUID uuid = protocol.getProfile().getId();
+                System.out.println(uuid);
                 if (uuid == null) {
                     // Set what our UUID *probably* is going to be
                     uuid = authData.uuid();
                 }
+
+                geyser.getLogger().warning("玩家: " + protocol.getProfile().getName() + " 登录异常，UUID 为空。authData.uuid: " + authData.uuid() + " XUid: " + authData.xuid());
+                if (uuid.toString().equals("00000000-0000-4000-8000-000000000000")) {
+                    geyser.getLogger().warning("玩家: " + protocol.getProfile().getName() + " 登录异常，UUID 为空。authData.uuid: " + authData.uuid() + " XUid: " + authData.xuid());
+                }
+
+
                 playerEntity.setUuid(uuid);
                 playerEntity.setUsername(protocol.getProfile().getName());
 

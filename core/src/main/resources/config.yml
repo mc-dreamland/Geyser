@@ -207,10 +207,6 @@ mtu: 1400
 # If disabled on plugin versions, expect performance decrease and latency increase
 use-direct-connection: true
 
-# 是否快速切换世界
-# 暂时还不清楚这样操作是否会有问题
-quick-switch-dimension: true
-
 # 启用网易验证
 online-mode: true
 

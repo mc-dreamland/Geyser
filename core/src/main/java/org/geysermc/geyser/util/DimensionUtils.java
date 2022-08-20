@@ -134,7 +134,6 @@ public class DimensionUtils {
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
 //        ChunkUtils.sendEmptyChunks(session, Vector3i.from(0, 64, 0), 3, true);
-        System.out.println(changeWorld);
         if (changeWorld) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 //        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
@@ -145,12 +144,9 @@ public class DimensionUtils {
             return;
         }
         if (BEDROCK_NETHER_ID == 2) {
-            System.out.println("#1");
             if (NETHER.equals(javaDimension)) {
-                System.out.println("#2");
                 session.sendFog("minecraft:fog_hell");
             } else if (previousDimension == BEDROCK_NETHER_ID) {
-                System.out.println("#3");
                 session.removeFog("minecraft:fog_hell");
             }
         }
