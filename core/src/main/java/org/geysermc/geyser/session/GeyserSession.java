@@ -62,6 +62,7 @@ import com.github.steveice10.packetlib.tcp.TcpSession;
 import com.nukkitx.math.GenericMath;
 import com.nukkitx.math.vector.*;
 import com.nukkitx.protocol.bedrock.BedrockPacket;
+import com.nukkitx.protocol.bedrock.BedrockPacketType;
 import com.nukkitx.protocol.bedrock.BedrockServerSession;
 import com.nukkitx.protocol.bedrock.data.*;
 import com.nukkitx.protocol.bedrock.data.command.CommandPermission;
@@ -253,6 +254,9 @@ public class GeyserSession implements GeyserConnection, CommandSender {
 
     @Setter
     private boolean startClearChunkCache;
+
+    @Setter
+    private boolean quickSwitch = true;
 
     /**
      * A list of all players that have a player head on with a custom texture.
@@ -941,7 +945,6 @@ public class GeyserSession implements GeyserConnection, CommandSender {
                     uuid = authData.uuid();
                 }
 
-                geyser.getLogger().warning("玩家: " + protocol.getProfile().getName() + " 登录异常，UUID 为空。authData.uuid: " + authData.uuid() + " XUid: " + authData.xuid());
                 if (uuid.toString().equals("00000000-0000-4000-8000-000000000000")) {
                     geyser.getLogger().warning("玩家: " + protocol.getProfile().getName() + " 登录异常，UUID 为空。authData.uuid: " + authData.uuid() + " XUid: " + authData.xuid());
                 }
@@ -1491,6 +1494,9 @@ public class GeyserSession implements GeyserConnection, CommandSender {
      * @param packet the bedrock packet from the NukkitX protocol lib
      */
     public void sendUpstreamPacket(BedrockPacket packet) {
+        if (packet.getPacketType().equals(BedrockPacketType.CHANGE_DIMENSION) && this.isQuickSwitch()) {
+            return;
+        }
         upstream.sendPacket(packet);
     }
 

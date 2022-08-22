@@ -130,7 +130,8 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
                 Value unConvert = messagePack.unconvert("value");
                 if (originJson.getType().equals(ValueType.MAP)) {
                     ArrayValue values = originJson.asMapValue().get(unConvert).asArrayValue();
-                    if (!values.get(0).toString().contains("ModEventC2S") && !values.get(0).toString().contains("ModEventS2C")) return;
+                    if (!values.get(0).toString().contains("ModEventC2S") && !values.get(0).toString().contains("ModEventS2C"))
+                        return;
                     ArrayValue packData = values.get(1).asMapValue().get(unConvert).asArrayValue();
                     neteaseCustomPacket.setModName(packData.get(0).toString().replace("\"", ""));
                     neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
@@ -141,7 +142,8 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
                     }
                 } else if (originJson.getType().equals(ValueType.ARRAY)) {
                     ArrayValue values = originJson.asArrayValue();
-                    if (!values.get(0).toString().contains("ModEventC2S") && !values.get(0).toString().contains("ModEventS2C")) return;
+                    if (!values.get(0).toString().contains("ModEventC2S") && !values.get(0).toString().contains("ModEventS2C"))
+                        return;
                     ArrayValue packData = values.get(1).asArrayValue();
                     neteaseCustomPacket.setModName(packData.get(0).toString().replace("\"", ""));
                     neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
@@ -156,8 +158,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             }
             session.sendUpstreamPacketImmediately(neteaseCustomPacket);
 
-        }
-        else if (channel.equals("floodgate:packet")) {
+        } else if (channel.equals("floodgate:packet")) {
             byte[] data = packet.getData();
             int packetId = 0;
             String check = null;
@@ -170,12 +171,16 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
                 e.printStackTrace();
             }
 
-            if (packetId != 0 && check!= null && check.equals("NeteaseMarketOpen")) {
+            if (packetId != 0 && check != null && check.equals("NeteaseMarketOpen")) {
                 if (packetId == 203) {
                     NeteaseMarketOpenPacket neteaseMarketPacket = new NeteaseMarketOpenPacket();
                     neteaseMarketPacket.setCategory(packetBytes.readUTF());
                     neteaseMarketPacket.setEventName(packetBytes.readUTF());
                     session.sendUpstreamPacket(neteaseMarketPacket);
+                }
+            } else if (packetId != 0 && check != null && check.equals("GeyserSetQuickChange")) {
+                if (packetId == 1000) {
+                    session.setQuickSwitch(packetBytes.readBoolean());
                 }
             }
         }

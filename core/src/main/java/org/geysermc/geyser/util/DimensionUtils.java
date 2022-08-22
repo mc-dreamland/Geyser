@@ -79,7 +79,7 @@ public class DimensionUtils {
         session.getOldLoadedChunkCache().addAll(session.getLoadedChunkCache());
         session.getLoadedChunkCache().clear();
 
-        if (!session.isStartClearChunkCache()) {
+        if (session.isQuickSwitch() && !session.isStartClearChunkCache()) {
             GeyserImpl.getInstance().getScheduledThread().schedule(new Runnable() {
                 @Override
                 public void run() {
@@ -107,9 +107,10 @@ public class DimensionUtils {
         changeDimensionPacket.setDimension(bedrockDimension);
         changeDimensionPacket.setRespawn(true);
         changeDimensionPacket.setPosition(pos);
-        if (changeWorld) session.sendUpstreamPacket(changeDimensionPacket);
-//        session.sendUpstreamPacket(changeDimensionPacket);
-        session.setDimension(javaDimension);
+        if (!session.isQuickSwitch() && changeWorld) {
+            session.sendUpstreamPacket(changeDimensionPacket);
+            session.setDimension(javaDimension);
+        }
         player.setPosition(pos);
         session.setSpawned(false);
         session.setLastChunkPosition(null);
@@ -125,29 +126,30 @@ public class DimensionUtils {
         // Effects are re-sent from server
         entityEffects.clear();
 
-        //let java server handle portal travel sound
-        StopSoundPacket stopSoundPacket = new StopSoundPacket();
-        stopSoundPacket.setStoppingAllSound(true);
-        stopSoundPacket.setSoundName("");
-        session.sendUpstreamPacket(stopSoundPacket);
+        if (!session.isQuickSwitch()) {
+            //let java server handle portal travel sound
+            StopSoundPacket stopSoundPacket = new StopSoundPacket();
+            stopSoundPacket.setStoppingAllSound(true);
+            stopSoundPacket.setSoundName("");
+            session.sendUpstreamPacket(stopSoundPacket);
+        }
 
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
 //        ChunkUtils.sendEmptyChunks(session, Vector3i.from(0, 64, 0), 3, true);
-        if (changeWorld) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+        if (!session.isQuickSwitch() && changeWorld) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 //        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
         // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
         // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
         // thinks they are in the end dimension.
-        if (true) {
-            return;
-        }
-        if (BEDROCK_NETHER_ID == 2) {
-            if (NETHER.equals(javaDimension)) {
-                session.sendFog("minecraft:fog_hell");
-            } else if (previousDimension == BEDROCK_NETHER_ID) {
-                session.removeFog("minecraft:fog_hell");
+        if (!session.isQuickSwitch()) {
+            if (BEDROCK_NETHER_ID == 2) {
+                if (NETHER.equals(javaDimension)) {
+                    session.sendFog("minecraft:fog_hell");
+                } else if (previousDimension == BEDROCK_NETHER_ID) {
+                    session.removeFog("minecraft:fog_hell");
+                }
             }
         }
     }

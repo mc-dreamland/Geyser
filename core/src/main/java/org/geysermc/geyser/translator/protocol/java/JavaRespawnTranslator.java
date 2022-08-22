@@ -92,6 +92,6 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
             DimensionUtils.switchDimension(session, newDimension, true);
         }
 
-        ChunkUtils.loadDimensionTag(session, packet.getDimension());
+        if (!session.isQuickSwitch()) ChunkUtils.loadDimensionTag(session, packet.getDimension());
     }
 }
