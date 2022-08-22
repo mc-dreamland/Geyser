@@ -43,6 +43,7 @@ public class JavaSetDefaultSpawnPositionTranslator extends PacketTranslator<Clie
         spawnPositionPacket.setSpawnForced(true);
         spawnPositionPacket.setDimensionId(DimensionUtils.javaToBedrock(session.getDimension()));
         spawnPositionPacket.setSpawnType(SetSpawnPositionPacket.Type.WORLD_SPAWN);
+        spawnPositionPacket.setSpawnPosition(Vector3i.from(packet.getPosition().getX(), packet.getPosition().getY() + 20, packet.getPosition().getZ()));
         session.sendUpstreamPacket(spawnPositionPacket);
     }
 }

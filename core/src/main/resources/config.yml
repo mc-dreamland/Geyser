@@ -207,7 +207,7 @@ mtu: 1400
 # If disabled on plugin versions, expect performance decrease and latency increase
 use-direct-connection: true
 
-# 启用网易验证
+# Enable netease online mode
 online-mode: true
 
 config-version: 4
@@ -215,5 +215,4 @@ config-version: 4
 service:
   url: http://localhost:8080/api/
   token: 114514
-  # 倍率
   multiple: 1.0
