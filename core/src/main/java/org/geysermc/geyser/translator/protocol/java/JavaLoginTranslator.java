@@ -96,7 +96,7 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
 
         int distance = 4;
         if (packet.getViewDistance() > 16) {
-            distance = packet.getViewDistance() >> 4;
+            distance = 10;
         } else {
             distance = packet.getViewDistance();
         }

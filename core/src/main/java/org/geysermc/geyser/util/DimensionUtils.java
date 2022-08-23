@@ -79,15 +79,17 @@ public class DimensionUtils {
         session.getOldLoadedChunkCache().addAll(session.getLoadedChunkCache());
         session.getLoadedChunkCache().clear();
 
-        if (session.isQuickSwitch() && !session.isStartClearChunkCache()) {
-            GeyserImpl.getInstance().getScheduledThread().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    clearLoadedChunks(session);
-                }
-            }, 1000, TimeUnit.MILLISECONDS);
-            session.setStartClearChunkCache(true);
-        }
+
+        clearLoadedChunks(session);
+//        if (session.isQuickSwitch() && !session.isStartClearChunkCache()) {
+//            GeyserImpl.getInstance().getScheduledThread().schedule(new Runnable() {
+//                @Override
+//                public void run() {
+//                    clearLoadedChunks(session);
+//                }
+//            }, 1000, TimeUnit.MILLISECONDS);
+//            session.setStartClearChunkCache(true);
+//        }
 
         Entity player = session.getPlayerEntity();
 
