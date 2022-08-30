@@ -64,6 +64,14 @@ public class JavaBlockDestructionTranslator extends PacketTranslator<Clientbound
             case STAGE_9 -> levelEventPacket.setData(breakTime * 9);
             case STAGE_10 -> levelEventPacket.setData(breakTime * 10);
             case RESET -> {
+                if (!levelEventPacket.getPosition().equals(session.getLastBreak())) {
+                    levelEventPacket.setPosition(session.getLastBreak());
+                    session.setLastBreak(Vector3f.from(
+                            packet.getPosition().getX(),
+                            packet.getPosition().getY(),
+                            packet.getPosition().getZ()
+                    ));
+                }
                 levelEventPacket.setType(LevelEventType.BLOCK_STOP_BREAK);
                 levelEventPacket.setData(0);
             }

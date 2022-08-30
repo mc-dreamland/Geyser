@@ -253,6 +253,9 @@ public class GeyserSession implements GeyserConnection, CommandSender {
     private final Set<Vector2i> loadedChunkCache;
 
     @Setter
+    private Vector3f lastBreak;
+
+    @Setter
     private boolean startClearChunkCache;
 
     @Setter

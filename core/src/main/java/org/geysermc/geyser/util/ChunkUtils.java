@@ -201,7 +201,6 @@ public class ChunkUtils {
         data.setChunkX(chunkX);
         data.setChunkZ(chunkZ);
         data.setSubChunksLength(0);
-//        byte[] test = new byte[]{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         data.setData(EMPTY_CHUNK_DATA);
         data.setCachingEnabled(false);
         session.sendUpstreamPacket(data);
