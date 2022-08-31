@@ -40,6 +40,7 @@ import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.FileUtils;
+import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.geyser.util.WebUtils;
 
 import javax.imageio.ImageIO;
@@ -55,6 +56,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Predicate;
+import java.util.zip.GZIPInputStream;
 
 public class SkinProvider {
     public static final boolean ALLOW_THIRD_PARTY_CAPES = GeyserImpl.getInstance().getConfig().isAllowThirdPartyCapes();
@@ -145,6 +147,10 @@ public class SkinProvider {
         return cachedCapes.getIfPresent(capeUrl) != null;
     }
 
+    public static boolean hasSkinCached(String skinUrl){
+        return cachedSkins.getIfPresent(skinUrl) != null;
+    }
+
     public static Skin getCachedSkin(String skinUrl) {
         return permanentSkins.getOrDefault(skinUrl, cachedSkins.getIfPresent(skinUrl));
     }
@@ -156,7 +162,7 @@ public class SkinProvider {
 
     public static CompletableFuture<SkinProvider.SkinData> requestSkinData(PlayerEntity entity) {
         SkinManager.GameProfileData data = SkinManager.GameProfileData.from(entity);
-
+        GeyserImpl.getInstance().getLogger().debug("Entity RequestSkin:"+entity.getUsername() + " url: "+data.skinUrl());
         return requestSkinAndCape(entity.getUuid(), data.skinUrl(), data.capeUrl())
                 .thenApplyAsync(skinAndCape -> {
                     try {
@@ -230,6 +236,7 @@ public class SkinProvider {
                 }
             }
 
+            // 向 URL 请求皮肤、披风数据
             CapeProvider provider = capeUrl != null ? CapeProvider.MINECRAFT : null;
             SkinAndCape skinAndCape = new SkinAndCape(
                     getOrDefault(requestSkin(playerId, newSkinUrl, false), EMPTY_SKIN, 5),
@@ -242,15 +249,21 @@ public class SkinProvider {
     }
 
     public static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
+        GeyserImpl.getInstance().getLogger().debug(playerId+"请求皮肤 url:"+textureUrl);
         if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(EMPTY_SKIN);
+        //  从 cachedSkins 里面拿皮肤
+        // 从HTTP请求缓存里面拿皮肤
         CompletableFuture<Skin> requestedSkin = requestedSkins.get(textureUrl);
         if (requestedSkin != null) {
+            GeyserImpl.getInstance().getLogger().debug("检测到 requested缓存 "+playerId);
             // already requested
             return requestedSkin;
         }
 
+        // 从缓存的 url拿皮肤
         Skin cachedSkin = getCachedSkin(textureUrl);
         if (cachedSkin != null) {
+            GeyserImpl.getInstance().getLogger().debug("检测到 cachedSkin缓存 "+playerId);
             return CompletableFuture.completedFuture(cachedSkin);
         }
 
@@ -262,8 +275,22 @@ public class SkinProvider {
                         cachedSkins.put(textureUrl, skin);
                         requestedSkins.remove(textureUrl);
                     });
+            if (textureUrl.endsWith("?pe")){
+                future = CompletableFuture.supplyAsync(()-> requestSkin(playerId,textureUrl),EXECUTOR_SERVICE).whenCompleteAsync((skin,throwable)->{
+                    skin.updated = true;
+                    cachedSkins.put(textureUrl,skin);
+                    requestedSkins.remove(textureUrl);
+                });
+            }
             requestedSkins.put(textureUrl, future);
         } else {
+            if (textureUrl.endsWith("?pe")){
+                Skin skin = requestSkin(playerId,textureUrl);
+                future = CompletableFuture.completedFuture(skin);
+                cachedSkins.put(textureUrl,skin);
+                return future;
+            }
+            // 成功HTTP拿到皮肤进行缓存
             Skin skin = supplySkin(playerId, textureUrl);
             future = CompletableFuture.completedFuture(skin);
             cachedSkins.put(textureUrl, skin);
@@ -413,6 +440,27 @@ public class SkinProvider {
         return new Skin(uuid, "empty", EMPTY_SKIN.getSkinData(), System.currentTimeMillis(), false, false);
     }
 
+    private static Skin requestSkin(UUID uuid,String textureUrl){
+        try {
+            CompletableFuture<Skin> skinCompletableFuture = CompletableFuture.supplyAsync(()->WebUtils.getJson(textureUrl)).thenApply(json -> {
+                byte[] geometryNameBytes = Base64.getDecoder().decode((json.get("geometry_name").asText()));
+                byte[] geometry_data = MathUtils.unGZipBytes(Base64.getDecoder().decode(json.get("geometry_data").asText()));
+                GeyserImpl.getInstance().getLogger().debug("storeBedrock Geometry: "+uuid + " data length: "+geometry_data.length);
+                SkinProvider.storeBedrockGeometry(uuid,geometryNameBytes,geometry_data);
+                return buildSkin(uuid, textureUrl, json);
+            });
+            return skinCompletableFuture.get();
+        }catch (Exception ignored){}
+        return new Skin(uuid, "empty", EMPTY_SKIN.getSkinData(), System.currentTimeMillis(), false, false);
+    }
+
+    private static Skin buildSkin(UUID uuid,String textureUrl,JsonNode jsonNode) {
+        GeyserImpl.getInstance().getLogger().debug("buildSkin: "+uuid + " url: "+textureUrl + " json: "+jsonNode);
+        byte[] bytes = MathUtils.unGZipBytes(Base64.getDecoder().decode(jsonNode.get("skin_data").asText()));
+        return new Skin(uuid,textureUrl, bytes,
+                System.currentTimeMillis(), true,false);
+    }
+
     private static Cape supplyCape(String capeUrl, CapeProvider provider) {
         byte[] cape = EMPTY_CAPE.getCapeData();
         try {
@@ -477,7 +525,7 @@ public class SkinProvider {
         BufferedImage image = null;
 
         // First see if we have a cached file. We also update the modification stamp so we know when the file was last used
-        File imageFile = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("cache").resolve("images").resolve(UUID.nameUUIDFromBytes(imageUrl.getBytes()).toString() + ".png").toFile();
+        File imageFile = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("cache").resolve("images").resolve(UUID.nameUUIDFromBytes(imageUrl.getBytes()) + ".png").toFile();
         if (imageFile.exists()) {
             try {
                 GeyserImpl.getInstance().getLogger().debug("Reading cached image from file " + imageFile.getPath() + " for " + imageUrl);

@@ -30,6 +30,7 @@ import com.nukkitx.math.vector.Vector3f;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.skin.SkinProvider;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.text.GeyserLocale;
@@ -58,7 +59,11 @@ public class JavaAddPlayerTranslator extends PacketTranslator<ClientboundAddPlay
                 return;
             }
 
-            entity.setGeyserId(packet.getEntityId());
+            if (session.getPlayerEntity().getGeyserId() == entity.getEntityId() && entity.getEntityId() != 1) {
+                entity.setGeyserId(entity.getEntityId() * 5000000L + 99999);
+            } else {
+                entity.setGeyserId(packet.getEntityId());
+            }
             entity.setEntityId(packet.getEntityId());
             entity.setPosition(position);
             entity.setYaw(yaw);
@@ -68,6 +73,8 @@ public class JavaAddPlayerTranslator extends PacketTranslator<ClientboundAddPlay
         session.getEntityCache().cacheEntity(entity);
 
         entity.sendPlayer();
+        GeyserImpl.getInstance().getLogger().debug("AddPlayerTranslator: Entity: "+entity.getUsername() + " session: "+session.getAuthData().name());
+        GeyserImpl.getInstance().getLogger().debug("Entity Textures: "+ entity.getTexturesProperty());
         SkinManager.requestAndHandleSkinAndCape(entity, session, null);
     }
 }

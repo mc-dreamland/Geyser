@@ -29,25 +29,32 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.nimbusds.jose.JWSObject;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.GeyserLogger;
+import org.geysermc.geyser.dump.DumpInfo;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.Constants;
+import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.geyser.util.PluginMessageUtils;
 import org.geysermc.floodgate.util.WebsocketEventType;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import javax.net.ssl.SSLException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public final class FloodgateSkinUploader {
     private final ObjectMapper JACKSON = new ObjectMapper();
@@ -59,7 +66,7 @@ public final class FloodgateSkinUploader {
 
     @Getter private int id;
     @Getter private String verifyCode;
-    @Getter private int subscribersCount;
+    @Getter private int subscribersCount = 2;
 
     public FloodgateSkinUploader(GeyserImpl geyser) {
         this.logger = geyser.getLogger();
@@ -84,7 +91,6 @@ public final class FloodgateSkinUploader {
                         logger.error("Got an error: " + node.get("error").asText());
                         return;
                     }
-
                     int typeId = node.get("event_id").asInt();
                     WebsocketEventType type = WebsocketEventType.fromId(typeId);
                     if (type == null) {
@@ -93,8 +99,13 @@ public final class FloodgateSkinUploader {
                                 typeId));
                         return;
                     }
-
                     switch (type) {
+/*                        case SKIN_SYNC:
+                            JsonNode jsonNode = JACKSON.readTree(unGZipBytes(node.get("data").binaryValue()));
+                            UUID uuid = UUID.fromString(jsonNode.get("uuid").asText());
+                            BedrockClientData clientData = JACKSON.convertValue(jsonNode.get("client_data"), BedrockClientData.class);
+                            SkinManager.syncBedrockSkin(uuid,clientData);
+                            break;*/
                         case SUBSCRIBER_CREATED:
                             id = node.get("id").asInt();
                             verifyCode = node.get("verify_code").asText();
@@ -105,6 +116,8 @@ public final class FloodgateSkinUploader {
                         case SKIN_UPLOADED:
                             // if Geyser is the only subscriber we have send it to the server manually
                             // otherwise it's handled by the Floodgate plugin subscribers
+                            // 向单个 floodgate 代理发送皮肤数据
+                            // 如果有多个 floodgate 订阅者将直接采用 Websocket 发送皮肤数据
                             if (subscribersCount != 1) {
                                 break;
                             }
@@ -141,7 +154,7 @@ public final class FloodgateSkinUploader {
                             //todo
                     }
                 } catch (Exception e) {
-                    logger.error("Error while receiving a message", e);
+                    logger.error("Error while receiving a message: "+message, e);
                 }
             }
 
@@ -184,14 +197,24 @@ public final class FloodgateSkinUploader {
         };
     }
 
-    public void uploadSkin(JsonNode chainData, String clientData) {
+    @SneakyThrows
+    public void syncSkin(GeyserSession session, BedrockClientData clientData) {
+        JsonNode chainData = session.getCertChainData();
         if (chainData == null || !chainData.isArray() || clientData == null) {
             return;
         }
+        logger.debug(session.getAuthData().name() + " syncSkin "+clientData.getOriginalString() );
 
         ObjectNode node = JACKSON.createObjectNode();
-        node.set("chain_data", chainData);
-        node.put("client_data", clientData);
+//        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
+        node.put("skin_data",Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)))));
+        node.put("geometry_data",clientData.getGeometryData());
+        node.put("geometry_name",clientData.getGeometryName());
+        node.put("skin_id",clientData.getSkinId());
+//        node.put("skin_data",gZipBytes(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)));
+//        node.put("geometry_data",gZipBytes(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8)));
+        node.put("uuid",session.getAuthData().uuid().toString());
+        node.put("xuid", session.getAuthData().xuid());
 
         // The reason why I don't like Jackson
         String jsonString;
@@ -202,6 +225,7 @@ public final class FloodgateSkinUploader {
             return;
         }
 
+        logger.debug(session.getAuthData().name() + "syncSkin Json: "+jsonString);
         if (client.isOpen()) {
             client.send(jsonString);
             return;
@@ -226,6 +250,8 @@ public final class FloodgateSkinUploader {
         client.connect();
         return this;
     }
+
+
 
     public void close() {
         if (!closed) {

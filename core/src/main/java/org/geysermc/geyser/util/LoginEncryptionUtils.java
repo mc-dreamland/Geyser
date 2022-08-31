@@ -187,6 +187,7 @@ public class LoginEncryptionUtils {
 
             JsonNode clientDataJson = JSON_MAPPER.readTree(clientJwt.getPayload().toBytes());
             BedrockClientData data = JSON_MAPPER.convertValue(clientDataJson, BedrockClientData.class);
+            data.formatGeometryData();
             data.setOriginalString(clientData);
             session.setClientData(data);
 
