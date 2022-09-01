@@ -32,7 +32,6 @@ import com.github.steveice10.opennbt.tag.builtin.StringTag;
 import com.nukkitx.protocol.bedrock.data.skin.ImageData;
 import com.nukkitx.protocol.bedrock.data.skin.SerializedSkin;
 import com.nukkitx.protocol.bedrock.packet.PlayerListPacket;
-import org.geysermc.api.Geyser;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
@@ -318,7 +317,7 @@ public class SkinManager {
                     capeUrl = session.getClientData().getCapeId();
                 }
                 if (session == null && GeyserImpl.getInstance().getConfig().getRemote().getAuthType() == AuthType.FLOODGATE) {
-                    skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinUrl()+"/skin/" + uuid+"?pe";
+                    skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/" + uuid+"?pe";
                 }
                 GeyserImpl.getInstance().getLogger().debug("loadOfflinSkin: "+entity.getUsername() + " url: "+skinUrl);
             }

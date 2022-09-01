@@ -170,7 +170,7 @@ public interface GeyserConfiguration {
 
     interface IServiceConfiguration {
         String getUrl();
-        String getSkinUrl();
+        String getSkinurl();
         String getToken();
         double getMultiple();
     }

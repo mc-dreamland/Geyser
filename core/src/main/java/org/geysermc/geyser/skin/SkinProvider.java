@@ -35,6 +35,7 @@ import com.google.common.cache.CacheBuilder;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;

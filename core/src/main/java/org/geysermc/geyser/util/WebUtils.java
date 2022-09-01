@@ -100,7 +100,8 @@ public class WebUtils {
      * @param reqURL URL to fetch
      * @return the response as JSON
      */
-    public static JsonNode getJson(String reqURL) throws IOException {
+    @SneakyThrows
+    public static JsonNode getJson(String reqURL)  {
         HttpURLConnection con = (HttpURLConnection) new URL(reqURL).openConnection();
         con.setRequestProperty("User-Agent", "Geyser-" + GeyserImpl.getInstance().getPlatformType().toString() + "/" + GeyserImpl.VERSION);
         return GeyserImpl.JSON_MAPPER.readTree(con.getInputStream());
