@@ -214,5 +214,6 @@ config-version: 4
 
 service:
   url: http://localhost:8080/api/
+  skinUrl: http://localhost:12455
   token: 114514
   multiple: 1.0

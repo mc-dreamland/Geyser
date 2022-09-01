@@ -248,6 +248,8 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
 
         @JsonProperty("url")
         private String url = "http://localhost:8081/api";
+        @JsonProperty("skinUrl")
+        private String skinUrl = "http://localhost:12455";
 
         @JsonProperty("token")
         private String token = "114514";

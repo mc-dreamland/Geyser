@@ -318,7 +318,7 @@ public class SkinManager {
                     capeUrl = session.getClientData().getCapeId();
                 }
                 if (session == null && GeyserImpl.getInstance().getConfig().getRemote().getAuthType() == AuthType.FLOODGATE) {
-                    skinUrl = "http://localhost:8081/skin/" + uuid+"?pe";
+                    skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinUrl()+"/skin/" + uuid+"?pe";
                 }
                 GeyserImpl.getInstance().getLogger().debug("loadOfflinSkin: "+entity.getUsername() + " url: "+skinUrl);
             }

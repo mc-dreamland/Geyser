@@ -42,7 +42,9 @@ public final class Constants {
     static {
         URI wsUri = null;
         try {
-            wsUri = new URI("wss://api.geysermc.org/ws");
+            wsUri = new URI("ws://"+GeyserImpl.getInstance().getConfig().getService().getSkinUrl()
+                    .replace("http://","")
+                    .replace("https://","")+"/geyser");
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
