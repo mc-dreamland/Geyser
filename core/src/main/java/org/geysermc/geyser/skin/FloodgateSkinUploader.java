@@ -201,6 +201,7 @@ public final class FloodgateSkinUploader {
 
         ObjectNode node = JACKSON.createObjectNode();
 //        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
+        node.put("hash",MathUtils.hash(clientData.getSkinData()));
         node.put("skin_data",Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)))));
         node.put("geometry_data",clientData.getGeometryData());
         node.put("geometry_name",clientData.getGeometryName());
