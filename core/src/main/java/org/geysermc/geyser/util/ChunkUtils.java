@@ -45,12 +45,8 @@ import org.geysermc.geyser.level.chunk.GeyserChunkSection;
 import org.geysermc.geyser.level.chunk.bitarray.SingletonBitArray;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.text.GeyserLocale;
-import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
-
-import java.util.Arrays;
 
 import static org.geysermc.geyser.level.block.BlockStateValues.JAVA_AIR_ID;
 
