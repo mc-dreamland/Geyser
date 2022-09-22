@@ -70,6 +70,10 @@ public class DimensionUtils {
             ChunkUtils.sendEmptyChunk(session, vector2i.getX(), vector2i.getY(), false);
             session.getOldLoadedChunkCache().remove(vector2i);
         }
+
+        session.getSkullCache().getSkulls().forEach((vector3i, skull) -> {
+            session.getSkullCache().removeSkull(vector3i);
+        });
     }
 
     public static void switchDimension(GeyserSession session, String javaDimension, boolean changeWorld) {
@@ -109,7 +113,7 @@ public class DimensionUtils {
         changeDimensionPacket.setDimension(bedrockDimension);
         changeDimensionPacket.setRespawn(true);
         changeDimensionPacket.setPosition(pos);
-        if (!session.isQuickSwitch() && changeWorld) {
+        if (!session.isQuickSwitch() || changeWorld) {
             session.sendUpstreamPacket(changeDimensionPacket);
             session.setDimension(javaDimension);
         }
