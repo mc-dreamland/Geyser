@@ -1497,9 +1497,6 @@ public class GeyserSession implements GeyserConnection, CommandSender {
      * @param packet the bedrock packet from the NukkitX protocol lib
      */
     public void sendUpstreamPacket(BedrockPacket packet) {
-        if (packet.getPacketType().equals(BedrockPacketType.CHANGE_DIMENSION) && this.isQuickSwitch()) {
-            return;
-        }
         upstream.sendPacket(packet);
     }
 
