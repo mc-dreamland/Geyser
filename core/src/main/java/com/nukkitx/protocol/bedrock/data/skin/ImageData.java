@@ -22,7 +22,12 @@ public class ImageData {
     private static final int DOUBLE_SKIN_SIZE = 64 * 64 * PIXEL_SIZE;
     private static final int SKIN_128_64_SIZE = 128 * 64 * PIXEL_SIZE;
     private static final int SKIN_128_128_SIZE = 128 * 128 * PIXEL_SIZE;
+    private static final int SKIN_256_128_SIZE = 256 * 128 * PIXEL_SIZE;
+    private static final int SKIN_256_256_SIZE = 256 * 256 * PIXEL_SIZE;
+    private static final int SKIN_512_256_SIZE = 512 * 256 * PIXEL_SIZE;
+    private static final int SKIN_512_512_SIZE = 512 * 512 * PIXEL_SIZE;
     private static final int SKIN_1024_512_SIZE = 1024 * 512 * PIXEL_SIZE;
+    private static final int SKIN_1024_1024_SIZE = 1024 * 1024 * PIXEL_SIZE;
 
     private final int width;
     private final int height;
@@ -46,8 +51,18 @@ public class ImageData {
                 return new ImageData(128, 64, image);
             case SKIN_128_128_SIZE:
                 return new ImageData(128, 128, image);
+            case SKIN_256_128_SIZE:
+                return new ImageData(256, 128, image);
+            case SKIN_256_256_SIZE:
+                return new ImageData(256, 256, image);
+            case SKIN_512_256_SIZE:
+                return new ImageData(512, 256, image);
+            case SKIN_512_512_SIZE:
+                return new ImageData(512, 512, image);
             case SKIN_1024_512_SIZE:
                 return new ImageData(1024, 512, image);
+            case SKIN_1024_1024_SIZE:
+                return new ImageData(1024, 1024, image);
             default:
                 throw new IllegalArgumentException("Invalid legacy skin: " + image.length);
         }
@@ -59,7 +74,12 @@ public class ImageData {
             case DOUBLE_SKIN_SIZE:
             case SKIN_128_64_SIZE:
             case SKIN_128_128_SIZE:
+            case SKIN_256_128_SIZE:
+            case SKIN_256_256_SIZE:
+            case SKIN_512_256_SIZE:
+            case SKIN_512_512_SIZE:
             case SKIN_1024_512_SIZE:
+            case SKIN_1024_1024_SIZE:
                 return;
             default:
                 throw new IllegalArgumentException("Invalid legacy skin: " + image.length);
