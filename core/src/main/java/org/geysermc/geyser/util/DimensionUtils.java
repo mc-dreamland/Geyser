@@ -84,7 +84,9 @@ public class DimensionUtils {
         session.getLoadedChunkCache().clear();
 
 
-        clearLoadedChunks(session);
+        if (session.isQuickSwitch()) {
+            clearLoadedChunks(session);
+        }
 //        if (session.isQuickSwitch() && !session.isStartClearChunkCache()) {
 //            GeyserImpl.getInstance().getScheduledThread().schedule(new Runnable() {
 //                @Override
@@ -113,7 +115,8 @@ public class DimensionUtils {
         changeDimensionPacket.setDimension(bedrockDimension);
         changeDimensionPacket.setRespawn(true);
         changeDimensionPacket.setPosition(pos);
-        if (!session.isQuickSwitch() || changeWorld) {
+//        if (!session.isQuickSwitch() || changeWorld) {
+        if (!session.isQuickSwitch()) {
             session.sendUpstreamPacket(changeDimensionPacket);
             session.setDimension(javaDimension);
         }
@@ -143,7 +146,8 @@ public class DimensionUtils {
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
 //        ChunkUtils.sendEmptyChunks(session, Vector3i.from(0, 64, 0), 3, true);
-        if (!session.isQuickSwitch() && changeWorld) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+        if (!session.isQuickSwitch()) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+//        if (!session.isQuickSwitch() && changeWorld) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 //        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
         // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
