@@ -189,6 +189,8 @@ public interface GeyserConfiguration {
 
     int getMtu();
 
+    int getThreads();
+
     boolean isUseDirectConnection();
 
     boolean isQuickSwitchDimension();

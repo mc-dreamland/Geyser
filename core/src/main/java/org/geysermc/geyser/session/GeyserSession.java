@@ -259,7 +259,7 @@ public class GeyserSession implements GeyserConnection, CommandSender {
     private boolean startClearChunkCache;
 
     @Setter
-    private boolean quickSwitch = true;
+    private boolean quickSwitch = false;
 
     /**
      * A list of all players that have a player head on with a custom texture.

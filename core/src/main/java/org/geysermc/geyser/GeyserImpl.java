@@ -310,9 +310,15 @@ public class GeyserImpl implements GeyserApi {
         logger.debug("Setting MTU to " + config.getMtu());
 
         Integer bedrockThreadCount = Integer.getInteger("Geyser.BedrockNetworkThreads");
+
+        if (config.getThreads() > 1) {
+            bedrockThreadCount = config.getThreads();
+        }
+        logger.warning("正在设定间歇泉启用线程...线程数为: " + bedrockThreadCount);
         if (bedrockThreadCount == null) {
             // Copy the code from Netty's default thread count fallback
             bedrockThreadCount = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
+            logger.warning("正在重新设定间歇泉启用线程...线程数为: " + bedrockThreadCount);
         }
 
         boolean enableProxyProtocol = config.getBedrock().isEnableProxyProtocol();

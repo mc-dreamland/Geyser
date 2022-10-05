@@ -156,7 +156,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            session.sendUpstreamPacketImmediately(neteaseCustomPacket);
+            session.sendUpstreamPacket(neteaseCustomPacket);
 
         } else if (channel.equals("floodgate:packet")) {
             byte[] data = packet.getData();

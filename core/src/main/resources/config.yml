@@ -201,6 +201,9 @@ enable-proxy-connections: false
 # 1400 is the default.
 mtu: 1400
 
+# set 1 means auto.
+threads: 1
+
 # Whether to connect directly into the Java server without creating a TCP connection.
 # This should only be disabled if a plugin that interfaces with packets or the network does not work correctly with Geyser.
 # If enabled on plugin versions, the remote address and port sections are ignored
