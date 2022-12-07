@@ -42,10 +42,9 @@ public class JavaChatTranslator extends PacketTranslator<ClientboundChatPacket> 
         textPacket.setSourceName("");
         textPacket.setXuid(session.getAuthData().xuid());
         textPacket.setType(switch (packet.getType()) {
-            case CHAT -> TextPacket.Type.CHAT;
+            case CHAT -> TextPacket.Type.RAW;
             case SYSTEM -> TextPacket.Type.SYSTEM;
-            case NOTIFICATION -> TextPacket.Type.TIP;
-            default -> TextPacket.Type.RAW;
+            case NOTIFICATION -> TextPacket.Type.POPUP;
         });
 
         textPacket.setNeedsTranslation(false);
