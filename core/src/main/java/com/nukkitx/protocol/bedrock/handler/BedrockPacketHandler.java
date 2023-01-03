@@ -736,4 +736,8 @@ public interface BedrockPacketHandler extends PacketHandler {
     default boolean handle(NeteaseMarketOpenPacket packet) {
         return false;
     }
+
+    default boolean handle(FeatureRegistryPacket packet) {
+        return false;
+    }
 }

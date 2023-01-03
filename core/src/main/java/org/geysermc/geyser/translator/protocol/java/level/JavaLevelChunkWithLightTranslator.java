@@ -281,6 +281,11 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 }
             }
 
+            // As of 1.18.0, Bedrock hardcodes to always read 25 biome sections
+            // As of 1.18.30, the hardcode may now be tied to the dimension definition
+            boolean isNewVersion = session.getUpstream().getProtocolVersion() >= Bedrock_v503.V503_CODEC.getProtocolVersion();
+            int biomeCount = isNewVersion ? bedrockDimension.height() >> 4 : 25;
+
             // Find highest section
             sectionCount = sections.length - 1;
             while (sectionCount >= 0 && sections[sectionCount] == null) {
@@ -298,10 +303,16 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                     size += SERIALIZED_CHUNK_DATA.length;
                 }
             }
-            size += ChunkUtils.EMPTY_CHUNK_DATA.length; // Consists only of biome data
-            size += 1; // Border blocks
-            size += 1; // Extra data length (always 0)
-            size += bedrockBlockEntities.size() * 64; // Conservative estimate of 64 bytes per tile entity
+            if (session.isNewVersion()) {
+                size += ChunkUtils.EMPTY_BIOME_DATA.length * biomeCount;
+                size += 1; // Border blocks
+                size += bedrockBlockEntities.size() * 64; // Conservative estimate of 64 bytes per tile entity
+            } else {
+                size += ChunkUtils.EMPTY_CHUNK_DATA.length; // Consists only of biome data
+                size += 1; // Border blocks
+                size += 1; // Extra data length (always 0)
+                size += bedrockBlockEntities.size() * 64; // Conservative estimate of 64 bytes per tile entity
+            }
 
             // Allocate output buffer
             byteBuf = ByteBufAllocator.DEFAULT.buffer(size);
@@ -313,11 +324,6 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                     byteBuf.writeBytes(SERIALIZED_CHUNK_DATA);
                 }
             }
-
-            // As of 1.18.0, Bedrock hardcodes to always read 25 biome sections
-            // As of 1.18.30, the hardcode may now be tied to the dimension definition
-            boolean isNewVersion = session.getUpstream().getProtocolVersion() >= Bedrock_v503.V503_CODEC.getProtocolVersion();
-            int biomeCount = isNewVersion ? bedrockDimension.height() >> 4 : 25;
             int dimensionOffset = bedrockDimension.minY() >> 4;
             for (int i = 0; i < biomeCount; i++) {
                 int biomeYOffset = dimensionOffset + i;
@@ -341,8 +347,8 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 BiomeTranslator.toNewBedrockBiome(session, javaBiomes[i + (dimensionOffset - yOffset)]).writeToNetwork(byteBuf);
             }
 
-//            byteBuf.writeByte(0); // Border blocks - Edu edition only
-            VarInts.writeUnsignedInt(byteBuf, 0); // extra data length, 0 for now
+            byteBuf.writeByte(0); // Border blocks - Edu edition only
+//            VarInts.writeUnsignedInt(byteBuf, 0); // extra data length, 0 for now
 
             // Encode tile entities into buffer
             NBTOutputStream nbtStream = NbtUtils.createNetworkWriter(new ByteBufOutputStream(byteBuf));
@@ -369,8 +375,8 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         levelChunkPacket.setData(payload);
         session.sendUpstreamPacket(levelChunkPacket);
 
-        session.getLoadedChunkCache().add(Vector2i.from(packet.getX(), packet.getZ()));
-        session.getOldLoadedChunkCache().remove(Vector2i.from(packet.getX(), packet.getZ()));
+//        session.getLoadedChunkCache().add(Vector2i.from(packet.getX(), packet.getZ()));
+//        session.getOldLoadedChunkCache().remove(Vector2i.from(packet.getX(), packet.getZ()));
 
         for (Map.Entry<Vector3i, ItemFrameEntity> entry : session.getItemFrameCache().entrySet()) {
             Vector3i position = entry.getKey();

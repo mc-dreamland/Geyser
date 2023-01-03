@@ -93,6 +93,7 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
         }
 
         // TODO 需尽快实现进入高版本服务器时关闭该功能，及游戏中提供相关功能
-        if (!session.isQuickSwitch()) ChunkUtils.loadDimensionTag(session, packet.getDimension());
+        if (!session.isNewVersion() && !session.isQuickSwitch()) ChunkUtils.loadDimensionTag(session, packet.getDimension());
+//        if (!session.isQuickSwitch()) ChunkUtils.loadDimensionTag(session, packet.getDimension());
     }
 }

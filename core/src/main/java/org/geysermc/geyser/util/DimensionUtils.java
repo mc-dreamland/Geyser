@@ -64,12 +64,12 @@ public class DimensionUtils {
     public static final String THE_END = "minecraft:the_end";
 
     public static void clearLoadedChunks(GeyserSession session) {
-        session.setStartClearChunkCache(false);
-        HashSet<Vector2i> vector2is = new HashSet<>(session.getOldLoadedChunkCache());
-        for (Vector2i vector2i : vector2is) {
-            ChunkUtils.sendEmptyChunk(session, vector2i.getX(), vector2i.getY(), false);
-            session.getOldLoadedChunkCache().remove(vector2i);
-        }
+//        session.setStartClearChunkCache(false);
+//        HashSet<Vector2i> vector2is = new HashSet<>(session.getOldLoadedChunkCache());
+//        for (Vector2i vector2i : vector2is) {
+//            ChunkUtils.sendEmptyChunk(session, vector2i.getX(), vector2i.getY(), false);
+//            session.getOldLoadedChunkCache().remove(vector2i);
+//        }
 
         session.getSkullCache().getSkulls().forEach((vector3i, skull) -> {
             session.getSkullCache().removeSkull(vector3i);
@@ -80,13 +80,11 @@ public class DimensionUtils {
         int bedrockDimension = javaToBedrock(javaDimension);
         int previousDimension = javaToBedrock(session.getDimension());
 
-        session.getOldLoadedChunkCache().addAll(session.getLoadedChunkCache());
-        session.getLoadedChunkCache().clear();
 
 
-        if (session.isQuickSwitch()) {
-            clearLoadedChunks(session);
-        }
+//        if (session.isNewVersion() || session.isQuickSwitch()) {
+//            clearLoadedChunks(session);
+//        }
 //        if (session.isQuickSwitch() && !session.isStartClearChunkCache()) {
 //            GeyserImpl.getInstance().getScheduledThread().schedule(new Runnable() {
 //                @Override
@@ -116,7 +114,8 @@ public class DimensionUtils {
         changeDimensionPacket.setRespawn(true);
         changeDimensionPacket.setPosition(pos);
 //        if (!session.isQuickSwitch() || changeWorld) {
-        if (!session.isQuickSwitch()) {
+        if (!session.isNewVersion() && !session.isQuickSwitch()) {
+//        if (!session.isQuickSwitch()) {
             session.sendUpstreamPacket(changeDimensionPacket);
             session.setDimension(javaDimension);
         }
@@ -135,7 +134,8 @@ public class DimensionUtils {
         // Effects are re-sent from server
         entityEffects.clear();
 
-        if (!session.isQuickSwitch()) {
+        if (!session.isNewVersion() && !session.isQuickSwitch()) {
+//        if (!session.isQuickSwitch()) {
             //let java server handle portal travel sound
             StopSoundPacket stopSoundPacket = new StopSoundPacket();
             stopSoundPacket.setStoppingAllSound(true);
@@ -146,14 +146,16 @@ public class DimensionUtils {
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
 //        ChunkUtils.sendEmptyChunks(session, Vector3i.from(0, 64, 0), 3, true);
-        if (!session.isQuickSwitch()) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+        if (!session.isNewVersion() && !session.isQuickSwitch()) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+//        if (!session.isQuickSwitch()) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 //        if (!session.isQuickSwitch() && changeWorld) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 //        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
         // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
         // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
         // thinks they are in the end dimension.
-        if (!session.isQuickSwitch()) {
+        if (!session.isNewVersion() && !session.isQuickSwitch()) {
+//        if (!session.isQuickSwitch()) {
             if (BEDROCK_NETHER_ID == 2) {
                 if (NETHER.equals(javaDimension)) {
                     session.sendFog("minecraft:fog_hell");

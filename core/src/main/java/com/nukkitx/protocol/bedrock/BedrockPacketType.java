@@ -58,6 +58,7 @@ public enum BedrockPacketType {
     ENTITY_PICK_REQUEST,
     EVENT,
     EXPLODE,
+    FEATURE_REGISTRY,
     FILTER_TEXT,
     GAME_RULES_CHANGED,
     GUI_DATA_PICK_ITEM,
