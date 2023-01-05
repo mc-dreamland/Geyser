@@ -45,6 +45,7 @@ public final class Constants {
             wsUri = new URI("ws://"+GeyserImpl.getInstance().getConfig().getService().getSkinurl()
                     .replace("http://","")
                     .replace("https://","")+"/geyser");
+            GeyserImpl.getInstance().getLogger().debug("init wsUri: "+wsUri);
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }

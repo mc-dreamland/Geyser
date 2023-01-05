@@ -55,7 +55,8 @@ public class SkinManager {
     public static PlayerListPacket.Entry buildCachedEntry(GeyserSession session, PlayerEntity playerEntity) {
         GameProfileData data = GameProfileData.from(playerEntity);
         SkinProvider.Cape cape = SkinProvider.getCachedCape(data.capeUrl());
-        SkinProvider.SkinGeometry geometry = SkinProvider.SkinGeometry.getLegacy(data.isAlex());
+//        SkinProvider.SkinGeometry geometry = SkinProvider.SkinGeometry.getLegacy(data.isAlex());
+        SkinProvider.SkinGeometry geometry = SkinProvider.FASHION_CHUN_HU;
 
         GeyserImpl.getInstance().getLogger().debug("playerEntity buildCache: " + playerEntity.getUsername() + " skinUrl: " + data.skinUrl() + " session: " + session.getAuthData().name());
         SkinProvider.Skin skin = SkinProvider.getCachedSkin(data.skinUrl());
@@ -181,8 +182,13 @@ public class SkinManager {
             byte[] geometryNameBytes = Base64.getDecoder().decode(clientData.getGeometryName().getBytes(StandardCharsets.UTF_8));
             byte[] geometryBytes = Base64.getDecoder().decode(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8));
             geyser.getLogger().debug(playerEntity.getUuid() + " "+String.format("length: Skin-%s Cape-%s GeometryName-%s geometry-%s", skinBytes.length, capeBytes.length, geometryNameBytes.length, geometryBytes.length));
-            SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
-            SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
+//            SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
+//            SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
+
+            SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), SkinProvider.CHUN_HU.getSkinData());
+            SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), SkinProvider.FASHION_CHUN_HU.getGeometryName().getBytes(StandardCharsets.UTF_8),
+                    SkinProvider.FASHION_CHUN_HU.getGeometryData().getBytes(StandardCharsets.UTF_8));
+            geyser.getLogger().debug("storeGeometrys: "+SkinProvider.getCachedGeometry());
 
             if (!clientData.getCapeId().equals("")) {
                 SkinProvider.storeBedrockCape(playerEntity.getUuid(), capeBytes);

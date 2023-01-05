@@ -35,7 +35,6 @@ import com.google.common.cache.CacheBuilder;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
@@ -57,7 +56,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Predicate;
-import java.util.zip.GZIPInputStream;
 
 public class SkinProvider {
     public static final boolean ALLOW_THIRD_PARTY_CAPES = GeyserImpl.getInstance().getConfig().isAllowThirdPartyCapes();
@@ -66,6 +64,11 @@ public class SkinProvider {
     public static final byte[] STEVE_SKIN = new ProvidedSkin("bedrock/skin/skin_steve.png").getSkin();
     public static final Skin EMPTY_SKIN = new Skin(-1, "steve", STEVE_SKIN);
     public static final byte[] ALEX_SKIN = new ProvidedSkin("bedrock/skin/skin_alex.png").getSkin();
+
+    public static final SkinGeometry FASHION_CHUN_HU = new SkinGeometry("{\"geometry\" :{\"default\" :\"geometry.fashion_nilu\"}}",
+            new String(FileUtils.readAllBytes("bedrock/skin/geometry/fashion_nilu.json"),StandardCharsets.UTF_8),false);
+    // chunhu
+    public static final Skin CHUN_HU = new Skin(-1,"chunhu",new ProvidedSkin("bedrock/skin/geometry/nilu.png").getSkin());
     public static final Skin EMPTY_SKIN_ALEX = new Skin(-1, "alex", ALEX_SKIN);
     private static final Map<String, Skin> permanentSkins = new HashMap<>() {{
         put("steve", EMPTY_SKIN);
@@ -97,6 +100,12 @@ public class SkinProvider {
     public static final SkinGeometry SKULL_GEOMETRY;
     public static final SkinGeometry WEARING_CUSTOM_SKULL;
     public static final SkinGeometry WEARING_CUSTOM_SKULL_SLIM;
+
+
+
+    public static Map<UUID, SkinGeometry> getCachedGeometry() {
+        return cachedGeometry;
+    }
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -169,7 +178,8 @@ public class SkinProvider {
                     try {
                         Skin skin = skinAndCape.getSkin();
                         Cape cape = skinAndCape.getCape();
-                        SkinGeometry geometry = SkinGeometry.getLegacy(data.isAlex());
+//                        SkinGeometry geometry = SkinGeometry.getLegacy(data.isAlex());
+                        SkinGeometry geometry = SkinProvider.FASHION_CHUN_HU;
 
                         if (cape.isFailed()) {
                             cape = getOrDefault(requestBedrockCape(entity.getUuid()),
@@ -186,6 +196,7 @@ public class SkinProvider {
                         geometry = getOrDefault(requestBedrockGeometry(
                                 geometry, entity.getUuid()
                         ), geometry, 3);
+
 
                         boolean isDeadmau5 = "deadmau5".equals(entity.getUsername());
                         // Not a bedrock player check for ears
@@ -208,7 +219,7 @@ public class SkinProvider {
                             if (isEars) {
                                 // Get the new geometry
                                 geometry = SkinGeometry.getEars(data.isAlex());
-
+                                GeyserImpl.getInstance().getLogger().debug("isEars... storeEarSkin and geometry");
                                 // Store the skin and geometry for the ears
                                 storeEarSkin(skin);
                                 storeEarGeometry(entity.getUuid(), data.isAlex());
@@ -236,21 +247,32 @@ public class SkinProvider {
                     newSkinUrl = session.getClientData().getSkinId();
                 }
             }
-
             // 向 URL 请求皮肤、披风数据
             CapeProvider provider = capeUrl != null ? CapeProvider.MINECRAFT : null;
             SkinAndCape skinAndCape = new SkinAndCape(
                     getOrDefault(requestSkin(playerId, newSkinUrl, false), EMPTY_SKIN, 5),
                     getOrDefault(requestCape(capeUrl, provider, false), EMPTY_CAPE, 5)
             );
+            GeyserImpl.getInstance().getLogger().debug("player skin is: "+skinAndCape.getSkin().getSkinOwner());
 
             GeyserImpl.getInstance().getLogger().debug("Took " + (System.currentTimeMillis() - time) + "ms for " + playerId);
             return skinAndCape;
         }, EXECUTOR_SERVICE);
     }
 
+    /**
+     * 最终请求皮肤方法
+     * @param playerId
+     * @param textureUrl
+     * @param newThread
+     * @return
+     */
     public static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
         GeyserImpl.getInstance().getLogger().debug(playerId+"请求皮肤 url:"+textureUrl);
+        if (playerId.toString().equals("1d613e67-e203-34d6-8e78-d16fad3fbd4c")){
+            GeyserImpl.getInstance().getLogger().debug("set chun hu~");
+            return CompletableFuture.completedFuture(SkinProvider.CHUN_HU);
+        }
         if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(EMPTY_SKIN);
         //  从 cachedSkins 里面拿皮肤
         // 从HTTP请求缓存里面拿皮肤
@@ -429,7 +451,8 @@ public class SkinProvider {
      * @param isSlim If the player is using an slim base
      */
     public static void storeEarGeometry(UUID playerID, boolean isSlim) {
-        cachedGeometry.put(playerID, SkinGeometry.getEars(isSlim));
+//        cachedGeometry.put(playerID, SkinGeometry.getEars(isSlim));
+        cachedGeometry.put(playerID, SkinProvider.FASHION_CHUN_HU);
     }
 
     private static Skin supplySkin(UUID uuid, String textureUrl) {
