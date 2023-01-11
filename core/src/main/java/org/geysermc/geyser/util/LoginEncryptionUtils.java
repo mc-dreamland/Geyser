@@ -169,6 +169,7 @@ public class LoginEncryptionUtils {
             }
 
             JsonNode extraData = payload.get("extraData");
+            session.setPlatform(extraData.get("platform").asText());
             session.setAuthenticationData(new AuthData(
                     extraData.get("displayName").asText(),
                     UUID.fromString(extraData.get("identity").asText()),

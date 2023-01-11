@@ -165,6 +165,8 @@ public class GeyserSession implements GeyserConnection, CommandSender {
     @Setter
     private int remotePort;
     @Setter
+    private String platform;
+    @Setter
     private AuthType remoteAuthType;
     /* Setter for GeyserConnect */
 
@@ -263,7 +265,7 @@ public class GeyserSession implements GeyserConnection, CommandSender {
     private boolean startClearChunkCache;
 
     @Setter
-    private boolean quickSwitch = false;
+    private boolean quickSwitch = true;
 
     /**
      * A list of all players that have a player head on with a custom texture.
@@ -603,6 +605,9 @@ public class GeyserSession implements GeyserConnection, CommandSender {
      * Send all necessary packets to load Bedrock into the server
      */
     public void connect() {
+
+        GeyserImpl.getInstance().checkIp(this);
+
         startGame();
         sentSpawnPacket = true;
 
@@ -1469,7 +1474,6 @@ public class GeyserSession implements GeyserConnection, CommandSender {
         }
 
         upstream.sendPacket(startGamePacket);
-        System.out.println(startGamePacket);
     }
 
     public void testBytes(BedrockSession session) {
