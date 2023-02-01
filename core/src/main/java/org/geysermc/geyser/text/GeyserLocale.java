@@ -202,21 +202,25 @@ public class GeyserLocale {
             formatString = properties.getProperty(key);
         }
 
-        // Try and get the key from the default locale
-        if (formatString == null) {
-            properties = LOCALE_MAPPINGS.get(getDefaultLocale());
-            formatString = properties.getProperty(key);
-
-            // Try and get the key from en_US (this should only ever happen in development)
+        try {
+            // Try and get the key from the default locale
             if (formatString == null) {
-                properties = LOCALE_MAPPINGS.get("en_US");
+                properties = LOCALE_MAPPINGS.get(getDefaultLocale());
                 formatString = properties.getProperty(key);
 
-                // Final fallback
+                // Try and get the key from en_US (this should only ever happen in development)
                 if (formatString == null) {
-                    return key;
+                    properties = LOCALE_MAPPINGS.get("en_US");
+                    formatString = properties.getProperty(key);
+
+                    // Final fallback
+                    if (formatString == null) {
+                        return key;
+                    }
                 }
             }
+        }catch (NullPointerException e){
+            formatString = key;
         }
 
         String message = formatString.replace("&", "\u00a7");

@@ -197,15 +197,16 @@ public final class FloodgateSkinUploader {
         if (chainData == null || !chainData.isArray() || clientData == null) {
             return;
         }
-        logger.debug(session.getAuthData().name() + " syncSkin "+clientData.getOriginalString() );
-
+//        logger.debug(session.getAuthData().name() + " syncSkin "+clientData.getOriginalString() );
         ObjectNode node = JACKSON.createObjectNode();
 //        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
         node.put("hash",MathUtils.hash(clientData.getSkinData()));
         node.put("skin_data",Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)))));
-        node.put("geometry_data",clientData.getGeometryData());
+        node.put("geometry_data",clientData.getGeometryData().replace("\t",""));
         node.put("geometry_name",clientData.getGeometryName());
         node.put("skin_id",clientData.getSkinId());
+        node.put("fashion_name",clientData.getFashionName());
+        node.put("fashion_data_name",clientData.getFashionDataName());
 //        node.put("skin_data",gZipBytes(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)));
 //        node.put("geometry_data",gZipBytes(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8)));
         node.put("uuid",session.getAuthData().uuid().toString());

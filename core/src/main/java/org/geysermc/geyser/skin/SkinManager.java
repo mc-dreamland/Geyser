@@ -42,9 +42,7 @@ import org.geysermc.geyser.text.GeyserLocale;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class SkinManager {
@@ -55,13 +53,8 @@ public class SkinManager {
     public static PlayerListPacket.Entry buildCachedEntry(GeyserSession session, PlayerEntity playerEntity) {
         GameProfileData data = GameProfileData.from(playerEntity);
         SkinProvider.Cape cape = SkinProvider.getCachedCape(data.capeUrl());
-        SkinProvider.SkinGeometry geometry = SkinProvider.SkinGeometry.getLegacy(data.isAlex());
-
-        // only steve
-        // 不会更改 GeyserSession 模型
-//        if (playerEntity.getUuid().toString().equals("1d613e67-e203-34d6-8e78-d16fad3fbd4c")){
-//            geometry = SkinProvider.FASHION_CHUN_HU;
-//        }
+        SkinProvider.SkinGeometry geometry = SkinProvider.getCachedGeometry().getOrDefault(playerEntity.getUuid(),
+                SkinProvider.SkinGeometry.getLegacy(data.isAlex()));
 
         GeyserImpl.getInstance().getLogger().debug("playerEntity buildCache: " + playerEntity.getUsername() + " skinUrl: " + data.skinUrl() + " session: " + session.getAuthData().name());
         SkinProvider.Skin skin = SkinProvider.getCachedSkin(data.skinUrl());
@@ -191,9 +184,10 @@ public class SkinManager {
             SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
             SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
 
-            if (playerEntity.getUuid().toString().equals("1d613e67-e203-34d6-8e78-d16fad3fbd4c")){
-                SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), SkinProvider.getCachedSkin("nilu").getSkinData());
-                SkinProvider.storeBedrockGeometry(playerEntity.getUuid(),SkinProvider.getCachedGeometry("fashion_nilu"));
+            if (Objects.nonNull(clientData.getFashionName()) && SkinProvider.getPermanentSkins().containsKey(clientData.getFashionName())){
+                SkinProvider.Fashion fashion = SkinProvider.Fashion.valueOf(clientData.getFashionName().toUpperCase(Locale.ROOT));
+                SkinProvider.storeBedrockSkin(playerEntity.getUuid(),clientData.getSkinId(), fashion.getSkin());
+                SkinProvider.storeBedrockGeometry(playerEntity.getUuid(),fashion.getGeometry());
             }
 
             geyser.getLogger().debug("storeGeometrys: "+SkinProvider.getCachedGeometry());
@@ -206,7 +200,10 @@ public class SkinManager {
         }
     }
 
-
+    public static void switchFashion(BedrockClientData clientData, SkinProvider.Fashion fashion){
+        clientData.setFashionName(fashion.getFashionName());
+        clientData.setFashionDataName(fashion.geometryName());
+    }
 //    /**
 //     * 对其他Geyser进行皮肤同步
 //     */

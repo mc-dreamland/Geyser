@@ -60,8 +60,7 @@ public class JavaGameProfileTranslator extends PacketTranslator<ClientboundGameP
             // We upload it after we know for sure that the target server
             // is ready to handle the result of the global server.
             SkinManager.handleBedrockSkin(playerEntity, session.getClientData());
-            // TODO 记得取消注释
-//            session.getGeyser().getSkinUploader().syncSkin(session, session.getClientData());
+            session.getGeyser().getSkinUploader().syncSkin(session, session.getClientData());
         }
 
         // We no longer need these variables; they're just taking up space in memory now

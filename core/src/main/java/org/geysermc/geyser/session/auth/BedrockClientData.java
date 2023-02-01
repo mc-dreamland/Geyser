@@ -79,6 +79,11 @@ public final class BedrockClientData {
     @JsonProperty(value = "PremiumSkin")
     private boolean premiumSkin;
 
+    @Getter@Setter
+    private String fashionName;
+    @Getter@Setter
+    private String fashionDataName;
+
     @JsonProperty(value = "DeviceId")
     private String deviceId;
     @JsonProperty(value = "DeviceModel")

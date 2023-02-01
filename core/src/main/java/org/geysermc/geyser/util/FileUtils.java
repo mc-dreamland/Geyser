@@ -32,7 +32,6 @@ import org.geysermc.geyser.GeyserImpl;
 
 import java.io.*;
 import java.lang.annotation.Annotation;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -261,8 +260,8 @@ public class FileUtils {
     }
     public static List<File> loopFiles(String path,FileFilter fileFilter){
         try {
-            return loopFiles(new File(GeyserBootstrap.class.getClassLoader().getResource(path).getPath()),1,fileFilter);
-        }catch (NullPointerException e){
+            return loopFiles(new File(GeyserBootstrap.class.getClassLoader().getResource(path).toURI().toString()),1,fileFilter);
+        }catch (Exception ignored){
             return loopFiles(new File(path),1,fileFilter);
         }
     }
