@@ -70,7 +70,6 @@ public class JavaAddPlayerTranslator extends PacketTranslator<ClientboundAddPlay
 
         entity.sendPlayer();
         GeyserImpl.getInstance().getLogger().debug("AddPlayerTranslator: Entity: "+entity.getUsername() + " session: "+session.getAuthData().name());
-        GeyserImpl.getInstance().getLogger().debug("Entity Textures: "+ entity.getTexturesProperty());
         SkinManager.requestAndHandleSkinAndCape(entity, session, null);
     }
 }

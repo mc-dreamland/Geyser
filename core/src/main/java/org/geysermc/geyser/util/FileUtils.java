@@ -32,10 +32,14 @@ import org.geysermc.geyser.GeyserImpl;
 
 import java.io.*;
 import java.lang.annotation.Annotation;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -240,5 +244,86 @@ public class FileUtils {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static String replaceBlank(String source) {
+        String ret = "";
+        if (source.length() > 0) {
+            ret = source
+                    .replaceAll("\\s{2,}",  "")
+                    .replaceAll("\\t", "");
+        }
+        return ret;
+    }
+
+    public static List<File> loopFiles(String path){
+        return loopFiles(new File(GeyserBootstrap.class.getClassLoader().getResource(path).getPath()),1,null);
+    }
+    public static List<File> loopFiles(String path,FileFilter fileFilter){
+        try {
+            return loopFiles(new File(GeyserBootstrap.class.getClassLoader().getResource(path).getPath()),1,fileFilter);
+        }catch (NullPointerException e){
+            return loopFiles(new File(path),1,fileFilter);
+        }
+    }
+
+    public static List<File> loopFiles(File file, int maxDepth, FileFilter fileFilter) {
+        return loopFiles(file.toPath(), maxDepth, fileFilter);
+    }
+    public static List<File> loopFiles(File file, FileFilter fileFilter) {
+        return loopFiles(file.toPath(), 1, fileFilter);
+    }
+
+    public static boolean isDirectory(Path path) {
+        return isDirectory(path, false);
+    }
+
+    public static List<File> loopFiles(Path path, int maxDepth, FileFilter fileFilter) {
+        final List<File> fileList = new ArrayList<>();
+
+        if (null == path || false == Files.exists(path)) {
+            return fileList;
+        } else if (false == isDirectory(path)) {
+            final File file = path.toFile();
+            if (null == fileFilter || fileFilter.accept(file)) {
+                fileList.add(file);
+            }
+            return fileList;
+        }
+
+        walkFiles(path, maxDepth, new SimpleFileVisitor<>() {
+
+            @Override
+            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
+                final File file = path.toFile();
+                if (null == fileFilter || fileFilter.accept(file)) {
+                    fileList.add(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+
+        return fileList;
+    }
+
+    public static void walkFiles(Path start, int maxDepth, FileVisitor<? super Path> visitor) {
+        if (maxDepth < 0) {
+            // < 0 表示遍历到最底层
+            maxDepth = Integer.MAX_VALUE;
+        }
+
+        try {
+            Files.walkFileTree(start, EnumSet.noneOf(FileVisitOption.class), maxDepth, visitor);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static boolean isDirectory(Path path, boolean isFollowLinks) {
+        if (null == path) {
+            return false;
+        }
+        final LinkOption[] options = isFollowLinks ? new LinkOption[0] : new LinkOption[]{LinkOption.NOFOLLOW_LINKS};
+        return Files.isDirectory(path, options);
     }
 }

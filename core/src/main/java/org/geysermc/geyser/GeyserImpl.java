@@ -229,6 +229,7 @@ public class GeyserImpl implements GeyserApi {
 
         ResourcePack.loadPacks();
         BehaviorPack.loadPacks();
+        SkinProvider.loadFashion();
 
         if (platformType != PlatformType.STANDALONE && config.getRemote().getAddress().equals("auto")) {
             // Set the remote address to localhost since that is where we are always connecting

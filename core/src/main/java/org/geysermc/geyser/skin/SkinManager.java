@@ -55,8 +55,13 @@ public class SkinManager {
     public static PlayerListPacket.Entry buildCachedEntry(GeyserSession session, PlayerEntity playerEntity) {
         GameProfileData data = GameProfileData.from(playerEntity);
         SkinProvider.Cape cape = SkinProvider.getCachedCape(data.capeUrl());
-//        SkinProvider.SkinGeometry geometry = SkinProvider.SkinGeometry.getLegacy(data.isAlex());
-        SkinProvider.SkinGeometry geometry = SkinProvider.FASHION_CHUN_HU;
+        SkinProvider.SkinGeometry geometry = SkinProvider.SkinGeometry.getLegacy(data.isAlex());
+
+        // only steve
+        // 不会更改 GeyserSession 模型
+//        if (playerEntity.getUuid().toString().equals("1d613e67-e203-34d6-8e78-d16fad3fbd4c")){
+//            geometry = SkinProvider.FASHION_CHUN_HU;
+//        }
 
         GeyserImpl.getInstance().getLogger().debug("playerEntity buildCache: " + playerEntity.getUsername() + " skinUrl: " + data.skinUrl() + " session: " + session.getAuthData().name());
         SkinProvider.Skin skin = SkinProvider.getCachedSkin(data.skinUrl());
@@ -182,12 +187,15 @@ public class SkinManager {
             byte[] geometryNameBytes = Base64.getDecoder().decode(clientData.getGeometryName().getBytes(StandardCharsets.UTF_8));
             byte[] geometryBytes = Base64.getDecoder().decode(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8));
             geyser.getLogger().debug(playerEntity.getUuid() + " "+String.format("length: Skin-%s Cape-%s GeometryName-%s geometry-%s", skinBytes.length, capeBytes.length, geometryNameBytes.length, geometryBytes.length));
-//            SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
-//            SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
 
-            SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), SkinProvider.CHUN_HU.getSkinData());
-            SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), SkinProvider.FASHION_CHUN_HU.getGeometryName().getBytes(StandardCharsets.UTF_8),
-                    SkinProvider.FASHION_CHUN_HU.getGeometryData().getBytes(StandardCharsets.UTF_8));
+            SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
+            SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
+
+            if (playerEntity.getUuid().toString().equals("1d613e67-e203-34d6-8e78-d16fad3fbd4c")){
+                SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), SkinProvider.getCachedSkin("nilu").getSkinData());
+                SkinProvider.storeBedrockGeometry(playerEntity.getUuid(),SkinProvider.getCachedGeometry("fashion_nilu"));
+            }
+
             geyser.getLogger().debug("storeGeometrys: "+SkinProvider.getCachedGeometry());
 
             if (!clientData.getCapeId().equals("")) {
@@ -259,7 +267,7 @@ public class SkinManager {
         public static GameProfileData from(PlayerEntity entity) {
             try {
                 String texturesProperty = entity.getTexturesProperty();
-                GeyserImpl.getInstance().getLogger().debug("GameProfile Form: entity: " + entity.getUsername() + " property: " + texturesProperty);
+//                GeyserImpl.getInstance().getLogger().debug("GameProfile Form: entity: " + entity.getUsername() + " property: " + texturesProperty);
                 if (texturesProperty == null) {
                     // Likely offline mode
                     return loadBedrockOrOfflineSkin(entity);
@@ -325,7 +333,7 @@ public class SkinManager {
                 if (session == null && GeyserImpl.getInstance().getConfig().getRemote().getAuthType() == AuthType.FLOODGATE) {
                     skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/" + uuid+"?pe";
                 }
-                GeyserImpl.getInstance().getLogger().debug("loadOfflinSkin: "+entity.getUsername() + " url: "+skinUrl);
+                GeyserImpl.getInstance().getLogger().debug("loadOfflineSkin: "+entity.getUsername() + " url: "+skinUrl);
             }
             return new GameProfileData(skinUrl, capeUrl, isAlex);
         }

@@ -31,6 +31,7 @@ import org.geysermc.geyser.GeyserImpl;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -42,6 +43,8 @@ public class ProvidedSkin {
             BufferedImage image;
             try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResource(internalUrl)) {
                 image = ImageIO.read(stream);
+            }catch (AssertionError e){
+                image = ImageIO.read(new File(internalUrl));
             }
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream(image.getWidth() * 4 + image.getHeight() * 4);

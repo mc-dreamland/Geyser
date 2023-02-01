@@ -129,7 +129,7 @@ public class ConnectorServerEventHandler implements BedrockServerEventHandler {
         } else {
             pong.setPlayerCount((int) (WebUtils.getTotalOnline() * geyser.getConfig().getService().getMultiple()));
             pong.setMaximumPlayerCount(config.getMaxPlayers());
-            geyser.getLogger().debug("pong web online: "+pong.getPlayerCount());
+//            geyser.getLogger().debug("pong web online: "+pong.getPlayerCount());
         }
 
         // Fallbacks to prevent errors and allow Bedrock to see the server

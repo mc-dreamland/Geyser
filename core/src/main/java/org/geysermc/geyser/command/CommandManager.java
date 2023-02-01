@@ -52,6 +52,7 @@ public abstract class CommandManager {
         registerCommand(new DumpCommand(geyser, "dump", "geyser.commands.dump.desc", "geyser.command.dump"));
         registerCommand(new VersionCommand(geyser, "version", "geyser.commands.version.desc", "geyser.command.version"));
         registerCommand(new SettingsCommand(geyser, "settings", "geyser.commands.settings.desc", "geyser.command.settings"));
+        registerCommand(new ReloadSkin(geyser,"reloadskin","重载皮肤、模型文件","geyser.command.reloadskin"));
         registerCommand(new StatisticsCommand(geyser, "statistics", "geyser.commands.statistics.desc", "geyser.command.statistics"));
         registerCommand(new AdvancementsCommand("advancements", "geyser.commands.advancements.desc", "geyser.command.advancements"));
         registerCommand(new AdvancedTooltipsCommand("tooltips", "geyser.commands.advancedtooltips.desc", "geyser.command.tooltips"));
