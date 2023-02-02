@@ -29,6 +29,7 @@ import com.github.steveice10.mc.auth.data.GameProfile;
 import com.github.steveice10.mc.protocol.data.game.PlayerListEntry;
 import com.github.steveice10.mc.protocol.data.game.PlayerListEntryAction;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundPlayerInfoPacket;
+import com.google.gson.Gson;
 import com.nukkitx.math.vector.Vector3f;
 import com.nukkitx.protocol.bedrock.packet.PlayerListPacket;
 import org.geysermc.geyser.GeyserImpl;
@@ -45,12 +46,14 @@ public class JavaPlayerInfoTranslator extends PacketTranslator<ClientboundPlayer
         if (packet.getAction() != PlayerListEntryAction.ADD_PLAYER && packet.getAction() != PlayerListEntryAction.REMOVE_PLAYER)
             return;
 
+        GeyserImpl.getInstance().getLogger().debug(String.format("InfoTranslator: %s Action： %s",session.name(),packet.getAction().name()));
         PlayerListPacket translate = new PlayerListPacket();
         translate.setAction(packet.getAction() == PlayerListEntryAction.ADD_PLAYER ? PlayerListPacket.Action.ADD : PlayerListPacket.Action.REMOVE);
 
         for (PlayerListEntry entry : packet.getEntries()) {
             switch (packet.getAction()) {
                 case ADD_PLAYER -> {
+                    GeyserImpl.getInstance().getLogger().debug("add_player: "+entry.getProfile().getName());
                     GameProfile profile = entry.getProfile();
                     PlayerEntity playerEntity;
                     boolean self = profile.getId().equals(session.getPlayerEntity().getUuid());
@@ -103,6 +106,7 @@ public class JavaPlayerInfoTranslator extends PacketTranslator<ClientboundPlayer
                 case REMOVE_PLAYER -> {
                     // As the player entity is no longer present, we can remove the entry
                     PlayerEntity entity = session.getEntityCache().removePlayerEntity(entry.getProfile().getId());
+                    GeyserImpl.getInstance().getLogger().debug("remove_player: "+new Gson().toJson(entry));
                     if (entity != null) {
                         // Just remove the entity's player list status
                         // Don't despawn the entity - the Java server will also take care of that.

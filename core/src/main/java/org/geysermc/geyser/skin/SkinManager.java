@@ -29,9 +29,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
 import com.github.steveice10.opennbt.tag.builtin.ListTag;
 import com.github.steveice10.opennbt.tag.builtin.StringTag;
+import com.google.gson.Gson;
 import com.nukkitx.protocol.bedrock.data.skin.ImageData;
 import com.nukkitx.protocol.bedrock.data.skin.SerializedSkin;
 import com.nukkitx.protocol.bedrock.packet.PlayerListPacket;
+import com.nukkitx.protocol.bedrock.packet.PlayerSkinPacket;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
@@ -53,7 +55,7 @@ public class SkinManager {
     public static PlayerListPacket.Entry buildCachedEntry(GeyserSession session, PlayerEntity playerEntity) {
         GameProfileData data = GameProfileData.from(playerEntity);
         SkinProvider.Cape cape = SkinProvider.getCachedCape(data.capeUrl());
-        SkinProvider.SkinGeometry geometry = SkinProvider.getCachedGeometry().getOrDefault(playerEntity.getUuid(),
+        SkinProvider.SkinGeometry geometry = SkinProvider.getCachedGeometry().asMap().getOrDefault(playerEntity.getUuid(),
                 SkinProvider.SkinGeometry.getLegacy(data.isAlex()));
 
         GeyserImpl.getInstance().getLogger().debug("playerEntity buildCache: " + playerEntity.getUsername() + " skinUrl: " + data.skinUrl() + " session: " + session.getAuthData().name());
@@ -87,7 +89,6 @@ public class SkinManager {
                 ImageData.of(capeData), geometry.getGeometryData(), "", true, false,
                 !capeId.equals(SkinProvider.EMPTY_CAPE.getCapeId()), capeId, skinId
         );
-
         // This attempts to find the XUID of the player so profile images show up for Xbox accounts
         String xuid = "";
         GeyserSession playerSession = GeyserImpl.getInstance().connectionByUuid(uuid);
@@ -120,11 +121,11 @@ public class SkinManager {
     }
 
     public static void requestAndHandleSkinAndCape(PlayerEntity entity, GeyserSession session,
-                                                   Consumer<SkinProvider.SkinAndCape> skinAndCapeConsumer) {
+                                                   Consumer<SkinProvider.SkinData> skinDataConsumer) {
         SkinProvider.requestSkinData(entity).whenCompleteAsync((skinData, throwable) -> {
             if (skinData == null) {
-                if (skinAndCapeConsumer != null) {
-                    skinAndCapeConsumer.accept(null);
+                if (skinDataConsumer != null) {
+                    skinDataConsumer.accept(null);
                 }
 
                 return;
@@ -134,6 +135,12 @@ public class SkinManager {
                 SkinProvider.Skin skin = skinData.skin();
                 SkinProvider.Cape cape = skinData.cape();
                 SkinProvider.SkinGeometry geometry = skinData.geometry();
+
+                GeyserImpl.getInstance().getLogger().debug(
+                        String.format("build list packet session: %s entity: %s",
+                                session.name(),
+                                entity.getUsername())
+                );
 
                 PlayerListPacket.Entry updatedEntry = buildEntryManually(
                         session,
@@ -146,7 +153,6 @@ public class SkinManager {
                         cape.getCapeData(),
                         geometry
                 );
-
 
                 PlayerListPacket playerAddPacket = new PlayerListPacket();
                 playerAddPacket.setAction(PlayerListPacket.Action.ADD);
@@ -161,8 +167,8 @@ public class SkinManager {
                 }
             }
 
-            if (skinAndCapeConsumer != null) {
-                skinAndCapeConsumer.accept(new SkinProvider.SkinAndCape(skinData.skin(), skinData.cape()));
+            if (skinDataConsumer != null) {
+                skinDataConsumer.accept(skinData);
             }
         });
     }
@@ -184,13 +190,19 @@ public class SkinManager {
             SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
             SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
 
+            if (playerEntity.getUuid().toString().equals("1d613e67-e203-34d6-8e78-d16fad3fbd4c")) {
+//                SkinProvider.storeBedrockSkin(playerEntity.getUuid(),clientData.getSkinId(), SkinProvider.Fashion.NILU.getSkin());
+//                SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), SkinProvider.Fashion.NILU.getGeometry());
+//                switchFashion(clientData, SkinProvider.Fashion.CHUNHU);
+            }
             if (Objects.nonNull(clientData.getFashionName()) && SkinProvider.getPermanentSkins().containsKey(clientData.getFashionName())){
-                SkinProvider.Fashion fashion = SkinProvider.Fashion.valueOf(clientData.getFashionName().toUpperCase(Locale.ROOT));
-                SkinProvider.storeBedrockSkin(playerEntity.getUuid(),clientData.getSkinId(), fashion.getSkin());
-                SkinProvider.storeBedrockGeometry(playerEntity.getUuid(),fashion.getGeometry());
+                SkinProvider.storeBedrockSkin(playerEntity.getUuid(),clientData.getSkinId(), SkinProvider.getPermanentSkins().get(clientData.getFashionName()));
+            }
+            if (Objects.nonNull(clientData.getFashionDataName()) && SkinProvider.getPermanentGeometry().containsKey(clientData.getFashionDataName())){
+                SkinProvider.storeBedrockGeometry(playerEntity.getUuid(),SkinProvider.getPermanentGeometry().get(clientData.getFashionDataName()));
             }
 
-            geyser.getLogger().debug("storeGeometrys: "+SkinProvider.getCachedGeometry());
+            geyser.getLogger().debug("storeGeometrys: "+SkinProvider.getPermanentGeometry());
 
             if (!clientData.getCapeId().equals("")) {
                 SkinProvider.storeBedrockCape(playerEntity.getUuid(), capeBytes);
@@ -202,23 +214,34 @@ public class SkinManager {
 
     public static void switchFashion(BedrockClientData clientData, SkinProvider.Fashion fashion){
         clientData.setFashionName(fashion.getFashionName());
-        clientData.setFashionDataName(fashion.geometryName());
+        clientData.setFashionDataName(fashion.getGeometryName());
     }
-//    /**
-//     * 对其他Geyser进行皮肤同步
-//     */
-//    public static void syncBedrockSkin(UUID uuid, String key, String skinData, String capeData, String geometryName, String geometryData, String capeId) {
-//        if (SkinProvider.hasSkinCached(key)) return;
-//        byte[] skinBytes = Base64.getDecoder().decode(skinData.getBytes(StandardCharsets.UTF_8));
-//        byte[] capeBytes = Base64.getDecoder().decode(capeData.getBytes(StandardCharsets.UTF_8));
-//        byte[] geometryNameBytes = Base64.getDecoder().decode(geometryName.getBytes(StandardCharsets.UTF_8));
-//        byte[] geometryBytes = Base64.getDecoder().decode(geometryData.getBytes(StandardCharsets.UTF_8));
-//        SkinProvider.storeBedrockSkin(uuid, key, skinBytes);
-//        SkinProvider.storeBedrockGeometry(uuid, geometryNameBytes, geometryBytes);
-//        if (!capeId.equals("")) {
-//            SkinProvider.storeBedrockCape(uuid, capeBytes);
-//        }
-//    }
+
+
+    public static void switchFashion(GeyserSession session,String fashion,String fashionData){
+        GeyserImpl.getInstance().getLogger().debug("storeBedrockSkinId: "+session.getClientData().getSkinId());
+        session.getClientData().setFashionName(fashion);
+        session.getClientData().setFashionDataName(fashionData);
+//        GeyserImpl.getInstance().getSkinUploader().syncSkin(session, session.getClientData());
+        SkinProvider.storeBedrockSkin(session.uuid(),session.getClientData().getSkinId(),
+                SkinProvider.getPermanentSkins().getOrDefault(fashion,
+                        SkinProvider.getPermanentSkins().get("alex")));
+
+        SkinProvider.storeBedrockGeometry(session.uuid(),
+                SkinProvider.getPermanentGeometry(fashionData));
+        SkinManager.requestAndHandleSkinAndCape(session.getPlayerEntity(),session,skinAndCape -> {
+            PlayerSkinPacket skinPacket = new PlayerSkinPacket();
+            skinPacket.setUuid(session.uuid());
+            skinPacket.setOldSkinName("");
+            skinPacket.setNewSkinName(session.getClientData().getSkinId());
+            skinPacket.setSkin(FakeHeadProvider.getSkin(session.getClientData().getSkinId(),skinAndCape.skin(),skinAndCape.cape(),
+                    skinAndCape.geometry()));
+            skinPacket.setTrustedSkin(true);
+            session.sendUpstreamPacket(skinPacket);
+        });
+
+        GeyserImpl.getInstance().getLogger().debug(String.format("%s switch fasion skin: %s geometry: %s",session.name(),fashion,fashionData));
+    }
 
     /**
      * 对其他Geyser进行皮肤同步

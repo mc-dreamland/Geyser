@@ -82,7 +82,9 @@ public class SkinProvider {
             .build();
     private static final Map<String, CompletableFuture<Cape>> requestedCapes = new ConcurrentHashMap<>();
 
-    private static final Map<UUID, SkinGeometry> cachedGeometry = new ConcurrentHashMap<>();
+    private static final Cache<UUID, SkinGeometry> cachedGeometry = CacheBuilder.newBuilder()
+            .expireAfterAccess(1,TimeUnit.HOURS)
+            .build();
 
     /**
      * Citizens NPCs use UUID version 2, while legitimate Minecraft players use version 4, and
@@ -95,7 +97,8 @@ public class SkinProvider {
     public static final SkinGeometry SKULL_GEOMETRY;
     public static final SkinGeometry WEARING_CUSTOM_SKULL;
     public static final SkinGeometry WEARING_CUSTOM_SKULL_SLIM;
-    public static Map<UUID, SkinGeometry> getCachedGeometry() {
+
+    public static Cache<UUID, SkinGeometry> getCachedGeometry() {
         return cachedGeometry;
     }
 
@@ -203,7 +206,7 @@ public class SkinProvider {
         return permanentSkins.getOrDefault(skinUrl, cachedSkins.getIfPresent(skinUrl));
     }
 
-    public static SkinGeometry getCachedGeometry(String geometryName) {
+    public static SkinGeometry getPermanentGeometry(String geometryName) {
         return permanentGeometry.getOrDefault(geometryName, SkinGeometry.getLegacy(false));
     }
 
@@ -257,6 +260,8 @@ public class SkinProvider {
                                 storeEarGeometry(entity.getUuid(), data.isAlex());
                             }
                         }
+
+                        GeyserImpl.getInstance().getLogger().debug(entity.getUsername() + " : "+geometry.getGeometryName());
 
                         return new SkinData(skin, cape, geometry);
                     } catch (Exception e) {
@@ -315,7 +320,7 @@ public class SkinProvider {
         // 从缓存的 url拿皮肤
         Skin cachedSkin = getCachedSkin(textureUrl);
         if (cachedSkin != null) {
-            GeyserImpl.getInstance().getLogger().debug("检测到 cachedSkin缓存 " + playerId);
+            GeyserImpl.getInstance().getLogger().debug("检测到 cachedSkin缓存 " + playerId + " : "+cachedSkin.skinData.length);
             return CompletableFuture.completedFuture(cachedSkin);
         }
 
@@ -446,7 +451,7 @@ public class SkinProvider {
     }
 
     public static CompletableFuture<SkinGeometry> requestBedrockGeometry(SkinGeometry currentGeometry, UUID playerID) {
-        SkinGeometry bedrockGeometry = cachedGeometry.getOrDefault(playerID, currentGeometry);
+        SkinGeometry bedrockGeometry = cachedGeometry.asMap().getOrDefault(playerID, currentGeometry);
         return CompletableFuture.completedFuture(bedrockGeometry);
     }
 
@@ -505,12 +510,12 @@ public class SkinProvider {
 
     private static Skin requestSkin(UUID uuid, String textureUrl) {
         try {
+            GeyserImpl.getInstance().getLogger().debug("requestSkin: "+uuid + " url: "+textureUrl);
             CompletableFuture<Skin> skinCompletableFuture = CompletableFuture.supplyAsync(() -> WebUtils.getJson(textureUrl))
                     .thenApply(json -> {
                         // 保存玩家的时装模型
-                        if (json.hasNonNull("fashion_name")) {
-                            Fashion fashion = Fashion.valueOf(json.get("fashion_name").asText().toUpperCase(Locale.ROOT));
-                            SkinProvider.storeBedrockGeometry(uuid, fashion.getGeometry());
+                        if (json.hasNonNull("fashion_name") && SkinProvider.getPermanentGeometry().containsKey(json.get("fashion_data_name").asText())) {
+                            SkinProvider.storeBedrockGeometry(uuid, SkinProvider.getPermanentGeometry().get(json.get("fashion_data_name").asText()));
                         } else {
                             byte[] geometryNameBytes = Base64.getDecoder().decode((json.get("geometry_name").asText()));
                             byte[] geometry_data = MathUtils.unGZipBytes(Base64.getDecoder().decode(json.get("geometry_data").asText()));
@@ -519,7 +524,9 @@ public class SkinProvider {
                         return buildSkin(uuid, textureUrl, json);
                     });
             return skinCompletableFuture.get();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            GeyserImpl.getInstance().getLogger().warning(ignored.getMessage());
+        }
         return new Skin(uuid, "empty", EMPTY_SKIN.getSkinData(), System.currentTimeMillis(), false, false);
     }
 
@@ -527,9 +534,9 @@ public class SkinProvider {
         GeyserImpl.getInstance().getLogger().debug("buildSkin: " + uuid + " url: " + textureUrl + " json: " + jsonNode);
         byte[] bytes;
         // 初始化玩家 时装皮肤
-        if (jsonNode != null && jsonNode.hasNonNull("fashion_name")) {
-            Fashion fashion = Fashion.valueOf(jsonNode.get("fashion_name").asText().toUpperCase(Locale.ROOT));
-            bytes = fashion.getSkin().skinData;
+        if (jsonNode != null && jsonNode.hasNonNull("fashion_name") &&
+                SkinProvider.getPermanentSkins().containsKey(jsonNode.get("fashion_name").asText())) {
+            bytes = SkinProvider.getPermanentSkins().get(jsonNode.get("fashion_name").asText()).skinData;
         } else {
             bytes = MathUtils.unGZipBytes(Base64.getDecoder().decode(jsonNode.get("skin_data").asText()));
         }
@@ -948,7 +955,8 @@ public class SkinProvider {
     @Getter
     public enum Fashion {
         // 对应文件名 保持和 fashionName 一样,建议全部大写
-        NILU("fashion_nilu", "nilu");
+        NILU("fashion_nilu", "nilu"),
+        CHUNHU("fashion_chunhu","chunhu");
 
         private final String geometryName;
         private final String fashionName;

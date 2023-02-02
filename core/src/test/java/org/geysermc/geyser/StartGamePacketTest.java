@@ -192,7 +192,7 @@ public class StartGamePacketTest {
     @Test
     @SneakyThrows
     public void fasionResource() {
-        List<File> json = FileUtils.loopFiles("bedrock/skin/fasion/", pathname -> pathname.getName().endsWith(".json"));
+        List<File> json = FileUtils.loopFiles("/bedrock/skin/fasion/", pathname -> pathname.getName().endsWith(".json"));
         for (File file : json) {
             String s = new String(FileUtils.readAllBytes(file), StandardCharsets.UTF_8).replace("\t","");
             System.out.println(file.getName().split("\\.")[0]);
@@ -201,6 +201,13 @@ public class StartGamePacketTest {
         for (File file : png) {
             System.out.println(file.getAbsolutePath());
         }
+    }
+
+    @Test
+    public void onloop(){
+        List<File> files = FileUtils.
+                loopFiles("jar:file:F:/Minecraft%20Server/PocketServer/bungee/plugins/Geyser-BungeeCord.jar!/bedrock/skin/fasion/",pathname -> pathname.getName().endsWith(".json"));
+        System.out.println(files);
     }
     public static final String EMPTY = "";
 
