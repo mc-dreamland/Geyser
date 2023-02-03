@@ -476,7 +476,7 @@ public class SkinProvider {
     }
 
     public static void storeBedrockGeometry(UUID playerID, SkinGeometry geometry) {
-        if (cachedGeometry.getIfPresent(playerID) == null){
+        if (cachedGeometry.getIfPresent(playerID) == null) {
             cachedGeometry.put(playerID, geometry);
         }
         SkinGeometry cached = cachedGeometry.getIfPresent(playerID);
@@ -524,14 +524,14 @@ public class SkinProvider {
                         // 保存玩家的时装模型
                         if (json.hasNonNull("fashion_name") && SkinProvider.getPermanentGeometry().containsKey(json.get("fashion_data_name").asText())) {
                             SkinProvider.storeBedrockGeometry(uuid, SkinProvider.getPermanentGeometry().get(json.get("fashion_data_name").asText()));
-                        } else {
+                        } else if (json.hasNonNull("geometry_name") && json.hasNonNull("geometry_data")) {
                             byte[] geometryNameBytes = Base64.getDecoder().decode((json.get("geometry_name").asText()));
                             byte[] geometry_data = MathUtils.unGZipBytes(Base64.getDecoder().decode(json.get("geometry_data").asText()));
                             SkinProvider.storeBedrockGeometry(uuid, geometryNameBytes, geometry_data);
                         }
                         return buildSkin(uuid, textureUrl, json);
                     });
-            return skinCompletableFuture.get(5,TimeUnit.SECONDS);
+            return skinCompletableFuture.get(5, TimeUnit.SECONDS);
         } catch (Exception ignored) {
             ignored.printStackTrace();
             GeyserImpl.getInstance().getLogger().warning(ignored.getMessage());
@@ -540,14 +540,15 @@ public class SkinProvider {
     }
 
     private static Skin buildSkin(UUID uuid, String textureUrl, JsonNode jsonNode) {
-        byte[] bytes;
+        byte[] bytes = uuid.hashCode() % 2 == 1 ? ALEX_SKIN : STEVE_SKIN;
         // 初始化玩家 时装皮肤
-        if (jsonNode != null && jsonNode.hasNonNull("fashion_name") &&
-                SkinProvider.getPermanentSkins().containsKey(jsonNode.get("fashion_name").asText())) {
-            bytes = SkinProvider.getPermanentSkins().get(jsonNode.get("fashion_name").asText()).skinData;
-            textureUrl = textureUrl.split("&")[0] + "&" + jsonNode.get("fashion_data_name").asText();
-        } else {
-            bytes = MathUtils.unGZipBytes(Base64.getDecoder().decode(jsonNode.get("skin_data").asText()));
+        if (jsonNode != null) {
+            if (jsonNode.hasNonNull("fashion_name") && SkinProvider.getPermanentSkins().containsKey(jsonNode.get("fashion_name").asText())) {
+                bytes = SkinProvider.getPermanentSkins().get(jsonNode.get("fashion_name").asText()).skinData;
+                textureUrl = textureUrl.split("&")[0] + "&" + jsonNode.get("fashion_data_name").asText();
+            } else if (jsonNode.hasNonNull("skin_data")) {
+                bytes = MathUtils.unGZipBytes(Base64.getDecoder().decode(jsonNode.get("skin_data").asText()));
+            }
         }
         GeyserImpl.getInstance().getLogger().debug("buildSkin: " + uuid + " url: " + textureUrl + " json: " + jsonNode);
         return new Skin(uuid, textureUrl, bytes,
