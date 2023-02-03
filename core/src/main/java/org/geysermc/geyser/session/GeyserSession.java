@@ -1555,6 +1555,8 @@ public class GeyserSession implements GeyserConnection, CommandSender {
                                                     if (!(packet instanceof InventorySlotPacket))
                                                         if (!(packet instanceof InventoryContentPacket))
                                                             if (!(packet instanceof LevelChunkPacket))
+                                                                if (!(packet instanceof AddEntityPacket))
+                                                                    if (!(packet instanceof CraftingDataPacket))
                     GeyserImpl.getInstance().getLogger().debug(packet);
                 }
             }

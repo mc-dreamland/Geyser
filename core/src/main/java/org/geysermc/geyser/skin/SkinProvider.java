@@ -83,7 +83,7 @@ public class SkinProvider {
     private static final Map<String, CompletableFuture<Cape>> requestedCapes = new ConcurrentHashMap<>();
 
     private static final Cache<UUID, SkinGeometry> cachedGeometry = CacheBuilder.newBuilder()
-            .expireAfterAccess(1,TimeUnit.HOURS)
+            .expireAfterAccess(1, TimeUnit.HOURS)
             .build();
 
     /**
@@ -155,7 +155,8 @@ public class SkinProvider {
             }, 10, 1440, TimeUnit.MINUTES);
         }
     }
-    public static void loadFashion(){
+
+    public static void loadFashion() {
         File fashion = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("fashion").toFile();
         if (!fashion.exists()) {
             fashion.mkdir();
@@ -176,7 +177,8 @@ public class SkinProvider {
         List<File> png = FileUtils.loopFiles(path, pathname -> pathname.getName().endsWith(".png"));
         loadGeometrySkin(png, path);
     }
-    private static void loadGeometryData(List<File> files){
+
+    private static void loadGeometryData(List<File> files) {
         for (File file : files) {
             String fileName = file.getName().split("\\.")[0];
             String data = new String(FileUtils.readAllBytes(file), StandardCharsets.UTF_8).replaceAll("\t", "");
@@ -185,7 +187,8 @@ public class SkinProvider {
             GeyserImpl.getInstance().getLogger().info("加载模型文件 - " + fileName);
         }
     }
-    private static void loadGeometrySkin(List<File> files, String path){
+
+    private static void loadGeometrySkin(List<File> files, String path) {
         for (File file : files) {
             String fileName = file.getName().split("\\.")[0];
             Skin skin = new Skin(-1, fileName, new ProvidedSkin(path + file.getName()).getSkin());
@@ -261,7 +264,7 @@ public class SkinProvider {
                             }
                         }
 
-                        GeyserImpl.getInstance().getLogger().debug(entity.getUsername() + " : "+geometry.getGeometryName());
+                        GeyserImpl.getInstance().getLogger().debug(entity.getUsername() + " : " + geometry.getGeometryName());
 
                         return new SkinData(skin, cape, geometry);
                     } catch (Exception e) {
@@ -321,7 +324,7 @@ public class SkinProvider {
         // 从缓存的 url拿皮肤
         Skin cachedSkin = getCachedSkin(textureUrl);
         if (cachedSkin != null) {
-            GeyserImpl.getInstance().getLogger().debug("检测到 cachedSkin缓存 " + playerId + " : "+cachedSkin.skinData.length);
+            GeyserImpl.getInstance().getLogger().debug("检测到 cachedSkin缓存 " + playerId + " : " + cachedSkin.skinData.length);
             return CompletableFuture.completedFuture(cachedSkin);
         }
 
@@ -465,12 +468,18 @@ public class SkinProvider {
     }
 
     public static void storeBedrockGeometry(UUID playerID, byte[] geometryName, byte[] geometryData) {
-        storeBedrockGeometry(playerID,new SkinGeometry(new String(geometryName), new String(geometryData), false));
+        storeBedrockGeometry(playerID, new SkinGeometry(new String(geometryName), new String(geometryData), false));
     }
 
     public static void storeBedrockGeometry(UUID playerID, SkinGeometry geometry) {
-        cachedGeometry.put(playerID, geometry);
-        GeyserImpl.getInstance().getLogger().debug(String.format("storeBedrockGeometry: %s %s",playerID,geometry.getGeometryName()));
+        if (cachedGeometry.getIfPresent(playerID) == null){
+            cachedGeometry.put(playerID, geometry);
+        }
+        SkinGeometry cached = cachedGeometry.getIfPresent(playerID);
+        if (!geometry.getGeometryName().contains("humanoid") && !cached.getGeometryName().equals(geometry.getGeometryName())) {
+            cachedGeometry.put(playerID, geometry);
+        }
+        GeyserImpl.getInstance().getLogger().debug(String.format("storeBedrockGeometry: %s %s", playerID, geometry.getGeometryName()));
     }
 
     /**
@@ -504,10 +513,10 @@ public class SkinProvider {
 
     private static Skin requestSkin(UUID uuid, String textureUrl) {
         try {
-            GeyserImpl.getInstance().getLogger().debug("requestSkin: "+uuid + " url: "+textureUrl);
+            GeyserImpl.getInstance().getLogger().debug("requestSkin: " + uuid + " url: " + textureUrl);
             CompletableFuture<Skin> skinCompletableFuture = CompletableFuture.supplyAsync(() -> WebUtils.getJson(textureUrl))
                     .thenApply(json -> {
-                        GeyserImpl.getInstance().getLogger().debug("requestSkin Json: "+json);
+                        GeyserImpl.getInstance().getLogger().debug("requestSkin Json: " + json);
                         // 保存玩家的时装模型
                         if (json.hasNonNull("fashion_name") && SkinProvider.getPermanentGeometry().containsKey(json.get("fashion_data_name").asText())) {
                             SkinProvider.storeBedrockGeometry(uuid, SkinProvider.getPermanentGeometry().get(json.get("fashion_data_name").asText()));
@@ -526,15 +535,16 @@ public class SkinProvider {
     }
 
     private static Skin buildSkin(UUID uuid, String textureUrl, JsonNode jsonNode) {
-        GeyserImpl.getInstance().getLogger().debug("buildSkin: " + uuid + " url: " + textureUrl + " json: " + jsonNode);
         byte[] bytes;
         // 初始化玩家 时装皮肤
         if (jsonNode != null && jsonNode.hasNonNull("fashion_name") &&
                 SkinProvider.getPermanentSkins().containsKey(jsonNode.get("fashion_name").asText())) {
             bytes = SkinProvider.getPermanentSkins().get(jsonNode.get("fashion_name").asText()).skinData;
+            textureUrl = textureUrl.split("&")[0] + "&" + jsonNode.get("fashion_data_name").asText();
         } else {
             bytes = MathUtils.unGZipBytes(Base64.getDecoder().decode(jsonNode.get("skin_data").asText()));
         }
+        GeyserImpl.getInstance().getLogger().debug("buildSkin: " + uuid + " url: " + textureUrl + " json: " + jsonNode);
         return new Skin(uuid, textureUrl, bytes,
                 System.currentTimeMillis(), true, false);
     }
@@ -951,7 +961,7 @@ public class SkinProvider {
     public enum Fashion {
         // 对应文件名 保持和 fashionName 一样,建议全部大写
         NILU("fashion_nilu", "nilu"),
-        CHUNHU("fashion_chunhu","chunhu");
+        CHUNHU("fashion_chunhu", "chunhu");
 
         private final String geometryName;
         private final String fashionName;

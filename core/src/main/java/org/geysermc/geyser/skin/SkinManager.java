@@ -34,6 +34,7 @@ import com.nukkitx.protocol.bedrock.data.skin.ImageData;
 import com.nukkitx.protocol.bedrock.data.skin.SerializedSkin;
 import com.nukkitx.protocol.bedrock.packet.PlayerListPacket;
 import com.nukkitx.protocol.bedrock.packet.PlayerSkinPacket;
+import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
@@ -241,7 +242,7 @@ public class SkinManager {
                     geyserSession.sendUpstreamPacket(skinPacket);
                 }
             }
-            session.sendUpstreamPacket(skinPacket);
+//            session.sendUpstreamPacket(skinPacket);
         });
         GeyserImpl.getInstance().getLogger().debug(String.format("%s switch fasion skin: %s geometry: %s", session.name(), fashion, fashionData));
     }
@@ -350,6 +351,7 @@ public class SkinManager {
          * @return default skin with default cape when texture data is invalid, or the Bedrock player's skin if this
          * is a Bedrock player.
          */
+        @SneakyThrows
         private static GameProfileData loadBedrockOrOfflineSkin(PlayerEntity entity) {
             // Fallback to the offline mode of working it out
             UUID uuid = entity.getUuid();
@@ -363,6 +365,12 @@ public class SkinManager {
                 if (session != null) {
                     skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe";
                     capeUrl = session.getClientData().getCapeId();
+
+                    SkinProvider.SkinGeometry geometry = SkinProvider.getCachedGeometry().getIfPresent(uuid);
+                    if (geometry != null) {
+                        String geometryName = GeyserImpl.JSON_MAPPER.readTree(geometry.getGeometryName()).get("geometry").get("default").asText().replace("geometry.","");
+                        skinUrl += "&"+geometryName;
+                    }
                 }
                 GeyserImpl.getInstance().getLogger().debug("loadOfflineSkin: " + entity.getUsername() + " url: " + skinUrl);
             }
