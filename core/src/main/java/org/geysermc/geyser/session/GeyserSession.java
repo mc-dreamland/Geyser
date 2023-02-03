@@ -1541,7 +1541,7 @@ public class GeyserSession implements GeyserConnection, CommandSender {
      * @param packet the bedrock packet from the NukkitX protocol lib
      */
     public void sendUpstreamPacket(BedrockPacket packet) {
-/*        if (!(packet instanceof MoveEntityAbsolutePacket)) {
+        if (!(packet instanceof MoveEntityAbsolutePacket)) {
             if (!(packet instanceof NeteaseCustomPacket)){
                 if (!(packet instanceof SetTimePacket)){
                     if (!(packet instanceof MovePlayerPacket))
@@ -1560,7 +1560,7 @@ public class GeyserSession implements GeyserConnection, CommandSender {
                     GeyserImpl.getInstance().getLogger().debug(this.name()+" "+packet);
                 }
             }
-        }*/
+        }
         upstream.sendPacket(packet);
     }
 

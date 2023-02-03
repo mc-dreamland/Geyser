@@ -209,6 +209,10 @@ public class SkinProvider {
         return permanentSkins.getOrDefault(skinUrl, cachedSkins.getIfPresent(skinUrl));
     }
 
+    public static Cache<String, Skin> getCachedSkins() {
+        return cachedSkins;
+    }
+
     public static SkinGeometry getPermanentGeometry(String geometryName) {
         return permanentGeometry.getOrDefault(geometryName, SkinGeometry.getLegacy(false));
     }
@@ -511,11 +515,11 @@ public class SkinProvider {
         return new Skin(uuid, "empty", EMPTY_SKIN.getSkinData(), System.currentTimeMillis(), false, false);
     }
 
-    private static Skin requestSkin(UUID uuid, String textureUrl) {
+    public static Skin requestSkin(UUID uuid, String textureUrl) {
         try {
             GeyserImpl.getInstance().getLogger().debug("requestSkin: " + uuid + " url: " + textureUrl);
             CompletableFuture<Skin> skinCompletableFuture = CompletableFuture.supplyAsync(() -> WebUtils.getJson(textureUrl))
-                    .thenApply(json -> {
+                    .thenApplyAsync(json -> {
                         GeyserImpl.getInstance().getLogger().debug("requestSkin Json: " + json);
                         // 保存玩家的时装模型
                         if (json.hasNonNull("fashion_name") && SkinProvider.getPermanentGeometry().containsKey(json.get("fashion_data_name").asText())) {
@@ -527,8 +531,9 @@ public class SkinProvider {
                         }
                         return buildSkin(uuid, textureUrl, json);
                     });
-            return skinCompletableFuture.get();
+            return skinCompletableFuture.get(5,TimeUnit.SECONDS);
         } catch (Exception ignored) {
+            ignored.printStackTrace();
             GeyserImpl.getInstance().getLogger().warning(ignored.getMessage());
         }
         return new Skin(uuid, "empty", EMPTY_SKIN.getSkinData(), System.currentTimeMillis(), false, false);

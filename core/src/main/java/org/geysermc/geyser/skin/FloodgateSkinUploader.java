@@ -29,10 +29,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.nukkitx.protocol.bedrock.data.skin.ImageData;
-import com.nukkitx.protocol.bedrock.data.skin.SerializedSkin;
 import com.nukkitx.protocol.bedrock.packet.PlayerListPacket;
-import com.nukkitx.protocol.bedrock.packet.PlayerSkinPacket;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
@@ -121,6 +118,43 @@ public final class FloodgateSkinUploader {
                             for (GeyserSession session : sessions) {
                                 session.sendUpstreamPacket(listPacket);
                             }
+                            break;
+                        }
+                        case RESTORE_SKIN:{
+                            UUID uuid = UUID.fromString(node.get("uuid").asText());
+                            SkinProvider.getCachedGeometry().invalidate(uuid); // 删除模型 还需要删除皮肤
+                            List<String> keys = new ArrayList<>();
+                            for (String s : SkinProvider.getCachedSkins().asMap().keySet()) {
+                                if (s.contains(uuid.toString())){
+                                    keys.add(s);
+                                }
+                            }
+                            keys.forEach(key->SkinProvider.getCachedSkins().invalidate(key)); // 删除皮肤缓存
+//                            String skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe";
+/*
+                            CompletableFuture.supplyAsync(()-> WebUtils.getJson(skinUrl)).whenCompleteAsync((json,ex)->{
+                                if (ex != null){
+                                    ex.printStackTrace();
+                                }
+
+                                byte[] geometryNameBytes = Base64.getDecoder().decode(json.get("geometry_name").asText().getBytes(StandardCharsets.UTF_8));
+                                byte[] geometryBytes = Base64.getDecoder().decode(json.get("geometry_data").asText().getBytes(StandardCharsets.UTF_8));
+                                byte[] skinBytes = Base64.getDecoder().decode(json.get("skin_data").asText().getBytes(StandardCharsets.UTF_8));
+                                // 重置皮肤、模型数据
+                                SkinProvider.SkinGeometry geometry = new SkinProvider.SkinGeometry(new String(geometryNameBytes), new String(geometryBytes).replaceAll("\t", ""), false);
+                                SkinProvider.getCachedGeometry().put(uuid,geometry);
+                                String skinId = skinUrl;
+                                try {
+                                    String geometryName = GeyserImpl.JSON_MAPPER.readTree(geometry.getGeometryName()).get("geometry").get("default").asText()
+                                            .replace("geometry.","")
+                                            .replace("humanoid.","");
+                                    skinId = skinUrl+"&"+geometryName;
+                                }catch (Exception e){
+                                    e.printStackTrace();
+                                }
+                                SkinProvider.storeBedrockSkin(uuid,skinId,skinBytes);
+                            });
+*/
                             break;
                         }
                         case SUBSCRIBER_CREATED:

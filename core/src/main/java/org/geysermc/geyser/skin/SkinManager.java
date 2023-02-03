@@ -411,7 +411,9 @@ public class SkinManager {
 
                 SkinProvider.SkinGeometry geometry = SkinProvider.getCachedGeometry().getIfPresent(uuid);
                 if (geometry != null) {
-                    String geometryName = GeyserImpl.JSON_MAPPER.readTree(geometry.getGeometryName()).get("geometry").get("default").asText().replace("geometry.","");
+                    String geometryName = GeyserImpl.JSON_MAPPER.readTree(geometry.getGeometryName()).get("geometry").get("default").asText()
+                            .replace("geometry.","")
+                            .replace("humanoid.","");
                     skinUrl += "&"+geometryName;
                 }
                 if (session != null) {

@@ -60,7 +60,8 @@ public enum WebsocketEventType {
      * bad enough to close the connection
      */
     LOG_MESSAGE(5),
-    SYCN_FASHION(7);
+    SYCN_FASHION(7),
+    RESTORE_SKIN(8);
 
     private static final WebsocketEventType[] VALUES;
 
