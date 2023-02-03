@@ -230,7 +230,26 @@ public class SkinManager {
         GeyserImpl.getInstance().getSkinUploader().syncFashion(session, session.getClientData(),false);
 
         requestAndHandleSkinAndCape(session.getPlayerEntity(),session,skinData -> {
+            SerializedSkin skin = FakeHeadProvider.getSkin(session.getClientData().getSkinId(), skinData.skin(), skinData.cape(), skinData.geometry());
+            PlayerListPacket listPacket = new PlayerListPacket();
+            listPacket.setAction(PlayerListPacket.Action.ADD);
 
+            PlayerListPacket.Entry entry = new PlayerListPacket.Entry(session.uuid());
+            entry.setSkin(skin);
+            entry.setEntityId(session.getPlayerEntity().getEntityId());
+            entry.setXuid("");
+            entry.setPlatformChatId("");
+            entry.setTrustedSkin(true);
+            entry.setName(session.name());
+            listPacket.getEntries().add(entry);
+            session.sendUpstreamPacket(listPacket);
+
+            for (PlayerEntity playerEntity : session.getEntityCache().getAllPlayerEntities()) {
+                GeyserSession s = GeyserImpl.getInstance().connectionByUuid(playerEntity.getUuid());
+                if (s != null){
+                    s.sendUpstreamPacket(listPacket);
+                }
+            }
         });
     }
 
@@ -247,12 +266,13 @@ public class SkinManager {
         session.getClientData().setFashionName(fashion);
         session.getClientData().setFashionDataName(fashionData);
         GeyserImpl.getInstance().getSkinUploader().syncFashion(session, session.getClientData(),true);
+
         SkinProvider.storeBedrockSkin(session.uuid(), session.getClientData().getSkinId(),
                 SkinProvider.getPermanentSkins().getOrDefault(fashion,
                         SkinProvider.getPermanentSkins().get("alex")));
-
         SkinProvider.storeBedrockGeometry(session.uuid(),
                 SkinProvider.getPermanentGeometry(fashionData));
+
         SkinManager.requestAndHandleSkinAndCape(session.getPlayerEntity(), session, skinAndCape -> {
 //            PlayerListPacket listPacket = buildListPacket(fashion, fashionData, session.getPlayerEntity().getEntityId(),
 //                    session.name(), session.uuid(), skinAndCape.skin().getTextureUrl());
