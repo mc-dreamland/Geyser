@@ -407,17 +407,19 @@ public class SkinManager {
             if (("steve".equals(skinUrl) || "alex".equals(skinUrl)) && GeyserImpl.getInstance().getConfig().getRemote().getAuthType() != AuthType.ONLINE) {
                 GeyserSession session = GeyserImpl.getInstance().connectionByUuid(uuid);
 
-                skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe";
-
-                SkinProvider.SkinGeometry geometry = SkinProvider.getCachedGeometry().getIfPresent(uuid);
-                if (geometry != null) {
-                    String geometryName = GeyserImpl.JSON_MAPPER.readTree(geometry.getGeometryName()).get("geometry").get("default").asText()
-                            .replace("geometry.","")
-                            .replace("humanoid.","");
-                    skinUrl += "&"+geometryName;
-                }
                 if (session != null) {
+                    skinUrl = session.getClientData().getSkinId();
                     capeUrl = session.getClientData().getCapeId();
+                }
+                if (session == null && GeyserImpl.getInstance().getConfig().getRemote().getAuthType() == AuthType.FLOODGATE) {
+                    skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/" + uuid+"?pe";
+                    SkinProvider.SkinGeometry geometry = SkinProvider.getCachedGeometry().getIfPresent(uuid);
+                    if (geometry != null) {
+                        String geometryName = GeyserImpl.JSON_MAPPER.readTree(geometry.getGeometryName()).get("geometry").get("default").asText()
+                                .replace("geometry.","")
+                                .replace("humanoid.","");
+                        skinUrl += "&"+geometryName;
+                    }
                 }
 
                 GeyserImpl.getInstance().getLogger().debug("loadOfflineSkin: " + entity.getUsername() + " url: " + skinUrl);
