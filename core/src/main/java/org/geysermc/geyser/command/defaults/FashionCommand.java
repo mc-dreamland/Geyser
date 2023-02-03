@@ -44,6 +44,11 @@ public class FashionCommand extends GeyserCommand {
         if (args.length == 0) {
             return;
         }
+        if (args[0].equalsIgnoreCase("reset")){
+            SkinManager.restoreSkin(session);
+            sender.sendMessage("successfully reset skin!");
+            return;
+        }
         // TODO
         String fashion = args[0];
         String fashionData = args[1];

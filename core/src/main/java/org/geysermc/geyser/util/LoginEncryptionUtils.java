@@ -187,6 +187,8 @@ public class LoginEncryptionUtils {
 
             JsonNode clientDataJson = JSON_MAPPER.readTree(clientJwt.getPayload().toBytes());
             BedrockClientData data = JSON_MAPPER.convertValue(clientDataJson, BedrockClientData.class);
+            // 保存原本的皮肤 用来重置时装显示默认皮肤
+            data.setOriginSkinId(data.getSkinId());
             data.formatGeometryData();
             data.setOriginalString(clientData);
             session.setClientData(data);

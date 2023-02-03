@@ -38,6 +38,7 @@ import org.geysermc.geyser.util.MathUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Objects;
 import java.util.UUID;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -55,6 +56,8 @@ public final class BedrockClientData {
     @JsonProperty(value = "SkinId")
     @Setter
     private String skinId;
+    @Setter
+    private String originSkinId;
     @JsonProperty(value = "SkinData")
     private String skinData;
     @JsonProperty(value = "SkinImageHeight")
@@ -137,6 +140,10 @@ public final class BedrockClientData {
 
     public UiProfile getUiProfile() {
         return uiProfile != null ? uiProfile : UiProfile.CLASSIC;
+    }
+
+    public boolean wearFashion(){
+        return Objects.nonNull(this.getFashionName()) && Objects.nonNull(this.getFashionDataName());
     }
 
     public void formatGeometryData(){
