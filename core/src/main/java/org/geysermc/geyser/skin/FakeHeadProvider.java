@@ -142,7 +142,6 @@ public class FakeHeadProvider {
         SkinProvider.Skin skin = skinData.skin();
         SkinProvider.Cape cape = skinData.cape();
         SkinProvider.SkinGeometry geometry = skinData.geometry();
-        GeyserImpl.getInstance().getLogger().debug(new Gson().toJson(skinData));
 
         if (entity.getUuid().equals(session.getPlayerEntity().getUuid())) {
             PlayerListPacket.Entry updatedEntry = SkinManager.buildEntryManually(

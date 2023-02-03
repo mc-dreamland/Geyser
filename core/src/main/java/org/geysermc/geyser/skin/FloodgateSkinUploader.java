@@ -29,6 +29,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.nukkitx.protocol.bedrock.data.skin.ImageData;
+import com.nukkitx.protocol.bedrock.data.skin.SerializedSkin;
+import com.nukkitx.protocol.bedrock.packet.PlayerListPacket;
+import com.nukkitx.protocol.bedrock.packet.PlayerSkinPacket;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
@@ -50,6 +54,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public final class FloodgateSkinUploader {
     private final ObjectMapper JACKSON = new ObjectMapper();
@@ -59,9 +64,12 @@ public final class FloodgateSkinUploader {
     private final WebSocketClient client;
     private volatile boolean closed;
 
-    @Getter private int id;
-    @Getter private String verifyCode;
-    @Getter private int subscribersCount = 2;
+    @Getter
+    private int id;
+    @Getter
+    private String verifyCode;
+    @Getter
+    private int subscribersCount = 2;
 
     public FloodgateSkinUploader(GeyserImpl geyser) {
         this.logger = geyser.getLogger();
@@ -95,13 +103,43 @@ public final class FloodgateSkinUploader {
                         return;
                     }
                     switch (type) {
-                        case SYCN_FASHION:{
+                        case SYCN_FASHION: {
+                            GeyserImpl.getInstance().getLogger().debug("SYNC_FASHION: " + node);
                             String fashion = node.get("fashion_name").asText();
                             String geometryName = node.get("fashion_data_name").asText();
+                            int entityId = node.get("entity_id").asInt();
+                            String userName = node.get("username").asText();
                             UUID uuid = UUID.fromString(node.get("uuid").asText());
-                            String skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe&"+geometryName;
-                            SkinProvider.storeBedrockSkin(uuid,skinUrl,SkinProvider.getPermanentSkins().get(fashion));
-                            SkinProvider.storeBedrockGeometry(uuid,SkinProvider.getPermanentGeometry(geometryName));
+
+                            String skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe&" + geometryName;
+                            SkinProvider.storeBedrockSkin(uuid, skinUrl, SkinProvider.getPermanentSkins().get(fashion));
+                            SkinProvider.storeBedrockGeometry(uuid, SkinProvider.getPermanentGeometry(geometryName));
+
+                            PlayerListPacket listPacket = new PlayerListPacket();
+                            listPacket.setAction(PlayerListPacket.Action.ADD);
+
+                            PlayerListPacket.Entry entry = new PlayerListPacket.Entry(uuid);
+                            entry.setEntityId(entityId);
+                            entry.setName(userName);
+                            SkinProvider.SkinGeometry geometry = SkinProvider.getPermanentGeometry(geometryName);
+                            SerializedSkin skin = SerializedSkin.of(skinUrl, "", "{\"geometry\" :{\"default\" :\"geometry." + geometryName + "\"}}",
+                                    ImageData.of(SkinProvider.getPermanentSkins().get(fashion).getSkinData()),
+                                    Collections.emptyList(),
+                                    ImageData.of(SkinProvider.EMPTY_CAPE.getCapeData()),
+                                    geometry.getGeometryData(), "", true, false,
+                                    false, SkinProvider.EMPTY_CAPE.getCapeId(), skinUrl);
+                            entry.setSkin(skin);
+                            entry.setXuid("");
+                            entry.setPlatformChatId("");
+                            entry.setTrustedSkin(true);
+
+                            listPacket.getEntries().add(entry);
+
+                            List<UUID> entitys = GeyserImpl.JSON_MAPPER.readerForListOf(UUID.class).readValue(node.path("player_entitys"));
+                            List<GeyserSession> sessions = entitys.stream().map(b -> GeyserImpl.getInstance().connectionByUuid(b)).toList();
+                            for (GeyserSession session : sessions) {
+                                if (session != null) session.sendUpstreamPacket(listPacket);
+                            }
                             break;
                         }
                         case SUBSCRIBER_CREATED:
@@ -152,7 +190,7 @@ public final class FloodgateSkinUploader {
                             //todo
                     }
                 } catch (Exception e) {
-                    logger.error("Error while receiving a message: "+message, e);
+                    logger.error("Error while receiving a message: " + message, e);
                 }
             }
 
@@ -201,7 +239,7 @@ public final class FloodgateSkinUploader {
         if (chainData == null || !chainData.isArray() || clientData == null) {
             return;
         }
-        ObjectNode node = syncData(session,clientData);
+        ObjectNode node = syncData(session, clientData);
         // The reason why I don't like Jackson
         sendSkinQueue(session, node);
     }
@@ -215,7 +253,7 @@ public final class FloodgateSkinUploader {
             return;
         }
 
-        logger.debug(session.getAuthData().name() + "syncSkin Json: "+jsonString);
+        logger.debug(session.getAuthData().name() + "syncSkin Json: " + jsonString);
         if (client.isOpen()) {
             client.send(jsonString);
             return;
@@ -223,26 +261,28 @@ public final class FloodgateSkinUploader {
         skinQueue.add(jsonString);
     }
 
-    public void syncFashion(GeyserSession session,BedrockClientData clientData){
+    public void syncFashion(GeyserSession session, BedrockClientData clientData) {
         ObjectNode jsonNodes = syncData(session, clientData);
         List<UUID> collect = session.getEntityCache().getAllPlayerEntities().stream().map(PlayerEntity::getUuid).toList();
-        jsonNodes.putPOJO("player_entitys",collect);
-        sendSkinQueue(session,jsonNodes);
+        jsonNodes.putPOJO("player_entitys", collect);
+        sendSkinQueue(session, jsonNodes);
     }
 
-    public ObjectNode syncData(GeyserSession session, BedrockClientData clientData){
+    public ObjectNode syncData(GeyserSession session, BedrockClientData clientData) {
         ObjectNode node = JACKSON.createObjectNode();
 //        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
-        node.put("hash",MathUtils.hash(clientData.getSkinData()));
-        node.put("skin_data",Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)))));
-        node.put("geometry_data",clientData.getGeometryData().replace("\t",""));
-        node.put("geometry_name",clientData.getGeometryName());
-        node.put("skin_id",clientData.getSkinId());
-        node.put("fashion_name",clientData.getFashionName());
-        node.put("fashion_data_name",clientData.getFashionDataName());
+        node.put("hash", MathUtils.hash(clientData.getSkinData()));
+        node.put("skin_data", Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)))));
+        node.put("geometry_data", clientData.getGeometryData().replace("\t", ""));
+        node.put("geometry_name", clientData.getGeometryName());
+        node.put("skin_id", clientData.getSkinId());
+        node.put("fashion_name", clientData.getFashionName());
+        node.put("fashion_data_name", clientData.getFashionDataName());
+        node.put("username", clientData.getUsername());
+        node.put("entity_id", session.getPlayerEntity().getEntityId());
 //        node.put("skin_data",gZipBytes(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)));
 //        node.put("geometry_data",gZipBytes(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8)));
-        node.put("uuid",session.getAuthData().uuid().toString());
+        node.put("uuid", session.getAuthData().uuid().toString());
         node.put("xuid", session.getAuthData().xuid());
         return node;
     }
@@ -264,7 +304,6 @@ public final class FloodgateSkinUploader {
         client.connect();
         return this;
     }
-
 
 
     public void close() {

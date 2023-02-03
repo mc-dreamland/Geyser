@@ -220,7 +220,6 @@ public class SkinManager {
 
 
     public static void switchFashion(GeyserSession session, String fashion, String fashionData) {
-        // TODO SYNC_FASHION
         // 只适用于单个 Geyser 不适用于多 Geyser
         // 需保证 skinId 不重复
         session.getClientData().setSkinId(fashion);
