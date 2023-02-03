@@ -362,16 +362,17 @@ public class SkinManager {
             if (("steve".equals(skinUrl) || "alex".equals(skinUrl)) && GeyserImpl.getInstance().getConfig().getRemote().getAuthType() != AuthType.ONLINE) {
                 GeyserSession session = GeyserImpl.getInstance().connectionByUuid(uuid);
 
-                if (session != null) {
-                    skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe";
-                    capeUrl = session.getClientData().getCapeId();
+                skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe";
 
-                    SkinProvider.SkinGeometry geometry = SkinProvider.getCachedGeometry().getIfPresent(uuid);
-                    if (geometry != null) {
-                        String geometryName = GeyserImpl.JSON_MAPPER.readTree(geometry.getGeometryName()).get("geometry").get("default").asText().replace("geometry.","");
-                        skinUrl += "&"+geometryName;
-                    }
+                SkinProvider.SkinGeometry geometry = SkinProvider.getCachedGeometry().getIfPresent(uuid);
+                if (geometry != null) {
+                    String geometryName = GeyserImpl.JSON_MAPPER.readTree(geometry.getGeometryName()).get("geometry").get("default").asText().replace("geometry.","");
+                    skinUrl += "&"+geometryName;
                 }
+                if (session != null) {
+                    capeUrl = session.getClientData().getCapeId();
+                }
+
                 GeyserImpl.getInstance().getLogger().debug("loadOfflineSkin: " + entity.getUsername() + " url: " + skinUrl);
             }
             return new GameProfileData(skinUrl, capeUrl, isAlex);
