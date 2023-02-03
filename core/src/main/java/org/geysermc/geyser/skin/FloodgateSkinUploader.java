@@ -34,6 +34,7 @@ import lombok.SneakyThrows;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.GeyserLogger;
+import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.session.auth.BedrockClientData;
@@ -197,22 +198,12 @@ public final class FloodgateSkinUploader {
         if (chainData == null || !chainData.isArray() || clientData == null) {
             return;
         }
-//        logger.debug(session.getAuthData().name() + " syncSkin "+clientData.getOriginalString() );
-        ObjectNode node = JACKSON.createObjectNode();
-//        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
-        node.put("hash",MathUtils.hash(clientData.getSkinData()));
-        node.put("skin_data",Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)))));
-        node.put("geometry_data",clientData.getGeometryData().replace("\t",""));
-        node.put("geometry_name",clientData.getGeometryName());
-        node.put("skin_id",clientData.getSkinId());
-        node.put("fashion_name",clientData.getFashionName());
-        node.put("fashion_data_name","{\"geometry\" :{\"default\" :\"geometry." + clientData.getFashionDataName() + "\"}}");
-//        node.put("skin_data",gZipBytes(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)));
-//        node.put("geometry_data",gZipBytes(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8)));
-        node.put("uuid",session.getAuthData().uuid().toString());
-        node.put("xuid", session.getAuthData().xuid());
-
+        ObjectNode node = syncData(session,clientData);
         // The reason why I don't like Jackson
+        sendSkinQueue(session, node);
+    }
+
+    private void sendSkinQueue(GeyserSession session, ObjectNode node) {
         String jsonString;
         try {
             jsonString = JACKSON.writeValueAsString(node);
@@ -227,6 +218,30 @@ public final class FloodgateSkinUploader {
             return;
         }
         skinQueue.add(jsonString);
+    }
+
+    public void syncFashion(GeyserSession session,BedrockClientData clientData){
+        ObjectNode jsonNodes = syncData(session, clientData);
+        List<UUID> collect = session.getEntityCache().getAllPlayerEntities().stream().map(PlayerEntity::getUuid).toList();
+        jsonNodes.putPOJO("player_entitys",collect);
+        sendSkinQueue(session,jsonNodes);
+    }
+
+    public ObjectNode syncData(GeyserSession session, BedrockClientData clientData){
+        ObjectNode node = JACKSON.createObjectNode();
+//        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
+        node.put("hash",MathUtils.hash(clientData.getSkinData()));
+        node.put("skin_data",Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)))));
+        node.put("geometry_data",clientData.getGeometryData().replace("\t",""));
+        node.put("geometry_name",clientData.getGeometryName());
+        node.put("skin_id",clientData.getSkinId());
+        node.put("fashion_name",clientData.getFashionName());
+        node.put("fashion_data_name",clientData.getFashionDataName());
+//        node.put("skin_data",gZipBytes(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)));
+//        node.put("geometry_data",gZipBytes(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8)));
+        node.put("uuid",session.getAuthData().uuid().toString());
+        node.put("xuid", session.getAuthData().xuid());
+        return node;
     }
 
     private void reconnectLater(GeyserImpl geyser) {

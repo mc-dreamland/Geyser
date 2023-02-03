@@ -218,29 +218,43 @@ public class SkinManager {
     }
 
 
-    public static void switchFashion(GeyserSession session,String fashion,String fashionData){
-        GeyserImpl.getInstance().getLogger().debug("storeBedrockSkinId: "+session.getClientData().getSkinId());
+    public static void switchFashion(GeyserSession session, String fashion, String fashionData) {
+        // TODO SYNC_FASHION
+        // 只适用于单个 Geyser 不适用于多 Geyser
+        // 需保证 skinId 不重复
+        session.getClientData().setSkinId(fashion);
         session.getClientData().setFashionName(fashion);
         session.getClientData().setFashionDataName(fashionData);
-//        GeyserImpl.getInstance().getSkinUploader().syncSkin(session, session.getClientData());
-        SkinProvider.storeBedrockSkin(session.uuid(),session.getClientData().getSkinId(),
+        GeyserImpl.getInstance().getSkinUploader().syncFashion(session, session.getClientData());
+        SkinProvider.storeBedrockSkin(session.uuid(), session.getClientData().getSkinId(),
                 SkinProvider.getPermanentSkins().getOrDefault(fashion,
                         SkinProvider.getPermanentSkins().get("alex")));
 
         SkinProvider.storeBedrockGeometry(session.uuid(),
                 SkinProvider.getPermanentGeometry(fashionData));
-        SkinManager.requestAndHandleSkinAndCape(session.getPlayerEntity(),session,skinAndCape -> {
-            PlayerSkinPacket skinPacket = new PlayerSkinPacket();
-            skinPacket.setUuid(session.uuid());
-            skinPacket.setOldSkinName("");
-            skinPacket.setNewSkinName(session.getClientData().getSkinId());
-            skinPacket.setSkin(FakeHeadProvider.getSkin(session.getClientData().getSkinId(),skinAndCape.skin(),skinAndCape.cape(),
-                    skinAndCape.geometry()));
-            skinPacket.setTrustedSkin(true);
+        SkinManager.requestAndHandleSkinAndCape(session.getPlayerEntity(), session, skinAndCape -> {
+            PlayerSkinPacket skinPacket = skinPacket(session, skinAndCape);
+            for (PlayerEntity playerEntity : session.getEntityCache().getAllPlayerEntities()) {
+                GeyserSession geyserSession = GeyserImpl.getInstance().connectionByUuid(playerEntity.getUuid());
+                if (geyserSession != null && geyserSession != session){
+                    // 发包切换皮肤
+                    geyserSession.sendUpstreamPacket(skinPacket);
+                }
+            }
             session.sendUpstreamPacket(skinPacket);
         });
+        GeyserImpl.getInstance().getLogger().debug(String.format("%s switch fasion skin: %s geometry: %s", session.name(), fashion, fashionData));
+    }
 
-        GeyserImpl.getInstance().getLogger().debug(String.format("%s switch fasion skin: %s geometry: %s",session.name(),fashion,fashionData));
+    public static PlayerSkinPacket skinPacket(GeyserSession session, SkinProvider.SkinData skinAndCape){
+        PlayerSkinPacket skinPacket = new PlayerSkinPacket();
+        skinPacket.setUuid(session.uuid());
+        skinPacket.setOldSkinName("");
+        skinPacket.setNewSkinName(session.getClientData().getSkinId());
+        skinPacket.setSkin(FakeHeadProvider.getSkin(session.getClientData().getSkinId(),skinAndCape.skin(),skinAndCape.cape(),
+                skinAndCape.geometry()));
+        skinPacket.setTrustedSkin(true);
+        return skinPacket;
     }
 
     /**
@@ -347,13 +361,10 @@ public class SkinManager {
                 GeyserSession session = GeyserImpl.getInstance().connectionByUuid(uuid);
 
                 if (session != null) {
-                    skinUrl = session.getClientData().getSkinId();
+                    skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe";
                     capeUrl = session.getClientData().getCapeId();
                 }
-                if (session == null && GeyserImpl.getInstance().getConfig().getRemote().getAuthType() == AuthType.FLOODGATE) {
-                    skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/" + uuid+"?pe";
-                }
-                GeyserImpl.getInstance().getLogger().debug("loadOfflineSkin: "+entity.getUsername() + " url: "+skinUrl);
+                GeyserImpl.getInstance().getLogger().debug("loadOfflineSkin: " + entity.getUsername() + " url: " + skinUrl);
             }
             return new GameProfileData(skinUrl, capeUrl, isAlex);
         }

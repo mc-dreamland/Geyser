@@ -279,11 +279,11 @@ public class SkinProvider {
 
             if ("steve".equals(skinUrl) || "alex".equals(skinUrl)) {
                 GeyserSession session = GeyserImpl.getInstance().connectionByUuid(playerId);
-
                 if (session != null) {
                     newSkinUrl = session.getClientData().getSkinId();
                 }
             }
+            // TODO FIX: fashion 以及 cacheSkin缓存问题
             // 向 URL 请求皮肤、披风数据
             CapeProvider provider = capeUrl != null ? CapeProvider.MINECRAFT : null;
             SkinAndCape skinAndCape = new SkinAndCape(
@@ -308,6 +308,7 @@ public class SkinProvider {
     public static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
         GeyserImpl.getInstance().getLogger().debug(playerId + " 请求皮肤 url:" + textureUrl);
         if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(EMPTY_SKIN);
+
         //  从 cachedSkins 里面拿皮肤
         // 从HTTP请求缓存里面拿皮肤
         CompletableFuture<Skin> requestedSkin = requestedSkins.get(textureUrl);
@@ -332,16 +333,9 @@ public class SkinProvider {
                         cachedSkins.put(textureUrl, skin);
                         requestedSkins.remove(textureUrl);
                     });
-            if (textureUrl.endsWith("?pe")) {
-                future = CompletableFuture.supplyAsync(() -> requestSkin(playerId, textureUrl), EXECUTOR_SERVICE).whenCompleteAsync((skin, throwable) -> {
-                    skin.updated = true;
-                    cachedSkins.put(textureUrl, skin);
-                    requestedSkins.remove(textureUrl);
-                });
-            }
             requestedSkins.put(textureUrl, future);
         } else {
-            if (textureUrl.endsWith("?pe")) {
+            if (textureUrl.contains("?pe")) {
                 Skin skin = requestSkin(playerId, textureUrl);
                 future = CompletableFuture.completedFuture(skin);
                 cachedSkins.put(textureUrl, skin);
@@ -513,6 +507,7 @@ public class SkinProvider {
             GeyserImpl.getInstance().getLogger().debug("requestSkin: "+uuid + " url: "+textureUrl);
             CompletableFuture<Skin> skinCompletableFuture = CompletableFuture.supplyAsync(() -> WebUtils.getJson(textureUrl))
                     .thenApply(json -> {
+                        GeyserImpl.getInstance().getLogger().debug("requestSkin Json: "+json);
                         // 保存玩家的时装模型
                         if (json.hasNonNull("fashion_name") && SkinProvider.getPermanentGeometry().containsKey(json.get("fashion_data_name").asText())) {
                             SkinProvider.storeBedrockGeometry(uuid, SkinProvider.getPermanentGeometry().get(json.get("fashion_data_name").asText()));

@@ -53,6 +53,7 @@ public final class BedrockClientData {
     private String languageCode;
 
     @JsonProperty(value = "SkinId")
+    @Setter
     private String skinId;
     @JsonProperty(value = "SkinData")
     private String skinData;
