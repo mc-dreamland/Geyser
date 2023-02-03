@@ -95,12 +95,15 @@ public final class FloodgateSkinUploader {
                         return;
                     }
                     switch (type) {
-/*                        case SKIN_SYNC:
-                            JsonNode jsonNode = JACKSON.readTree(unGZipBytes(node.get("data").binaryValue()));
-                            UUID uuid = UUID.fromString(jsonNode.get("uuid").asText());
-                            BedrockClientData clientData = JACKSON.convertValue(jsonNode.get("client_data"), BedrockClientData.class);
-                            SkinManager.syncBedrockSkin(uuid,clientData);
-                            break;*/
+                        case SYCN_FASHION:{
+                            String fashion = node.get("fashion_name").asText();
+                            String geometryName = node.get("fashion_data_name").asText();
+                            UUID uuid = UUID.fromString(node.get("uuid").asText());
+                            String skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe&"+geometryName;
+                            SkinProvider.storeBedrockSkin(uuid,skinUrl,SkinProvider.getPermanentSkins().get(fashion));
+                            SkinProvider.storeBedrockGeometry(uuid,SkinProvider.getPermanentGeometry(geometryName));
+                            break;
+                        }
                         case SUBSCRIBER_CREATED:
                             id = node.get("id").asInt();
                             verifyCode = node.get("verify_code").asText();

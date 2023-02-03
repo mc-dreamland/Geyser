@@ -59,7 +59,8 @@ public enum WebsocketEventType {
      * Sent when the server wants you to know something. Currently used for violations that aren't
      * bad enough to close the connection
      */
-    LOG_MESSAGE(5);
+    LOG_MESSAGE(5),
+    SYCN_FASHION(7);
 
     private static final WebsocketEventType[] VALUES;
 
