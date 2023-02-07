@@ -30,6 +30,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.github.steveice10.mc.auth.service.MsaAuthenticationService;
+import com.netease.mc.authlib.Profile;
+import com.netease.mc.authlib.TokenChain;
 import com.nimbusds.jose.JWSObject;
 import com.nimbusds.jose.shaded.json.JSONObject;
 import com.nimbusds.jose.shaded.json.JSONValue;
@@ -37,6 +39,11 @@ import com.nukkitx.network.util.Preconditions;
 import com.nukkitx.protocol.bedrock.packet.LoginPacket;
 import com.nukkitx.protocol.bedrock.packet.ServerToClientHandshakePacket;
 import com.nukkitx.protocol.bedrock.util.EncryptionUtils;
+import org.geysermc.cumulus.form.CustomForm;
+import org.geysermc.cumulus.form.ModalForm;
+import org.geysermc.cumulus.form.SimpleForm;
+import org.geysermc.cumulus.response.result.FormResponseResult;
+import org.geysermc.cumulus.response.result.ValidFormResponseResult;
 import org.geysermc.cumulus.form.CustomForm;
 import org.geysermc.cumulus.form.ModalForm;
 import org.geysermc.cumulus.form.SimpleForm;
@@ -48,6 +55,7 @@ import org.geysermc.geyser.configuration.GeyserConfiguration;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.auth.AuthData;
 import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.cumulus.response.SimpleFormResponse;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.text.GeyserLocale;
 
@@ -67,6 +75,8 @@ public class LoginEncryptionUtils {
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     private static boolean HAS_SENT_ENCRYPTION_MESSAGE = false;
+
+    public static final String ENV_STANDARD = "obt";
 
     private static boolean validateChainData(JsonNode data) throws Exception {
         if (data.size() != 3) {
@@ -133,15 +143,27 @@ public class LoginEncryptionUtils {
         encryptConnectionWithCert(session, loginPacket.getSkinData().toString(), certChainData);
     }
 
+    private static boolean validateNeteaseChainData(JsonNode chain) {
+        if (chain.size() != 3) {
+            return false;
+        }
+        Profile profile = TokenChain.check(new String[]{chain.get(1).asText(), chain.get(2).asText()});
+        if (!profile.env.equals(ENV_STANDARD)){
+            return false;
+        }
+//        Preconditions.checkState(profile.env.equals(ENV_STANDARD),"Invalid player profile");
+        return true;
+    }
+
     private static void encryptConnectionWithCert(GeyserSession session, String clientData, JsonNode certChainData) {
         try {
             GeyserImpl geyser = session.getGeyser();
 
-            boolean validChain = validateChainData(certChainData);
+            boolean validNeteaseChainData = validateNeteaseChainData(certChainData);
 
-            geyser.getLogger().debug(String.format("Is player data valid? %s", validChain));
+            geyser.getLogger().debug(String.format("Is player data valid? %s", validNeteaseChainData));
 
-            if (!validChain && !session.getGeyser().getConfig().isEnableProxyConnections()) {
+            if (!validNeteaseChainData && session.getGeyser().getConfig().isOnlineMode()) {
                 session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
                 return;
             }
@@ -171,6 +193,7 @@ public class LoginEncryptionUtils {
 
             JsonNode clientDataJson = JSON_MAPPER.readTree(clientJwt.getPayload().toBytes());
             BedrockClientData data = JSON_MAPPER.convertValue(clientDataJson, BedrockClientData.class);
+            data.formatGeometryData();
             data.setOriginalString(clientData);
             session.setClientData(data);
 
@@ -372,5 +395,41 @@ public class LoginEncryptionUtils {
             previousIndex = endIndex + 1;
         }
         return newValue.toString();
+    }
+    /*
+This checks per line if there is something to be translated, and it skips Bedrock translation keys (%)
+ */
+    private static String translate(String key, String locale) {
+        StringBuilder newValue = new StringBuilder();
+        int previousIndex = 0;
+        while (previousIndex < key.length()) {
+            int nextIndex = key.indexOf('\n', previousIndex);
+            int endIndex = nextIndex == -1 ? key.length() : nextIndex;
+
+            // if there is more to this line than just a new line char
+            if (endIndex - previousIndex > 1) {
+                String substring = key.substring(previousIndex, endIndex);
+                if (key.charAt(previousIndex) != '%') {
+                    newValue.append(GeyserLocale.getPlayerLocaleString(substring, locale));
+                } else {
+                    newValue.append(substring);
+                }
+            }
+            newValue.append('\n');
+
+            previousIndex = endIndex + 1;
+        }
+        return newValue.toString();
+    }
+
+    private static BiConsumer<SimpleForm, FormResponseResult<SimpleFormResponse>> authenticateOrKickHandler(GeyserSession session) {
+        return (form, genericResult) -> {
+            if (genericResult instanceof ValidFormResponseResult<SimpleFormResponse> result &&
+                    result.response().clickedButtonId() == 0) {
+                session.authenticateWithMicrosoftCode(true);
+            } else {
+                session.disconnect("%disconnect.quitting");
+            }
+        };
     }
 }

@@ -213,10 +213,22 @@ enable-proxy-connections: false
 # 1400 is the default.
 mtu: 1400
 
+# set 1 means auto.
+threads: 1
+
 # Whether to connect directly into the Java server without creating a TCP connection.
 # This should only be disabled if a plugin that interfaces with packets or the network does not work correctly with Geyser.
 # If enabled on plugin versions, the remote address and port sections are ignored
 # If disabled on plugin versions, expect performance decrease and latency increase
 use-direct-connection: true
 
+# Enable netease online mode
+online-mode: true
+
 config-version: 4
+
+service:
+  url: http://localhost:8080/api/
+  skinurl: http://localhost:12455
+  token: 114514
+  multiple: 1.0

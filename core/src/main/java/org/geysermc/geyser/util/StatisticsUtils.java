@@ -29,9 +29,12 @@ import com.github.steveice10.mc.protocol.data.game.statistic.*;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.geysermc.cumulus.form.SimpleForm;
 import org.geysermc.cumulus.util.FormImage;
+import org.geysermc.cumulus.form.SimpleForm;
+import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.type.ItemMappings;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.cumulus.util.FormImage;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.text.MinecraftLocale;
 

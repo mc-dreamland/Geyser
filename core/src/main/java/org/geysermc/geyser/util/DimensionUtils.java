@@ -26,7 +26,11 @@
 package org.geysermc.geyser.util;
 
 import com.github.steveice10.mc.protocol.data.game.entity.Effect;
+import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
+import com.github.steveice10.opennbt.tag.builtin.StringTag;
+import com.nukkitx.math.vector.Vector2i;
 import com.nukkitx.math.vector.Vector3f;
+import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.protocol.bedrock.packet.ChangeDimensionPacket;
 import com.nukkitx.protocol.bedrock.packet.ChunkRadiusUpdatedPacket;
 import com.nukkitx.protocol.bedrock.packet.MobEffectPacket;
@@ -34,8 +38,13 @@ import com.nukkitx.protocol.bedrock.packet.StopSoundPacket;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.ChunkCache;
 
+import java.util.HashSet;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 public class DimensionUtils {
 
@@ -55,9 +64,39 @@ public class DimensionUtils {
      */
     public static final String THE_END = "minecraft:the_end";
 
-    public static void switchDimension(GeyserSession session, String javaDimension) {
+    public static void clearLoadedChunks(GeyserSession session) {
+        session.setStartClearChunkCache(false);
+        HashSet<Vector2i> vector2is = new HashSet<>(session.getOldLoadedChunkCache());
+        for (Vector2i vector2i : vector2is) {
+            ChunkUtils.sendEmptyChunk(session, vector2i.getX(), vector2i.getY(), false);
+            session.getOldLoadedChunkCache().remove(vector2i);
+        }
+
+        session.getSkullCache().getSkulls().forEach((vector3i, skull) -> {
+            session.getSkullCache().removeSkull(vector3i);
+        });
+    }
+
+    public static void switchDimension(GeyserSession session, String javaDimension, boolean changeWorld) {
         int bedrockDimension = javaToBedrock(javaDimension);
         int previousDimension = javaToBedrock(session.getDimension());
+
+        session.getOldLoadedChunkCache().addAll(session.getLoadedChunkCache());
+        session.getLoadedChunkCache().clear();
+
+
+        if (session.isQuickSwitch()) {
+            clearLoadedChunks(session);
+        }
+//        if (session.isQuickSwitch() && !session.isStartClearChunkCache()) {
+//            GeyserImpl.getInstance().getScheduledThread().schedule(new Runnable() {
+//                @Override
+//                public void run() {
+//                    clearLoadedChunks(session);
+//                }
+//            }, 1000, TimeUnit.MILLISECONDS);
+//            session.setStartClearChunkCache(true);
+//        }
 
         Entity player = session.getPlayerEntity();
 
@@ -87,14 +126,17 @@ public class DimensionUtils {
             // Will be re-adjusted on spawn
         }
 
-        Vector3f pos = Vector3f.from(0, Short.MAX_VALUE, 0);
+        Vector3f pos = Vector3f.from(0, 64, 0);
 
         ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
         changeDimensionPacket.setDimension(bedrockDimension);
         changeDimensionPacket.setRespawn(true);
         changeDimensionPacket.setPosition(pos);
-        session.sendUpstreamPacket(changeDimensionPacket);
-        session.setDimension(javaDimension);
+//        if (!session.isQuickSwitch() || changeWorld) {
+        if (!session.isQuickSwitch()) {
+            session.sendUpstreamPacket(changeDimensionPacket);
+            session.setDimension(javaDimension);
+        }
         setBedrockDimension(session, javaDimension);
         player.setPosition(pos);
         session.setSpawned(false);
@@ -111,24 +153,28 @@ public class DimensionUtils {
         // Effects are re-sent from server
         entityEffects.clear();
 
-        //let java server handle portal travel sound
-        StopSoundPacket stopSoundPacket = new StopSoundPacket();
-        stopSoundPacket.setStoppingAllSound(true);
-        stopSoundPacket.setSoundName("");
-        session.sendUpstreamPacket(stopSoundPacket);
+        if (!session.isQuickSwitch()) {
+            //let java server handle portal travel sound
+            StopSoundPacket stopSoundPacket = new StopSoundPacket();
+            stopSoundPacket.setStoppingAllSound(true);
+            stopSoundPacket.setSoundName("");
+            session.sendUpstreamPacket(stopSoundPacket);
+        }
 
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
-        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+        if (!session.isQuickSwitch()) ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
         // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
         // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
         // thinks they are in the end dimension.
-        if (BEDROCK_NETHER_ID == 2) {
-            if (NETHER.equals(javaDimension)) {
-                session.sendFog("minecraft:fog_hell");
-            } else if (previousDimension == BEDROCK_NETHER_ID) {
-                session.removeFog("minecraft:fog_hell");
+        if (!session.isQuickSwitch()) {
+            if (BEDROCK_NETHER_ID == 2) {
+                if (NETHER.equals(javaDimension)) {
+                    session.sendFog("minecraft:fog_hell");
+                } else if (previousDimension == BEDROCK_NETHER_ID) {
+                    session.removeFog("minecraft:fog_hell");
+                }
             }
         }
     }

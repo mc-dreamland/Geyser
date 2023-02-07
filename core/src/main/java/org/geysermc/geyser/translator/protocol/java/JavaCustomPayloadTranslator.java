@@ -28,11 +28,18 @@ package org.geysermc.geyser.translator.protocol.java;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundCustomPayloadPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteStreams;
+import com.google.gson.Gson;
+import com.nukkitx.protocol.bedrock.packet.NeteaseCustomPacket;
+import com.nukkitx.protocol.bedrock.packet.NeteaseMarketOpenPacket;
 import com.nukkitx.protocol.bedrock.packet.TransferPacket;
 import com.nukkitx.protocol.bedrock.packet.UnknownPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.geysermc.cumulus.Forms;
+import org.geysermc.cumulus.form.Form;
+import org.geysermc.cumulus.form.util.FormType;
 import org.geysermc.cumulus.form.Form;
 import org.geysermc.cumulus.form.util.FormType;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
@@ -42,12 +49,25 @@ import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
+import org.geysermc.cumulus.Forms;
+import org.msgpack.MessagePack;
+import org.msgpack.type.ArrayValue;
+import org.msgpack.type.Value;
+import org.msgpack.type.ValueType;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.zip.GZIPInputStream;
 
 @Translator(packet = ClientboundCustomPayloadPacket.class)
 public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCustomPayloadPacket> {
     private final GeyserLogger logger = GeyserImpl.getInstance().getLogger();
+    private static final Gson gson = new Gson();
 
     @Override
     public void translate(GeyserSession session, ClientboundCustomPayloadPacket packet) {
@@ -111,6 +131,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             session.sendUpstreamPacket(transferPacket);
 
         } else if (channel.equals(PluginMessageChannels.PACKET)) {
+            //TODO 发包处理
             logger.debug("A packet has been sent using the Floodgate api");
             byte[] data = packet.getData();
 
@@ -120,6 +141,19 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             }
 
             int packetId = data[0] & 0xFF;
+
+            if (packetId == 203) {
+                String check = packetBytes.readUTF();
+                NeteaseMarketOpenPacket neteaseMarketPacket = new NeteaseMarketOpenPacket();
+                neteaseMarketPacket.setCategory(packetBytes.readUTF());
+                neteaseMarketPacket.setEventName(packetBytes.readUTF());
+                session.sendUpstreamPacket(neteaseMarketPacket);
+            }
+            if (packetId == 1000) {
+                String check = packetBytes.readUTF();
+                session.setQuickSwitch(packetBytes.readBoolean());
+            }
+
             ByteBuf packetData = Unpooled.wrappedBuffer(data, 1, data.length - 1);
 
             var toSend = new UnknownPacket();
@@ -127,6 +161,95 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             toSend.setPayload(packetData);
 
             session.sendUpstreamPacket(toSend);
+        } else if (channel.equals(PluginMessageChannels.NeteaseCustom)) {
+            byte[] data = packet.getData();
+            NeteaseCustomPacket neteaseCustomPacket = new NeteaseCustomPacket();
+            MessagePack messagePack = new MessagePack();
+
+            byte[] msgPackData = unGZipBytes(data);
+            neteaseCustomPacket.setMsgPackBytes(msgPackData);
+            try {
+                Value originJson = messagePack.read(msgPackData);
+                Value unConvert = messagePack.unconvert("value");
+                if (originJson.getType().equals(ValueType.MAP)) {
+                    ArrayValue values = originJson.asMapValue().get(unConvert).asArrayValue();
+                    if (!values.get(0).toString().contains("ModEventC2S") && !values.get(0).toString().contains("ModEventS2C"))
+                        return;
+                    ArrayValue packData = values.get(1).asMapValue().get(unConvert).asArrayValue();
+                    neteaseCustomPacket.setModName(packData.get(0).toString().replace("\"", ""));
+                    neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
+                    neteaseCustomPacket.setEventName(packData.get(2).toString().replace("\"", ""));
+                    if (packData.get(3).isMapValue()) {
+                        neteaseCustomPacket.setData(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
+                        neteaseCustomPacket.setJson(originJson);
+                    }
+                } else if (originJson.getType().equals(ValueType.ARRAY)) {
+                    ArrayValue values = originJson.asArrayValue();
+                    if (!values.get(0).toString().contains("ModEventC2S") && !values.get(0).toString().contains("ModEventS2C"))
+                        return;
+                    ArrayValue packData = values.get(1).asArrayValue();
+                    neteaseCustomPacket.setModName(packData.get(0).toString().replace("\"", ""));
+                    neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
+                    neteaseCustomPacket.setEventName(packData.get(2).toString().replace("\"", ""));
+                    if (packData.get(3).isMapValue()) {
+                        neteaseCustomPacket.setData(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
+                        neteaseCustomPacket.setJson(originJson);
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            session.sendUpstreamPacket(neteaseCustomPacket);
+
+        } else if (channel.equals("floodgate:packet")) {
+            byte[] data = packet.getData();
+            int packetId = 0;
+            String check = null;
+            ByteArrayDataInput packetBytes = ByteStreams.newDataInput(data);
+            try {
+                packetBytes.readByte();
+                packetId = packetBytes.readInt();
+                check = packetBytes.readUTF();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            if (packetId != 0 && check != null && check.equals("NeteaseMarketOpen")) {
+                if (packetId == 203) {
+                    NeteaseMarketOpenPacket neteaseMarketPacket = new NeteaseMarketOpenPacket();
+                    neteaseMarketPacket.setCategory(packetBytes.readUTF());
+                    neteaseMarketPacket.setEventName(packetBytes.readUTF());
+                    session.sendUpstreamPacket(neteaseMarketPacket);
+                }
+            } else if (packetId != 0 && check != null && check.equals("GeyserSetQuickChange")) {
+                if (packetId == 1000) {
+                    session.setQuickSwitch(packetBytes.readBoolean());
+                }
+            }
         }
+    }
+
+
+    public static byte[] unGZipBytes(byte[] data) {
+        byte[] b = null;
+        try {
+            ByteArrayInputStream bis = new ByteArrayInputStream(data);
+            GZIPInputStream gzip = new GZIPInputStream(bis);
+            byte[] buf = new byte[1024];
+            int num = -1;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            while ((num = gzip.read(buf, 0, buf.length)) != -1) {
+                baos.write(buf, 0, num);
+            }
+            b = baos.toByteArray();
+            baos.flush();
+            baos.close();
+            gzip.close();
+            bis.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return b;
+    }
     }
 }

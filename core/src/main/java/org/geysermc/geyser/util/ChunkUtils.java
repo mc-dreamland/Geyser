@@ -165,6 +165,7 @@ public class ChunkUtils {
                 break; //No block will be a part of two classes
             }
         }
+        session.getChunkCache().updateBlock(position.getX(), position.getY(), position.getZ(), blockState);
     }
 
     public static void sendEmptyChunk(GeyserSession session, int chunkX, int chunkZ, boolean forceUpdate) {

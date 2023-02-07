@@ -66,6 +66,7 @@ import com.nukkitx.math.GenericMath;
 import com.nukkitx.math.vector.*;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.protocol.bedrock.BedrockPacket;
+import com.nukkitx.protocol.bedrock.BedrockPacketType;
 import com.nukkitx.protocol.bedrock.BedrockServerSession;
 import com.nukkitx.protocol.bedrock.data.*;
 import com.nukkitx.protocol.bedrock.data.command.CommandPermission;
@@ -261,6 +262,18 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * for more information.
      */
     private final Set<Vector3i> lecternCache;
+
+    private final Set<Vector2i> oldLoadedChunkCache;
+    private final Set<Vector2i> loadedChunkCache;
+
+    @Setter
+    private Vector3f lastBreak;
+
+    @Setter
+    private boolean startClearChunkCache;
+
+    @Setter
+    private boolean quickSwitch = false;
 
     /**
      * A list of all players that have a player head on with a custom texture.
@@ -570,6 +583,9 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
         this.spawned = false;
         this.loggedIn = false;
+        this.oldLoadedChunkCache = new HashSet<>();
+        this.loadedChunkCache = new HashSet<>();
+
 
         if (geyser.getWorldManager().shouldExpectLecternHandled()) {
             // Unneeded on these platforms
@@ -902,7 +918,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                             encryptedData = cipher.encryptFromString(BedrockData.of(
                                     clientData.getGameVersion(),
                                     authData.name(),
-                                    authData.xuid(),
+                                    authData.uuid().toString(),
                                     clientData.getDeviceOs().ordinal(),
                                     clientData.getLanguageCode(),
                                     clientData.getUiProfile().ordinal(),
@@ -953,12 +969,14 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                 UUID uuid = protocol.getProfile().getId();
                 if (uuid == null) {
                     // Set what our UUID *probably* is going to be
-                    if (remoteServer.authType() == AuthType.FLOODGATE) {
-                        uuid = new UUID(0, Long.parseLong(authData.xuid()));
-                    } else {
-                        uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + protocol.getProfile().getName()).getBytes(StandardCharsets.UTF_8));
-                    }
+                    uuid = authData.uuid();
                 }
+
+                if (uuid.toString().equals("00000000-0000-4000-8000-000000000000")) {
+                    geyser.getLogger().warning("玩家: " + protocol.getProfile().getName() + " 登录异常，UUID 为空。authData.uuid: " + authData.uuid() + " XUid: " + authData.xuid());
+                }
+
+
                 playerEntity.setUuid(uuid);
                 playerEntity.setUsername(protocol.getProfile().getName());
 

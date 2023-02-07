@@ -41,6 +41,9 @@ import org.geysermc.geyser.ping.IGeyserPingPassthrough;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
+import org.geysermc.geyser.ping.IGeyserPingPassthrough;
+import org.geysermc.geyser.text.GeyserLocale;
+import org.geysermc.geyser.util.WebUtils;
 
 import javax.annotation.Nonnull;
 import java.net.InetSocketAddress;
@@ -48,7 +51,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class ConnectorServerEventHandler implements BedrockServerEventHandler {
-    private static final boolean PRINT_DEBUG_PINGS = Boolean.parseBoolean(System.getProperty("Geyser.PrintPingsInDebugMode", "true"));
+    private static final boolean PRINT_DEBUG_PINGS = Boolean.parseBoolean(System.getProperty("Geyser.PrintPingsInDebugMode", "false"));
 
     /*
     The following constants are all used to ensure the ping does not reach a length where it is unparsable by the Bedrock client
@@ -85,8 +88,7 @@ public class ConnectorServerEventHandler implements BedrockServerEventHandler {
             }
         }
 
-        String ip = geyser.getConfig().isLogPlayerIpAddresses() ? inetSocketAddress.toString() : "<IP address withheld>";
-        geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.network.attempt_connect", ip));
+        geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.network.attempt_connect", inetSocketAddress));
         return true;
     }
 
@@ -123,6 +125,17 @@ public class ConnectorServerEventHandler implements BedrockServerEventHandler {
         } else {
             pong.setMotd(config.getBedrock().primaryMotd());
             pong.setSubMotd(config.getBedrock().secondaryMotd());
+            pong.setMotd(config.getBedrock().getMotd1());
+            pong.setSubMotd(config.getBedrock().getMotd2());
+        }
+
+        if (config.isPassthroughPlayerCounts() && pingInfo != null) {
+            pong.setPlayerCount(pingInfo.getPlayers().getOnline());
+            pong.setMaximumPlayerCount(pingInfo.getPlayers().getMax());
+        } else {
+            pong.setPlayerCount((int) (WebUtils.getTotalOnline() * geyser.getConfig().getService().getMultiple()));
+            pong.setMaximumPlayerCount(config.getMaxPlayers());
+            geyser.getLogger().debug("pong web online: "+pong.getPlayerCount());
         }
 
         // https://github.com/GeyserMC/Geyser/issues/3388

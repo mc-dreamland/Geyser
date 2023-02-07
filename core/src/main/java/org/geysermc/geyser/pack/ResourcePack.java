@@ -70,7 +70,7 @@ public class ResourcePack {
      * Loop through the packs directory and locate valid resource pack files
      */
     public static void loadPacks() {
-        Path directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs");
+        Path directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/ResourcePack");
 
         if (!Files.exists(directory)) {
             try {
@@ -98,9 +98,9 @@ public class ResourcePack {
             File file = path.toFile();
 
             if (file.getName().endsWith(".zip") || file.getName().endsWith(".mcpack")) {
-                ResourcePack pack = new ResourcePack();
+                ResourcePack resourcePack = new ResourcePack();
 
-                pack.sha256 = FileUtils.calculateSHA256(file);
+                resourcePack.sha256 = FileUtils.calculateSHA256(file);
 
                 Stream<? extends ZipEntry> stream = null;
                 try {
@@ -108,17 +108,17 @@ public class ResourcePack {
 
                     stream = zip.stream();
                     stream.forEach((x) -> {
-                        if (x.getName().contains("manifest.json")) {
+                        if (x.getName().contains("manifest.json") || x.getName().contains("pack_manifest.json")) {
                             try {
                                 ResourcePackManifest manifest = FileUtils.loadJson(zip.getInputStream(x), ResourcePackManifest.class);
                                 // Sometimes a pack_manifest file is present and not in a valid format,
                                 // but a manifest file is, so we null check through that one
                                 if (manifest.getHeader().getUuid() != null) {
-                                    pack.file = file;
-                                    pack.manifest = manifest;
-                                    pack.version = ResourcePackManifest.Version.fromArray(manifest.getHeader().getVersion());
+                                    resourcePack.file = file;
+                                    resourcePack.manifest = manifest;
+                                    resourcePack.version = ResourcePackManifest.Version.fromArray(manifest.getHeader().getVersion());
 
-                                    PACKS.put(pack.getManifest().getHeader().getUuid().toString(), pack);
+                                    PACKS.put(resourcePack.getManifest().getHeader().getUuid().toString(), resourcePack);
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();

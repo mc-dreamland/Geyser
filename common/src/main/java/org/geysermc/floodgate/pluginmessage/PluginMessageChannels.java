@@ -31,10 +31,11 @@ public final class PluginMessageChannels {
     public static final String SKIN = "floodgate:skin";
     public static final String FORM = "floodgate:form";
     public static final String TRANSFER = "floodgate:transfer";
-    public static final String PACKET = "floodgate:packet";
+    public static final String NeteaseCustom = "floodgate:netease";
+    public static final String CUSTOM = "floodgate:custom";
 
     private static final byte[] FLOODGATE_REGISTER_DATA =
-            String.join("\0", SKIN, FORM, TRANSFER, PACKET)
+            String.join("\0", SKIN, FORM, TRANSFER, NeteaseCustom, CUSTOM)
                     .getBytes(StandardCharsets.UTF_8);
 
     /**

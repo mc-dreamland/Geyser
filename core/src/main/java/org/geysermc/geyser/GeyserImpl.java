@@ -33,11 +33,15 @@ import com.github.steveice10.packetlib.tcp.TcpSession;
 import com.nukkitx.network.raknet.RakNetConstants;
 import com.nukkitx.network.util.EventLoops;
 import com.nukkitx.protocol.bedrock.BedrockServer;
+import com.nukkitx.protocol.bedrock.wrapper.BedrockWrapperSerializer;
+import com.nukkitx.protocol.bedrock.wrapper.BedrockWrapperSerializerV9_10;
+import com.nukkitx.protocol.bedrock.wrapper.BedrockWrapperSerializers;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.SystemPropertyUtil;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -71,6 +75,7 @@ import org.geysermc.geyser.event.GeyserEventBus;
 import org.geysermc.geyser.extension.GeyserExtensionManager;
 import org.geysermc.geyser.level.WorldManager;
 import org.geysermc.geyser.network.ConnectorServerEventHandler;
+import org.geysermc.geyser.pack.BehaviorPack;
 import org.geysermc.geyser.pack.ResourcePack;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
@@ -89,6 +94,8 @@ import org.geysermc.geyser.util.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -156,6 +163,18 @@ public class GeyserImpl implements GeyserApi {
     private Map<String, String> savedRefreshTokens;
 
     private static GeyserImpl instance;
+
+    static {
+        try {
+            final Field field = BedrockWrapperSerializers.class.getDeclaredField("SERIALIZERS");
+            field.setAccessible(true);
+            final Int2ObjectMap<BedrockWrapperSerializer> map = (Int2ObjectMap<BedrockWrapperSerializer>)field.get(BedrockWrapperSerializers.class);
+            map.put(8, BedrockWrapperSerializerV9_10.V10);
+        }
+        catch (Throwable ex) {
+            ex.printStackTrace();
+        }
+    }
 
     private GeyserImpl(PlatformType platformType, GeyserBootstrap bootstrap) {
         instance = this;
@@ -240,6 +259,7 @@ public class GeyserImpl implements GeyserApi {
         SkinProvider.registerCacheImageTask(this);
 
         ResourcePack.loadPacks();
+        BehaviorPack.loadPacks();
 
         if (platformType != PlatformType.STANDALONE && config.getRemote().address().equals("auto")) {
             // Set the remote address to localhost since that is where we are always connecting
@@ -280,9 +300,15 @@ public class GeyserImpl implements GeyserApi {
         logger.debug("Setting MTU to " + config.getMtu());
 
         Integer bedrockThreadCount = Integer.getInteger("Geyser.BedrockNetworkThreads");
+
+        if (config.getThreads() > 1) {
+            bedrockThreadCount = config.getThreads();
+        }
+        logger.warning("正在设定间歇泉启用线程...线程数为: " + bedrockThreadCount);
         if (bedrockThreadCount == null) {
             // Copy the code from Netty's default thread count fallback
             bedrockThreadCount = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
+            logger.warning("正在重新设定间歇泉启用线程...线程数为: " + bedrockThreadCount);
         }
 
         boolean enableProxyProtocol = config.getBedrock().isEnableProxyProtocol();

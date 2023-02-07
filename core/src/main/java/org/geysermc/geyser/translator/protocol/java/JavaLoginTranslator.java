@@ -82,7 +82,7 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         // are swapping servers
         if (session.isSpawned()) {
             String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), packet.getDimension());
-            DimensionUtils.switchDimension(session, fakeDim);
+            DimensionUtils.switchDimension(session, fakeDim, false);
 
             session.getWorldCache().removeScoreboard();
         }
@@ -128,7 +128,14 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
 
         session.setReducedDebugInfo(packet.isReducedDebugInfo());
 
-        session.setServerRenderDistance(packet.getViewDistance());
+        int distance = 4;
+        if (packet.getViewDistance() > 16) {
+            distance = 10;
+        } else {
+            distance = packet.getViewDistance();
+        }
+        session.setServerRenderDistance(distance);
+//        session.setServerRenderDistance(packet.getViewDistance());
 
         // TODO customize
         session.sendJavaClientSettings();
@@ -141,10 +148,12 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         }
 
         if (!newDimension.equals(session.getDimension())) {
-            DimensionUtils.switchDimension(session, newDimension);
+            DimensionUtils.switchDimension(session, newDimension, false);
         } else if (DimensionUtils.isCustomBedrockNetherId() && newDimension.equalsIgnoreCase(DimensionUtils.NETHER)) {
             // If the player is spawning into the "fake" nether, send them some fog
-            session.sendFog("minecraft:fog_hell");
+            if (!session.isQuickSwitch()) {
+                session.sendFog("minecraft:fog_hell");
+            }
         }
 
         ChunkUtils.loadDimension(session);

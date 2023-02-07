@@ -46,6 +46,8 @@ public interface GeyserConfiguration {
 
     IRemoteConfiguration getRemote();
 
+    IServiceConfiguration getService();
+
     List<String> getSavedUserLogins();
 
     @Deprecated
@@ -166,6 +168,13 @@ public interface GeyserConfiguration {
         boolean isMicrosoftAccount();
     }
 
+    interface IServiceConfiguration {
+        String getUrl();
+        String getSkinurl();
+        String getToken();
+        double getMultiple();
+    }
+
     interface IMetricsInfo {
 
         boolean isEnabled();
@@ -180,7 +189,14 @@ public interface GeyserConfiguration {
 
     int getMtu();
 
+    int getThreads();
+
     boolean isUseDirectConnection();
+
+    boolean isQuickSwitchDimension();
+
+
+    boolean isOnlineMode();
 
     int getConfigVersion();
 

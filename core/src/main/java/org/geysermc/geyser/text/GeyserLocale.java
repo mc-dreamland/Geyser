@@ -61,12 +61,12 @@ public class GeyserLocale {
         if (loadedLocale != null) {
             DEFAULT_LOCALE = loadedLocale;
             // Load English as a backup in case something goes really wrong
-            if (!"en_US".equals(loadedLocale)) {
-                loadGeyserLocale("en_US", bootstrap);
+            if (!"zh_CN".equals(loadedLocale)) {
+                loadGeyserLocale("zh_CN", bootstrap);
             }
             SYSTEM_LOCALE_INVALID = false;
         } else {
-            DEFAULT_LOCALE = loadGeyserLocale("en_US", bootstrap);
+            DEFAULT_LOCALE = loadGeyserLocale("zh_CN", bootstrap);
             if (DEFAULT_LOCALE == null) {
                 // en_US can't be loaded?
                 throw new IllegalStateException("English locale not found in Geyser. Did you clone the submodules? (git submodule update --init)");

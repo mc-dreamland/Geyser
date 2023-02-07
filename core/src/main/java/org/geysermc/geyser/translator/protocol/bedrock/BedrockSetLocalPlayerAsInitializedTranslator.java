@@ -25,23 +25,39 @@
 
 package org.geysermc.geyser.translator.protocol.bedrock;
 
+import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
 import com.nukkitx.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
 import org.geysermc.geyser.api.network.AuthType;
+import lombok.SneakyThrows;
+import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.auth.AuthType;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.InventoryUtils;
 import org.geysermc.geyser.util.LoginEncryptionUtils;
 
+import java.util.UUID;
+
 @Translator(packet = SetLocalPlayerAsInitializedPacket.class)
 public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslator<SetLocalPlayerAsInitializedPacket> {
+    @SneakyThrows
     @Override
     public void translate(GeyserSession session, SetLocalPlayerAsInitializedPacket packet) {
         if (session.getPlayerEntity().getGeyserId() == packet.getRuntimeEntityId()) {
             if (!session.getUpstream().isInitialized()) {
                 session.getUpstream().setInitialized(true);
 
-                if (session.remoteServer().authType() == AuthType.ONLINE) {
+                UUID uuid = session.getPlayerEntity().getUuid();
+                ByteArrayDataOutput out = ByteStreams.newDataOutput();
+                out.writeInt(packet.getPacketId());
+                out.writeUTF(packet.getPacketType().name());
+                out.writeUTF(uuid.toString());
+                session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(PluginMessageChannels.CUSTOM, out.toByteArray()));
+
+                if (session.getRemoteAuthType() == AuthType.ONLINE) {
                     if (!session.isLoggedIn()) {
                         if (session.getGeyser().getConfig().getSavedUserLogins().contains(session.bedrockUsername())) {
                             if (session.getGeyser().refreshTokenFor(session.bedrockUsername()) == null) {

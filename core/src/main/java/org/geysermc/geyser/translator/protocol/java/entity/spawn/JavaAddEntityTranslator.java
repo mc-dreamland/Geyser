@@ -83,6 +83,8 @@ public class JavaAddEntityTranslator extends PacketTranslator<ClientboundAddEnti
             entity = definition.factory().create(session, packet.getEntityId(), session.getEntityCache().getNextEntityId().incrementAndGet(),
                     packet.getUuid(), definition, position, motion, yaw, pitch, headYaw);
         }
+        entity.setGeyserId(packet.getEntityId());
+
         session.getEntityCache().spawnEntity(entity);
     }
 }

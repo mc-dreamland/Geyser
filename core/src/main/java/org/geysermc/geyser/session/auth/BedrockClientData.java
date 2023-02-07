@@ -33,7 +33,11 @@ import lombok.Setter;
 import org.geysermc.floodgate.util.DeviceOs;
 import org.geysermc.floodgate.util.InputMode;
 import org.geysermc.floodgate.util.UiProfile;
+import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.util.MathUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.UUID;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -127,5 +131,12 @@ public final class BedrockClientData {
 
     public UiProfile getUiProfile() {
         return uiProfile != null ? uiProfile : UiProfile.CLASSIC;
+    }
+
+    public void formatGeometryData(){
+        // base64 解码 -> 替换相关字符串 -> 再 gzip 压缩 -> 转 base64
+        GeyserImpl.getInstance().getLogger().debug("originGeometryLength: "+this.geometryData.length());
+        this.geometryData = Base64.getEncoder().encodeToString(MathUtils.gZipBytes(new String(Base64.getDecoder().decode(this.geometryData.getBytes(StandardCharsets.UTF_8))).replace("\n","").replace(" ","").getBytes(StandardCharsets.UTF_8)));
+        GeyserImpl.getInstance().getLogger().debug("base64 Gzip length: "+this.geometryData.length());
     }
 }

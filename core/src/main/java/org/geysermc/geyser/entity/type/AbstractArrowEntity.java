@@ -50,20 +50,20 @@ public class AbstractArrowEntity extends Entity {
 
         setFlag(EntityFlag.CRITICAL, (data & 0x01) == 0x01);
     }
-
-    // Ignore the rotation sent by the Java server since the
-    // Java client calculates the rotation from the motion
-    @Override
-    public void setYaw(float yaw) {
-    }
-
-    @Override
-    public void setPitch(float pitch) {
-    }
-
-    @Override
-    public void setHeadYaw(float headYaw) {
-    }
+//
+//    // Ignore the rotation sent by the Java server since the
+//    // Java client calculates the rotation from the motion
+//    @Override
+//    public void setYaw(float yaw) {
+//    }
+//
+//    @Override
+//    public void setPitch(float pitch) {
+//    }
+//
+//    @Override
+//    public void setHeadYaw(float headYaw) {
+//    }
 
     @Override
     public void setMotion(Vector3f motion) {

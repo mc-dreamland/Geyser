@@ -65,6 +65,7 @@ public class GeyserEnchantOption {
     private int javaEnchantIndex = -1;
     private int bedrockEnchantIndex = -1;
     private int enchantLevel = -1;
+    final String modEnchantIdentifier = ""; //only be used by netease mod
 
     public GeyserEnchantOption(int javaIndex) {
         this.javaIndex = javaIndex;
@@ -73,7 +74,7 @@ public class GeyserEnchantOption {
     public EnchantOptionData build(GeyserSession session) {
         this.hasChanged = false;
         return new EnchantOptionData(xpCost, javaIndex + 16, EMPTY,
-                enchantLevel == -1 ? EMPTY : Collections.singletonList(new EnchantData(bedrockEnchantIndex, enchantLevel)), EMPTY,
+                enchantLevel == -1 ? EMPTY : Collections.singletonList(new EnchantData(bedrockEnchantIndex, enchantLevel, modEnchantIdentifier)), EMPTY, EMPTY,
                 javaEnchantIndex == -1 ? "unknown" : ENCHANT_NAMES.get(javaEnchantIndex), enchantLevel == -1 ? 0 : session.getNextItemNetId());
     }
 

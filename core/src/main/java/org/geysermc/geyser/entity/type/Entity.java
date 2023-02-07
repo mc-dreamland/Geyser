@@ -62,7 +62,7 @@ public class Entity {
     protected final GeyserSession session;
 
     protected int entityId;
-    protected final long geyserId;
+    protected long geyserId;
     protected UUID uuid;
 
     protected Vector3f position;
@@ -144,7 +144,7 @@ public class Entity {
     protected void initializeMetadata() {
         dirtyMetadata.put(EntityData.SCALE, 1f);
         dirtyMetadata.put(EntityData.COLOR, (byte) 0);
-        dirtyMetadata.put(EntityData.MAX_AIR_SUPPLY, getMaxAir());
+        dirtyMetadata.put(EntityData.MAX_AIR_SUPPLY, (short) getMaxAir());
         setDimensions(Pose.STANDING);
         setFlag(EntityFlag.HAS_GRAVITY, true);
         setFlag(EntityFlag.HAS_COLLISION, true);

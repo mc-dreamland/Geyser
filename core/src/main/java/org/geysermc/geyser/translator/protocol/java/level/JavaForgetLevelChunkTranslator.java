@@ -26,6 +26,7 @@
 package org.geysermc.geyser.translator.protocol.java.level;
 
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.level.ClientboundForgetLevelChunkPacket;
+import com.nukkitx.math.vector.Vector2i;
 import com.nukkitx.math.vector.Vector3i;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
@@ -62,6 +63,7 @@ public class JavaForgetLevelChunkTranslator extends PacketTranslator<Clientbound
                 }
             }
         }
+        session.getLoadedChunkCache().remove(Vector2i.from(packet.getX(), packet.getZ()));
 
         ChunkUtils.sendEmptyChunk(session, packet.getX(), packet.getZ(), false);
     }
