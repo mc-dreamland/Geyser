@@ -63,7 +63,7 @@ public class JavaForgetLevelChunkTranslator extends PacketTranslator<Clientbound
                 }
             }
         }
-        session.getLoadedChunkCache().remove(Vector2i.from(packet.getX(), packet.getZ()));
+//        session.getLoadedChunkCache().remove(Vector2i.from(packet.getX(), packet.getZ()));
 
         ChunkUtils.sendEmptyChunk(session, packet.getX(), packet.getZ(), false);
     }

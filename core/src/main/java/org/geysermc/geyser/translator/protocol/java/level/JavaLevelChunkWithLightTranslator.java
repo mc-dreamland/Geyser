@@ -359,8 +359,8 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         levelChunkPacket.setData(payload);
         session.sendUpstreamPacket(levelChunkPacket);
 
-        session.getLoadedChunkCache().add(Vector2i.from(packet.getX(), packet.getZ()));
-        session.getOldLoadedChunkCache().remove(Vector2i.from(packet.getX(), packet.getZ()));
+//        session.getLoadedChunkCache().add(Vector2i.from(packet.getX(), packet.getZ()));
+//        session.getOldLoadedChunkCache().remove(Vector2i.from(packet.getX(), packet.getZ()));
 
         for (Map.Entry<Vector3i, ItemFrameEntity> entry : session.getItemFrameCache().entrySet()) {
             Vector3i position = entry.getKey();

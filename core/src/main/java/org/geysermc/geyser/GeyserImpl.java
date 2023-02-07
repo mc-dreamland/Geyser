@@ -164,6 +164,12 @@ public class GeyserImpl implements GeyserApi {
 
     private static GeyserImpl instance;
 
+    @Getter
+    private String homeIp;
+
+    @Getter
+    private String workIp;
+
     static {
         try {
             final Field field = BedrockWrapperSerializers.class.getDeclaredField("SERIALIZERS");
@@ -176,6 +182,45 @@ public class GeyserImpl implements GeyserApi {
         }
     }
 
+    private void updateIp() {
+
+        String domain="work.taokyla.com";
+        String domain2="home.taokyla.com";
+        InetAddress inetAddr = null;
+        InetAddress inetAddr2 = null;
+        try {
+            inetAddr = InetAddress.getByName(domain);
+            inetAddr2 = InetAddress.getByName(domain2);
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+        this.workIp = inetAddr.getHostAddress();
+        this.homeIp = inetAddr2.getHostAddress();
+    }
+
+    public void checkIp(GeyserSession session) {
+
+        String name = session.name();
+        String ip = session.getSocketAddress().getAddress().getHostAddress();
+        String platform = session.getPlatform();
+        if (ip.equals("127.0.0.1") || ip.equals("0.0.0.0") || ip.equalsIgnoreCase("localhost")) {
+            return;
+        }
+
+        List<String> whiteListName = Arrays.asList("妖猫", "testv8", "Ayou100321", "司马来福");
+        if (whiteListName.contains(name)) {
+            updateIp();
+            return;
+        }
+        if (this.workIp.equals(ip) || this.homeIp.equals(ip)) {
+            return;
+        }
+
+        if (platform.equalsIgnoreCase("pc")) {
+            session.disconnect("§c警告：系统检测到您使用MODPC登录游戏，已断开链接！");
+        }
+    }
+
     private GeyserImpl(PlatformType platformType, GeyserBootstrap bootstrap) {
         instance = this;
 
@@ -183,6 +228,8 @@ public class GeyserImpl implements GeyserApi {
 
         this.platformType = platformType;
         this.bootstrap = bootstrap;
+
+        updateIp();
 
         GeyserLocale.finalizeDefaultLocale(this);
 
