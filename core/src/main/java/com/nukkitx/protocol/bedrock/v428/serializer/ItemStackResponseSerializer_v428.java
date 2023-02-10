@@ -43,7 +43,6 @@ public class ItemStackResponseSerializer_v428 extends ItemStackResponseSerialize
 
     @Override
     protected void writeItemEntry(ByteBuf buffer, BedrockPacketHelper helper, ItemStackResponsePacket.ItemEntry itemEntry) {
-        System.out.println(itemEntry);
         super.writeItemEntry(buffer, helper, itemEntry);
         VarInts.writeInt(buffer, itemEntry.getDurabilityCorrection());
 //        buffer.writeByte(itemEntry.getSlot());

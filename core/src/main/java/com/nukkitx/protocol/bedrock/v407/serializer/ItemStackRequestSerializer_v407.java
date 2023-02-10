@@ -15,14 +15,11 @@ public class ItemStackRequestSerializer_v407 implements BedrockPacketSerializer<
 
     @Override
     public void serialize(ByteBuf buffer, BedrockPacketHelper helper, ItemStackRequestPacket packet, BedrockSession session) {
-        System.out.println("ItemStackRequestSerializer_v407 -> serialize");
         helper.writeArray(buffer, packet.getRequests(), (buf, requests) -> helper.writeItemStackRequest(buffer, session, requests));
     }
 
     @Override
     public void deserialize(ByteBuf buffer, BedrockPacketHelper helper, ItemStackRequestPacket packet, BedrockSession session) {
-        System.out.println("ItemStackRequestSerializer_v407 -> deserialize");
         helper.readArray(buffer, packet.getRequests(), buf -> helper.readItemStackRequest(buf, session));
-        System.out.println(packet);
     }
 }

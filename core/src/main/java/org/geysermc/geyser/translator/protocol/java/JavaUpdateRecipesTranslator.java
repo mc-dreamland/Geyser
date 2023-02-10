@@ -197,7 +197,6 @@ public class JavaUpdateRecipesTranslator extends PacketTranslator<ClientboundUpd
 
         session.sendUpstreamPacket(craftingDataPacket);
         session.setCraftingRecipes(recipeMap);
-        System.out.println(craftingDataPacket);
         session.setStonecutterRecipes(stonecutterRecipeMap);
         session.getLastRecipeNetId().set(netId);
     }

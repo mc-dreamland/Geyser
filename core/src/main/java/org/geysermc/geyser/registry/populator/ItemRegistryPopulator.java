@@ -76,8 +76,11 @@ public class ItemRegistryPopulator {
     }
 
     public static void populate() {
+
+        Map<String, String> V1_18_30 = new HashMap<>();
         Map<String, PaletteVersion> paletteVersions = new Object2ObjectOpenHashMap<>();
-        paletteVersions.put("1_18_30", new PaletteVersion(Bedrock_v503.V503_CODEC.getProtocolVersion(), Collections.emptyMap()));
+        paletteVersions.put("1_18_30", new PaletteVersion(Bedrock_v503.V503_CODEC.getProtocolVersion(),
+                V1_18_30));
         paletteVersions.put("1_19_0", new PaletteVersion(Bedrock_v527.V527_CODEC.getProtocolVersion(),
                 Collections.singletonMap("minecraft:trader_llama_spawn_egg", "minecraft:llama_spawn_egg")));
         paletteVersions.put("1_19_10", new PaletteVersion(Bedrock_v534.V534_CODEC.getProtocolVersion(), Collections.emptyMap()));
@@ -88,9 +91,17 @@ public class ItemRegistryPopulator {
         TypeReference<Map<String, GeyserMappingItem>> mappingItemsType = new TypeReference<>() { };
 
         Map<String, GeyserMappingItem> items;
+        Map<String, GeyserMappingItem> items_default;
+        Map<String, GeyserMappingItem> items_1_18_30;
         try (InputStream stream = bootstrap.getResource("mappings/items.json")) {
             // Load item mappings from Java Edition to Bedrock Edition
             items = GeyserImpl.JSON_MAPPER.readValue(stream, mappingItemsType);
+        } catch (Exception e) {
+            throw new AssertionError("Unable to load Java runtime item IDs", e);
+        }
+        try (InputStream stream = bootstrap.getResource("mappings/items_1_18_30.json")) {
+            // Load item mappings from Java Edition to Bedrock Edition
+            items_1_18_30 = GeyserImpl.JSON_MAPPER.readValue(stream, mappingItemsType);
         } catch (Exception e) {
             throw new AssertionError("Unable to load Java runtime item IDs", e);
         }
@@ -300,12 +311,18 @@ public class ItemRegistryPopulator {
             Int2ObjectMap<String> customIdMappings = new Int2ObjectOpenHashMap<>();
             Set<String> registeredItemNames = new ObjectOpenHashSet<>(); // This is used to check for duplicate item names
 
-            for (Map.Entry<String, GeyserMappingItem> entry : items.entrySet()) {
+            if (palette.getKey().equals("1_18_30")) {
+                items_default = items_1_18_30;
+            } else {
+                items_default = items;
+            }
+
+            for (Map.Entry<String, GeyserMappingItem> entry : items_default.entrySet()) {
                 String javaIdentifier = entry.getKey().intern();
                 GeyserMappingItem mappingItem;
                 String replacementItem = palette.getValue().additionalTranslatedItems().get(javaIdentifier);
                 if (replacementItem != null) {
-                    mappingItem = items.get(replacementItem);
+                    mappingItem = items_default.get(replacementItem);
                 } else {
                     // This items has a mapping specifically for this version of the game
                     mappingItem = entry.getValue();
