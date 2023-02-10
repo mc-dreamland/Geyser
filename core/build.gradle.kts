@@ -24,6 +24,9 @@ dependencies {
         exclude("com.nukkitx.network", "raknet")
     }
 
+    api("com.netease.mc.pe:authlib-test:1.2")
+    api("org.msgpack:msgpack:0.6.12")
+
     api(libs.mcauthlib)
     api(libs.mcprotocollib) {
         exclude("io.netty", "netty-all")

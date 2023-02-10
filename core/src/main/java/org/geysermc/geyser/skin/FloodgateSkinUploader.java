@@ -37,7 +37,6 @@ import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.GeyserLogger;
 import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.session.auth.BedrockClientData;
 import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.geyser.util.PluginMessageUtils;
@@ -86,6 +85,7 @@ public final class FloodgateSkinUploader {
                         logger.error("Got an error: " + node.get("error").asText());
                         return;
                     }
+
                     int typeId = node.get("event_id").asInt();
                     WebsocketEventType type = WebsocketEventType.fromId(typeId);
                     if (type == null) {
@@ -94,6 +94,7 @@ public final class FloodgateSkinUploader {
                                 typeId));
                         return;
                     }
+
                     switch (type) {
 /*                        case SKIN_SYNC:
                             JsonNode jsonNode = JACKSON.readTree(unGZipBytes(node.get("data").binaryValue()));
@@ -246,8 +247,6 @@ public final class FloodgateSkinUploader {
         client.connect();
         return this;
     }
-
-
 
     public void close() {
         if (!closed) {

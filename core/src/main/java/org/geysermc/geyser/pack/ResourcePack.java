@@ -98,9 +98,9 @@ public class ResourcePack {
             File file = path.toFile();
 
             if (file.getName().endsWith(".zip") || file.getName().endsWith(".mcpack")) {
-                ResourcePack resourcePack = new ResourcePack();
+                ResourcePack pack = new ResourcePack();
 
-                resourcePack.sha256 = FileUtils.calculateSHA256(file);
+                pack.sha256 = FileUtils.calculateSHA256(file);
 
                 Stream<? extends ZipEntry> stream = null;
                 try {
@@ -114,11 +114,11 @@ public class ResourcePack {
                                 // Sometimes a pack_manifest file is present and not in a valid format,
                                 // but a manifest file is, so we null check through that one
                                 if (manifest.getHeader().getUuid() != null) {
-                                    resourcePack.file = file;
-                                    resourcePack.manifest = manifest;
-                                    resourcePack.version = ResourcePackManifest.Version.fromArray(manifest.getHeader().getVersion());
+                                    pack.file = file;
+                                    pack.manifest = manifest;
+                                    pack.version = ResourcePackManifest.Version.fromArray(manifest.getHeader().getVersion());
 
-                                    PACKS.put(resourcePack.getManifest().getHeader().getUuid().toString(), resourcePack);
+                                    PACKS.put(pack.getManifest().getHeader().getUuid().toString(), pack);
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();

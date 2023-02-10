@@ -80,7 +80,7 @@ guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mcauthlib = { group = "com.github.GeyserMC", name = "MCAuthLib", version.ref = "mcauthlib" }
-mcprotocollib = { group = "com.github.GeyserMC", name = "MCProtocolLib", version.ref = "mcprotocollib" }
+mcprotocollib = { group = "com.github.steveice10", name = "mcprotocollib", version.ref = "mcprotocollib" }
 packetlib = { group = "com.github.steveice10", name = "packetlib", version.ref = "packetlib" }
 protocol = { group = "com.nukkitx.protocol", name = "bedrock-v557", version.ref = "protocol" }
 raknet = { group = "com.nukkitx.network", name = "raknet", version.ref = "raknet" }

@@ -231,7 +231,7 @@ public class GeyserLocale {
 
             // Try and get the key from en_US (this should only ever happen in development)
             if (formatString == null) {
-                properties = LOCALE_MAPPINGS.get("en_US");
+                properties = LOCALE_MAPPINGS.get("zh_CN");
                 formatString = properties.getProperty(key);
 
                 // Final fallback

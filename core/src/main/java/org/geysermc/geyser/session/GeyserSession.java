@@ -66,7 +66,6 @@ import com.nukkitx.math.GenericMath;
 import com.nukkitx.math.vector.*;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.network.VarInts;
-import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.protocol.bedrock.BedrockPacket;
 import com.nukkitx.protocol.bedrock.BedrockPacketHelper;
 import com.nukkitx.protocol.bedrock.BedrockServerSession;
@@ -181,6 +180,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Accessors(fluent = true)
     @Setter
     private RemoteServer remoteServer;
+    @Setter
+    private String platform;
 
     @Deprecated
     @Setter
@@ -277,7 +278,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private boolean startClearChunkCache;
 
     @Setter
-    private boolean quickSwitch = false;
+    private boolean quickSwitch = true;
 
     /**
      * A list of all players that have a player head on with a custom texture.
@@ -587,7 +588,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
         this.spawned = false;
         this.loggedIn = false;
-
 
         if (geyser.getWorldManager().shouldExpectLecternHandled()) {
             // Unneeded on these platforms
@@ -980,8 +980,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                 if (uuid.toString().equals("00000000-0000-4000-8000-000000000000")) {
                     geyser.getLogger().warning("玩家: " + protocol.getProfile().getName() + " 登录异常，UUID 为空。authData.uuid: " + authData.uuid() + " XUid: " + authData.xuid());
                 }
-
-
                 playerEntity.setUuid(uuid);
                 playerEntity.setUsername(protocol.getProfile().getName());
 

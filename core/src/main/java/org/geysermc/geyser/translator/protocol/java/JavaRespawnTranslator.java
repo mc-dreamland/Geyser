@@ -81,11 +81,10 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
             session.setThunder(false);
         }
 
-        String newDimension = DimensionUtils.getNewDimension(packet.getDimension());
+        String newDimension = packet.getDimension();
         boolean changeWorld = !session.getDimension().equals(newDimension)
                 && !packet.getWorldName().equals("minecraft:the_nether") && !session.getWorldName().equals("minecraft:the_nether")
                 && !packet.getWorldName().equals("minecraft:the_end") && !session.getWorldName().equals("minecraft:the_end");
-
         if (!session.isQuickSwitch()) {
             if (!session.getDimension().equals(newDimension) || !packet.getWorldName().equals(session.getWorldName())) {
                 // Switching to a new world (based off the world name change); send a fake dimension change
@@ -94,22 +93,15 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
                         // Can likely be removed if the Above Bedrock Nether Building option can be removed
                         || DimensionUtils.javaToBedrock(session.getDimension()) == DimensionUtils.javaToBedrock(newDimension))) {
                     String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), newDimension);
-                    DimensionUtils.switchDimension(session, fakeDim, true);
+                    DimensionUtils.switchDimension(session, fakeDim, changeWorld);
                 }
                 session.setWorldName(packet.getWorldName());
-                DimensionUtils.switchDimension(session, newDimension, true);
+                DimensionUtils.switchDimension(session, newDimension, changeWorld);
             }
         } else {
             session.setWorldName(packet.getWorldName());
-            DimensionUtils.switchDimension(session, newDimension, false);
+            DimensionUtils.switchDimension(session, newDimension, changeWorld);
         }
-
-        // TODO 需尽快实现进入高版本服务器时关闭该功能，及游戏中提供相关功能
-//        if (!session.isNewVersion() && !session.isQuickSwitch() || changeWorld) {
-//            ChunkUtils.loadDimensionTag(session, packet.getDimension());
-//        }
-
-        ChunkUtils.loadDimensionTag(session, packet.getDimension());
-//        if (!session.isQuickSwitch()) ChunkUtils.loadDimensionTag(session, packet.getDimension());
+        ChunkUtils.loadDimension(session);
     }
 }

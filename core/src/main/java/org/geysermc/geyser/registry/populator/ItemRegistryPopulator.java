@@ -37,6 +37,7 @@ import com.nukkitx.protocol.bedrock.data.SoundEvent;
 import com.nukkitx.protocol.bedrock.data.inventory.ComponentItemData;
 import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
 import com.nukkitx.protocol.bedrock.packet.StartGamePacket;
+import com.nukkitx.protocol.bedrock.v503.Bedrock_v503;
 import it.unimi.dsi.fastutil.ints.*;
 import com.nukkitx.protocol.bedrock.v527.Bedrock_v527;
 import com.nukkitx.protocol.bedrock.v534.Bedrock_v534;
@@ -76,6 +77,7 @@ public class ItemRegistryPopulator {
 
     public static void populate() {
         Map<String, PaletteVersion> paletteVersions = new Object2ObjectOpenHashMap<>();
+        paletteVersions.put("1_18_30", new PaletteVersion(Bedrock_v503.V503_CODEC.getProtocolVersion(), Collections.emptyMap()));
         paletteVersions.put("1_19_0", new PaletteVersion(Bedrock_v527.V527_CODEC.getProtocolVersion(),
                 Collections.singletonMap("minecraft:trader_llama_spawn_egg", "minecraft:llama_spawn_egg")));
         paletteVersions.put("1_19_10", new PaletteVersion(Bedrock_v534.V534_CODEC.getProtocolVersion(), Collections.emptyMap()));
@@ -320,7 +322,8 @@ public class ItemRegistryPopulator {
                 String bedrockIdentifier = mappingItem.getBedrockIdentifier();
                 int bedrockId = bedrockIdentifierToId.getInt(bedrockIdentifier);
                 if (bedrockId == Short.MIN_VALUE) {
-                    throw new RuntimeException("Missing Bedrock ID in mappings: " + bedrockIdentifier);
+                    bedrockId = 0;
+//                    throw new RuntimeException("Missing Bedrock ID in mappings: " + bedrockIdentifier);
                 }
                 int stackSize = mappingItem.getStackSize();
 

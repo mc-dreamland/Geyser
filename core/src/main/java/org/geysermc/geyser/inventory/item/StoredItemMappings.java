@@ -84,8 +84,10 @@ public class StoredItemMappings {
         this.enchantedBook = load(itemMappings, "enchanted_book");
         this.fishingRod = load(itemMappings, "fishing_rod");
         this.flintAndSteel = load(itemMappings, "flint_and_steel").getJavaId();
-        this.frogspawn = load(itemMappings, "frogspawn").getBedrockId();
-        this.goatHorn = load(itemMappings, "goat_horn").getJavaId();
+//        this.frogspawn = load(itemMappings, "frogspawn").getBedrockId();
+        this.frogspawn = 0;
+//        this.goatHorn = load(itemMappings, "goat_horn").getJavaId();
+        this.goatHorn = 0;
         this.glassBottle = load(itemMappings, "glass_bottle").getBedrockId();
         this.goldenApple = load(itemMappings, "golden_apple").getJavaId();
         this.goldIngot = load(itemMappings, "gold_ingot").getJavaId();

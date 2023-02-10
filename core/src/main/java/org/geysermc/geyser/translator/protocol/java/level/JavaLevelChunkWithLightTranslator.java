@@ -35,9 +35,6 @@ import com.github.steveice10.mc.protocol.data.game.level.block.BlockEntityInfo;
 import com.github.steveice10.mc.protocol.data.game.level.block.BlockEntityType;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
-import com.github.steveice10.packetlib.io.NetInput;
-import com.github.steveice10.packetlib.io.stream.StreamNetInput;
-import com.nukkitx.math.vector.Vector2i;
 import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.nbt.NBTOutputStream;
 import com.nukkitx.nbt.NbtMap;
@@ -358,9 +355,6 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         levelChunkPacket.setChunkZ(packet.getZ());
         levelChunkPacket.setData(payload);
         session.sendUpstreamPacket(levelChunkPacket);
-
-//        session.getLoadedChunkCache().add(Vector2i.from(packet.getX(), packet.getZ()));
-//        session.getOldLoadedChunkCache().remove(Vector2i.from(packet.getX(), packet.getZ()));
 
         for (Map.Entry<Vector3i, ItemFrameEntity> entry : session.getItemFrameCache().entrySet()) {
             Vector3i position = entry.getKey();

@@ -79,6 +79,11 @@ public abstract class ItemTranslator {
                 ItemTranslator itemStackTranslator = (ItemTranslator) clazz.getDeclaredConstructor().newInstance();
                 List<ItemMapping> appliedItems = itemStackTranslator.getAppliedItems();
                 for (ItemMapping item : appliedItems) {
+                    //TODO fix null;
+                    if (item == null) {
+                        GeyserImpl.getInstance().getLogger().warning("Item mapping has an item is null");
+                        continue;
+                    }
                     ItemTranslator registered = ITEM_STACK_TRANSLATORS.get(item.getJavaId());
                     if (registered != null) {
                         GeyserImpl.getInstance().getLogger().error("Could not instantiate annotated item translator " +

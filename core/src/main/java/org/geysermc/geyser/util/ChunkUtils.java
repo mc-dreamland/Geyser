@@ -165,7 +165,6 @@ public class ChunkUtils {
                 break; //No block will be a part of two classes
             }
         }
-        session.getChunkCache().updateBlock(position.getX(), position.getY(), position.getZ(), blockState);
     }
 
     public static void sendEmptyChunk(GeyserSession session, int chunkX, int chunkZ, boolean forceUpdate) {
@@ -235,14 +234,20 @@ public class ChunkUtils {
             throw new RuntimeException("Maximum Y must be a multiple of 16!");
         }
 
+        BedrockDimension bedrockDimension2 = switch (session.getDimension()) {
+            case DimensionUtils.THE_END -> BedrockDimension.THE_END;
+            case DimensionUtils.NETHER -> DimensionUtils.isCustomBedrockNetherId() ? BedrockDimension.THE_END : BedrockDimension.THE_NETHER;
+            default -> BedrockDimension.OVERWORLD;
+        };
         BedrockDimension bedrockDimension = session.getChunkCache().getBedrockDimension();
+        session.getChunkCache().setBedrockDimension(bedrockDimension2);
         // Yell in the console if the world height is too height in the current scenario
         // The constraints change depending on if the player is in the overworld or not, and if experimental height is enabled
         // (Ignore this for the Nether. We can't change that at the moment without the workaround. :/ )
-        if (minY < bedrockDimension.minY() || (bedrockDimension.doUpperHeightWarn() && maxY > bedrockDimension.height())) {
+        if (minY < bedrockDimension2.minY() || (bedrockDimension2.doUpperHeightWarn() && maxY > bedrockDimension2.height())) {
             session.getGeyser().getLogger().warning(GeyserLocale.getLocaleStringLog("geyser.network.translator.chunk.out_of_bounds",
-                    String.valueOf(bedrockDimension.minY()),
-                    String.valueOf(bedrockDimension.height()),
+                    String.valueOf(bedrockDimension2.minY()),
+                    String.valueOf(bedrockDimension2.height()),
                     session.getDimension()));
         }
 

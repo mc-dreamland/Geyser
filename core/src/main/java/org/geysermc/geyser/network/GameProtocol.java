@@ -28,6 +28,7 @@ package org.geysermc.geyser.network;
 import com.github.steveice10.mc.protocol.codec.MinecraftCodec;
 import com.github.steveice10.mc.protocol.codec.PacketCodec;
 import com.nukkitx.protocol.bedrock.BedrockPacketCodec;
+import com.nukkitx.protocol.bedrock.v503.Bedrock_v503;
 import com.nukkitx.protocol.bedrock.v527.Bedrock_v527;
 import com.nukkitx.protocol.bedrock.v534.Bedrock_v534;
 import com.nukkitx.protocol.bedrock.v544.Bedrock_v544;
@@ -61,6 +62,9 @@ public final class GameProtocol {
     private static final PacketCodec DEFAULT_JAVA_CODEC = MinecraftCodec.CODEC;
 
     static {
+        SUPPORTED_BEDROCK_CODECS.add(Bedrock_v503.V503_CODEC.toBuilder()
+                .minecraftVersion("1.18.30/1.18.31")
+                .build());
         SUPPORTED_BEDROCK_CODECS.add(Bedrock_v527.V527_CODEC.toBuilder()
                 .minecraftVersion("1.19.0/1.19.2")
                 .build());

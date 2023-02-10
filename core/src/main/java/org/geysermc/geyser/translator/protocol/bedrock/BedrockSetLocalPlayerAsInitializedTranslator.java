@@ -33,7 +33,6 @@ import org.geysermc.geyser.api.network.AuthType;
 import lombok.SneakyThrows;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.geyser.session.auth.AuthType;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.InventoryUtils;
@@ -57,7 +56,7 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
                 out.writeUTF(uuid.toString());
                 session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(PluginMessageChannels.CUSTOM, out.toByteArray()));
 
-                if (session.getRemoteAuthType() == AuthType.ONLINE) {
+                if (session.remoteServer().authType() == AuthType.ONLINE) {
                     if (!session.isLoggedIn()) {
                         if (session.getGeyser().getConfig().getSavedUserLogins().contains(session.bedrockUsername())) {
                             if (session.getGeyser().refreshTokenFor(session.bedrockUsername()) == null) {

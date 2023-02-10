@@ -30,14 +30,10 @@ import com.github.steveice10.mc.protocol.packet.ingame.serverbound.level.Serverb
 import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.protocol.bedrock.packet.BlockEntityDataPacket;
-import com.nukkitx.protocol.bedrock.v475.Bedrock_v475;
-import com.nukkitx.protocol.bedrock.v503.Bedrock_v503;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.SignUtils;
-
-import java.util.Arrays;
 
 @Translator(packet = BlockEntityDataPacket.class)
 public class BedrockBlockEntityDataTranslator extends PacketTranslator<BlockEntityDataPacket> {

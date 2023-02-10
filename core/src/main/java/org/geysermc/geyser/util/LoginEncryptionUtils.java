@@ -399,40 +399,4 @@ public class LoginEncryptionUtils {
         }
         return newValue.toString();
     }
-    /*
-This checks per line if there is something to be translated, and it skips Bedrock translation keys (%)
- */
-    private static String translate(String key, String locale) {
-        StringBuilder newValue = new StringBuilder();
-        int previousIndex = 0;
-        while (previousIndex < key.length()) {
-            int nextIndex = key.indexOf('\n', previousIndex);
-            int endIndex = nextIndex == -1 ? key.length() : nextIndex;
-
-            // if there is more to this line than just a new line char
-            if (endIndex - previousIndex > 1) {
-                String substring = key.substring(previousIndex, endIndex);
-                if (key.charAt(previousIndex) != '%') {
-                    newValue.append(GeyserLocale.getPlayerLocaleString(substring, locale));
-                } else {
-                    newValue.append(substring);
-                }
-            }
-            newValue.append('\n');
-
-            previousIndex = endIndex + 1;
-        }
-        return newValue.toString();
-    }
-
-    private static BiConsumer<SimpleForm, FormResponseResult<SimpleFormResponse>> authenticateOrKickHandler(GeyserSession session) {
-        return (form, genericResult) -> {
-            if (genericResult instanceof ValidFormResponseResult<SimpleFormResponse> result &&
-                    result.response().clickedButtonId() == 0) {
-                session.authenticateWithMicrosoftCode(true);
-            } else {
-                session.disconnect("%disconnect.quitting");
-            }
-        };
-    }
 }

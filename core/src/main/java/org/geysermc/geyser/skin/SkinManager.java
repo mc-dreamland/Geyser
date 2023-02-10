@@ -323,7 +323,7 @@ public class SkinManager {
                     skinUrl = session.getClientData().getSkinId();
                     capeUrl = session.getClientData().getCapeId();
                 }
-                if (session == null && GeyserImpl.getInstance().getConfig().getRemote().getAuthType() == AuthType.FLOODGATE) {
+                if (session == null && GeyserImpl.getInstance().getConfig().getRemote().authType() == AuthType.FLOODGATE) {
                     skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/" + uuid+"?pe";
                 }
                 GeyserImpl.getInstance().getLogger().debug("loadOfflinSkin: "+entity.getUsername() + " url: "+skinUrl);

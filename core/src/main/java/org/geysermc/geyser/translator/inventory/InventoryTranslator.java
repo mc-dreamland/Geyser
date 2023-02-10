@@ -151,6 +151,7 @@ public abstract class InventoryTranslator {
     public final void translateRequests(GeyserSession session, Inventory inventory, List<ItemStackRequest> requests) {
         boolean refresh = false;
         ItemStackResponsePacket responsePacket = new ItemStackResponsePacket();
+        System.out.println("new ItemStackResponsePacket");
         for (ItemStackRequest request : requests) {
             ItemStackResponsePacket.Response response;
             if (request.getActions().length > 0) {

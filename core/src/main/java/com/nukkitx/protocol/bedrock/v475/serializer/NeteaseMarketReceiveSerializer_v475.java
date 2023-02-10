@@ -41,14 +41,14 @@ public class NeteaseMarketReceiveSerializer_v475 implements BedrockPacketSeriali
     public static final NeteaseMarketReceiveSerializer_v475 INSTANCE = new NeteaseMarketReceiveSerializer_v475();
     private static final Gson gson = new Gson();
 
-    @SneakyThrows
     @Override
     public void serialize(ByteBuf buffer, BedrockPacketHelper helper, NeteaseMarketReceivePacket packet) {
-
+        return;
     }
 
     @Override
     public void deserialize(ByteBuf buffer, BedrockPacketHelper helper, NeteaseMarketReceivePacket packet) {
+        return;
         //TODO 还有1byte的数据未读
     }
 

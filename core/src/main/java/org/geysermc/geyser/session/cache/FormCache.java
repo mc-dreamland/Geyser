@@ -47,9 +47,6 @@ public class FormCache {
     private final Int2ObjectMap<Form> forms = new Int2ObjectOpenHashMap<>();
     private final GeyserSession session;
 
-
-    private final FormDefinitions formDefinitions = FormDefinitions.instance();
-
     public int addForm(Form form) {
         int formId = formIdCounter.getAndIncrement();
         forms.put(formId, form);
@@ -64,9 +61,9 @@ public class FormCache {
         }
     }
 
-
     private void sendForm(int formId, Form form) {
         String jsonData = formDefinitions.codecFor(form).jsonData(form);
+
         ModalFormRequestPacket formRequestPacket = new ModalFormRequestPacket();
         formRequestPacket.setFormId(formId);
         formRequestPacket.setFormData(jsonData);

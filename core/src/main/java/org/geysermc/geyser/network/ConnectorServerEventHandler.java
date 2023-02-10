@@ -41,8 +41,6 @@ import org.geysermc.geyser.ping.IGeyserPingPassthrough;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
-import org.geysermc.geyser.ping.IGeyserPingPassthrough;
-import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.WebUtils;
 
 import javax.annotation.Nonnull;
@@ -88,7 +86,8 @@ public class ConnectorServerEventHandler implements BedrockServerEventHandler {
             }
         }
 
-        geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.network.attempt_connect", inetSocketAddress));
+        String ip = geyser.getConfig().isLogPlayerIpAddresses() ? inetSocketAddress.toString() : "<IP address withheld>";
+        geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.network.attempt_connect", ip));
         return true;
     }
 
@@ -125,8 +124,6 @@ public class ConnectorServerEventHandler implements BedrockServerEventHandler {
         } else {
             pong.setMotd(config.getBedrock().primaryMotd());
             pong.setSubMotd(config.getBedrock().secondaryMotd());
-            pong.setMotd(config.getBedrock().getMotd1());
-            pong.setSubMotd(config.getBedrock().getMotd2());
         }
 
         if (config.isPassthroughPlayerCounts() && pingInfo != null) {

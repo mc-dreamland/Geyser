@@ -34,8 +34,6 @@ import com.nukkitx.protocol.bedrock.packet.*;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.configuration.GeyserConfiguration;
-import org.geysermc.geyser.pack.BehaviorPack;
-import org.geysermc.geyser.pack.BehaviorPackManifest;
 import org.geysermc.geyser.pack.ResourcePack;
 import org.geysermc.geyser.pack.ResourcePackManifest;
 import org.geysermc.geyser.registry.BlockRegistries;
@@ -140,12 +138,6 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         geyser.getSessionManager().addPendingSession(session);
 
         ResourcePacksInfoPacket resourcePacksInfo = new ResourcePacksInfoPacket();
-        for(BehaviorPack behaviorPack : BehaviorPack.PACKS.values()) {
-            BehaviorPackManifest.Header header = behaviorPack.getManifest().getHeader();
-            resourcePacksInfo.getBehaviorPackInfos().add(new ResourcePacksInfoPacket.Entry(
-                    header.getUuid().toString(), header.getVersionString(), behaviorPack.getFile().length(),
-                    "", "", "", false, false));
-        }
         for(ResourcePack resourcePack : ResourcePack.PACKS.values()) {
             ResourcePackManifest.Header header = resourcePack.getManifest().getHeader();
             resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
@@ -180,13 +172,9 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             case HAVE_ALL_PACKS:
                 ResourcePackStackPacket stackPacket = new ResourcePackStackPacket();
                 stackPacket.setExperimentsPreviouslyToggled(false);
-                stackPacket.setForcedToAccept(true); // Leaving this as false allows the player to choose to download or not
+                stackPacket.setForcedToAccept(false); // Leaving this as false allows the player to choose to download or not
                 stackPacket.setGameVersion(session.getClientData().getGameVersion());
 
-                for (BehaviorPack pack : BehaviorPack.PACKS.values()) {
-                    BehaviorPackManifest.Header header = pack.getManifest().getHeader();
-                    stackPacket.getBehaviorPacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
-                }
                 for (ResourcePack pack : ResourcePack.PACKS.values()) {
                     ResourcePackManifest.Header header = pack.getManifest().getHeader();
                     stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
@@ -263,9 +251,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     @Override
     public boolean handle(ResourcePackChunkRequestPacket packet) {
         ResourcePackChunkDataPacket data = new ResourcePackChunkDataPacket();
-        ResourcePack resourcePack = ResourcePack.PACKS.get(packet.getPackId().toString());
-        BehaviorPack behaviorPack = BehaviorPack.PACKS.get(packet.getPackId().toString());
-
+        ResourcePack pack = ResourcePack.PACKS.get(packet.getPackId().toString());
 
         data.setChunkIndex(packet.getChunkIndex());
         data.setProgress(packet.getChunkIndex() * ResourcePack.CHUNK_SIZE);
@@ -276,28 +262,14 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         long remainingSize = pack.getFile().length() - offset;
         byte[] packData = new byte[(int) MathUtils.constrain(remainingSize, 0, ResourcePack.CHUNK_SIZE)];
 
-        if (resourcePack == null) {
-            packData = new byte[(int) MathUtils.constrain(behaviorPack.getFile().length() - offset, 0, BehaviorPack.CHUNK_SIZE)];
-            try (InputStream inputStream = new FileInputStream(behaviorPack.getFile())) {
-                inputStream.skip(offset);
-                inputStream.read(packData, 0, packData.length);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-        } else {
-            packData = new byte[(int) MathUtils.constrain(resourcePack.getFile().length() - offset, 0, ResourcePack.CHUNK_SIZE)];
-
-            try (InputStream inputStream = new FileInputStream(resourcePack.getFile())) {
-                inputStream.skip(offset);
-                inputStream.read(packData, 0, packData.length);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
+        try (InputStream inputStream = new FileInputStream(pack.getFile())) {
+            inputStream.skip(offset);
+            inputStream.read(packData, 0, packData.length);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        data.setData(packData);
 
+        data.setData(packData);
 
         session.sendUpstreamPacket(data);
 

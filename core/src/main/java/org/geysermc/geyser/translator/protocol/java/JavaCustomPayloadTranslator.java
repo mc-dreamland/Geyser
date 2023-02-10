@@ -143,6 +143,9 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             int packetId = data[0] & 0xFF;
 
             if (packetId == 203) {
+                ByteArrayDataInput packetBytes = ByteStreams.newDataInput(data);
+                packetBytes.readByte();
+                packetId = packetBytes.readInt();
                 String check = packetBytes.readUTF();
                 NeteaseMarketOpenPacket neteaseMarketPacket = new NeteaseMarketOpenPacket();
                 neteaseMarketPacket.setCategory(packetBytes.readUTF());
@@ -150,6 +153,9 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
                 session.sendUpstreamPacket(neteaseMarketPacket);
             }
             if (packetId == 1000) {
+                ByteArrayDataInput packetBytes = ByteStreams.newDataInput(data);
+                packetBytes.readByte();
+                packetId = packetBytes.readInt();
                 String check = packetBytes.readUTF();
                 session.setQuickSwitch(packetBytes.readBoolean());
             }
@@ -250,6 +256,5 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             ex.printStackTrace();
         }
         return b;
-    }
     }
 }

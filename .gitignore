@@ -241,7 +241,7 @@ nbdist/
 ### Geyser ###
 run/
 extensions/
-config.yml
+config_.yml
 logs/
 key.pem
 locales/

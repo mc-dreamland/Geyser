@@ -725,6 +725,14 @@ public interface BedrockPacketHandler extends PacketHandler {
         return false;
     }
 
+    default boolean handle(RequestAbilityPacket packet) {
+        return false;
+    }
+
+    default boolean handle(RequestNetworkSettingsPacket packet) {
+        return false;
+    }
+
     default boolean handle(NeteaseCustomPacket packet) {
         return false;
     }
