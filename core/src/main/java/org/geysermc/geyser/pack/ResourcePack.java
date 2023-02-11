@@ -70,22 +70,40 @@ public class ResourcePack {
      * Loop through the packs directory and locate valid resource pack files
      */
     public static void loadPacks() {
-        Path directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/ResourcePack");
+        Path main = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs");
+        Path resourcePackDirectory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/ResourcePack");
+        Path behaviorPackDirectory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/BehaviorPack");
 
-        if (!Files.exists(directory)) {
+
+
+        if (!Files.exists(main)) {
             try {
-                Files.createDirectory(directory);
+                Files.createDirectory(main);
             } catch (IOException e) {
                 GeyserImpl.getInstance().getLogger().error("Could not create packs directory", e);
             }
+        }
 
-            // As we just created the directory it will be empty
-            return;
+        if (!Files.exists(resourcePackDirectory)) {
+            try {
+                Files.createDirectory(resourcePackDirectory);
+            } catch (IOException e) {
+                GeyserImpl.getInstance().getLogger().error("Could not create packs directory", e);
+            }
+        }
+
+        if (!Files.exists(behaviorPackDirectory)) {
+            try {
+                Files.createDirectory(behaviorPackDirectory);
+            } catch (IOException e) {
+                GeyserImpl.getInstance().getLogger().error("Could not create packs directory", e);
+            }
         }
 
         List<Path> resourcePacks;
         try {
-            resourcePacks = Files.walk(directory).collect(Collectors.toList());
+            resourcePacks = Files.walk(resourcePackDirectory).collect(Collectors.toList());
+            resourcePacks.addAll(Files.walk(behaviorPackDirectory).toList());
         } catch (IOException e) {
             GeyserImpl.getInstance().getLogger().error("Could not list packs directory", e);
             return;
