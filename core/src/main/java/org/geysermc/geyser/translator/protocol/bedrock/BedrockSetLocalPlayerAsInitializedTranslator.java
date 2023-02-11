@@ -28,6 +28,10 @@ package org.geysermc.geyser.translator.protocol.bedrock;
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import com.nukkitx.protocol.bedrock.data.entity.EntityDataMap;
+import com.nukkitx.protocol.bedrock.data.entity.EntityFlag;
+import com.nukkitx.protocol.bedrock.data.entity.EntityFlags;
+import com.nukkitx.protocol.bedrock.packet.SetEntityDataPacket;
 import com.nukkitx.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
 import org.geysermc.geyser.api.network.AuthType;
 import lombok.SneakyThrows;
@@ -39,6 +43,8 @@ import org.geysermc.geyser.util.InventoryUtils;
 import org.geysermc.geyser.util.LoginEncryptionUtils;
 
 import java.util.UUID;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Translator(packet = SetLocalPlayerAsInitializedPacket.class)
 public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslator<SetLocalPlayerAsInitializedPacket> {
@@ -54,6 +60,35 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
                 out.writeInt(packet.getPacketId());
                 out.writeUTF(packet.getPacketType().name());
                 out.writeUTF(uuid.toString());
+
+//                SetEntityDataPacket entityDataPacket = session.getEntityDataPacket();
+
+                SetEntityDataPacket entityDataPacket = new SetEntityDataPacket();
+
+                entityDataPacket.setRuntimeEntityId(-10);
+                entityDataPacket.setTick(0);
+
+                // 后续排查该问题，目前在客户端加载完成后手动发一次。
+                if (entityDataPacket != null) {
+                    EntityFlags flags = new EntityFlags();
+                    flags.setFlag(EntityFlag.SNEAKING, true);
+                    flags.setFlag(EntityFlag.CAN_SHOW_NAME, true);
+                    flags.setFlag(EntityFlag.CAN_CLIMB, true);
+                    flags.setFlag(EntityFlag.HAS_COLLISION, true);
+                    flags.setFlag(EntityFlag.HAS_GRAVITY, true);
+                    entityDataPacket.getMetadata().putFlags(flags);
+                    session.sendUpstreamPacket(entityDataPacket);
+                    ScheduledFuture<?> scheduledFuture = session.scheduleInEventLoop(new Runnable() {
+                        @Override
+                        public void run() {
+                            flags.setFlag(EntityFlag.SNEAKING, false);
+                            entityDataPacket.getMetadata().putFlags(flags);
+                            session.sendUpstreamPacket(entityDataPacket);
+
+                        }
+                    }, 2, TimeUnit.SECONDS);
+                }
+
                 session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(PluginMessageChannels.CUSTOM, out.toByteArray()));
 
                 if (session.remoteServer().authType() == AuthType.ONLINE) {
