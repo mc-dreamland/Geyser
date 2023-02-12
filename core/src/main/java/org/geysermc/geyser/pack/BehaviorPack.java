@@ -70,7 +70,7 @@ public class BehaviorPack {
      * Loop through the packs directory and locate valid resource pack files
      */
     public static void loadPacks() {
-        Path directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/ResourcePack");
+        Path directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/BehaviorPack");
 
         if (!Files.exists(directory)) {
             try {

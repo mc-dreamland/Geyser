@@ -69,25 +69,23 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
                 entityDataPacket.setTick(0);
 
                 // 后续排查该问题，目前在客户端加载完成后手动发一次。
-                if (entityDataPacket != null) {
-                    EntityFlags flags = new EntityFlags();
-                    flags.setFlag(EntityFlag.SNEAKING, true);
-                    flags.setFlag(EntityFlag.CAN_SHOW_NAME, true);
-                    flags.setFlag(EntityFlag.CAN_CLIMB, true);
-                    flags.setFlag(EntityFlag.HAS_COLLISION, true);
-                    flags.setFlag(EntityFlag.HAS_GRAVITY, true);
-                    entityDataPacket.getMetadata().putFlags(flags);
-                    session.sendUpstreamPacket(entityDataPacket);
-                    ScheduledFuture<?> scheduledFuture = session.scheduleInEventLoop(new Runnable() {
-                        @Override
-                        public void run() {
-                            flags.setFlag(EntityFlag.SNEAKING, false);
-                            entityDataPacket.getMetadata().putFlags(flags);
-                            session.sendUpstreamPacket(entityDataPacket);
+                EntityFlags flags = new EntityFlags();
+                flags.setFlag(EntityFlag.SNEAKING, true);
+                flags.setFlag(EntityFlag.CAN_SHOW_NAME, true);
+                flags.setFlag(EntityFlag.CAN_CLIMB, true);
+                flags.setFlag(EntityFlag.HAS_COLLISION, true);
+                flags.setFlag(EntityFlag.HAS_GRAVITY, true);
+                entityDataPacket.getMetadata().putFlags(flags);
+                session.sendUpstreamPacket(entityDataPacket);
+                ScheduledFuture<?> scheduledFuture = session.scheduleInEventLoop(new Runnable() {
+                    @Override
+                    public void run() {
+                        flags.setFlag(EntityFlag.SNEAKING, false);
+                        entityDataPacket.getMetadata().putFlags(flags);
+                        session.sendUpstreamPacket(entityDataPacket);
 
-                        }
-                    }, 2, TimeUnit.SECONDS);
-                }
+                    }
+                }, 2, TimeUnit.SECONDS);
 
                 session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(PluginMessageChannels.CUSTOM, out.toByteArray()));
 

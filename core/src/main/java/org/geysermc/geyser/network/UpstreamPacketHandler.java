@@ -46,6 +46,7 @@ import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.LoginEncryptionUtils;
 import org.geysermc.geyser.util.MathUtils;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayDeque;
@@ -140,17 +141,17 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         geyser.getSessionManager().addPendingSession(session);
 
         ResourcePacksInfoPacket resourcePacksInfo = new ResourcePacksInfoPacket();
-        for(ResourcePack resourcePack : ResourcePack.PACKS.values()) {
-            ResourcePackManifest.Header header = resourcePack.getManifest().getHeader();
-            resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
-                    header.getUuid().toString(), header.getVersionString(), resourcePack.getFile().length(),
-                            resourcePack.getContentKey(), "", header.getUuid().toString(), false, false));
-        }
         for(BehaviorPack behaviorPack : BehaviorPack.PACKS.values()) {
             BehaviorPackManifest.Header header = behaviorPack.getManifest().getHeader();
             resourcePacksInfo.getBehaviorPackInfos().add(new ResourcePacksInfoPacket.Entry(
                     header.getUuid().toString(), header.getVersionString(), behaviorPack.getFile().length(),
-                            behaviorPack.getContentKey(), "", header.getUuid().toString(), false, false));
+                    behaviorPack.getContentKey(), "", header.getUuid().toString(), false, false));
+        }
+        for(ResourcePack resourcePack : ResourcePack.PACKS.values()) {
+            ResourcePackManifest.Header header = resourcePack.getManifest().getHeader();
+            resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
+                    header.getUuid().toString(), header.getVersionString(), resourcePack.getFile().length(),
+                    resourcePack.getContentKey(), "", header.getUuid().toString(), false, false));
         }
         resourcePacksInfo.setForcedToAccept(GeyserImpl.getInstance().getConfig().isForceResourcePacks());
         session.sendUpstreamPacket(resourcePacksInfo);
@@ -183,13 +184,12 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                 stackPacket.setForcedToAccept(true); // Leaving this as false allows the player to choose to download or not
                 stackPacket.setGameVersion(session.getClientData().getGameVersion());
 
-                for (ResourcePack pack : ResourcePack.PACKS.values()) {
-                    ResourcePackManifest.Header header = pack.getManifest().getHeader();
-                    stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
-                }
-
                 for (BehaviorPack pack : BehaviorPack.PACKS.values()) {
                     BehaviorPackManifest.Header header = pack.getManifest().getHeader();
+                    stackPacket.getBehaviorPacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
+                }
+                for (ResourcePack pack : ResourcePack.PACKS.values()) {
+                    ResourcePackManifest.Header header = pack.getManifest().getHeader();
                     stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
                 }
 
@@ -263,19 +263,34 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
     @Override
     public boolean handle(ResourcePackChunkRequestPacket packet) {
+        System.out.println(packet);
         ResourcePackChunkDataPacket data = new ResourcePackChunkDataPacket();
-        ResourcePack pack = ResourcePack.PACKS.get(packet.getPackId().toString());
+        ResourcePack resourcePack = ResourcePack.PACKS.get(packet.getPackId().toString());
+        BehaviorPack behaviorPack = BehaviorPack.PACKS.get(packet.getPackId().toString());
 
         data.setChunkIndex(packet.getChunkIndex());
-        data.setProgress(packet.getChunkIndex() * ResourcePack.CHUNK_SIZE);
         data.setPackVersion(packet.getPackVersion());
         data.setPackId(packet.getPackId());
 
         int offset = packet.getChunkIndex() * ResourcePack.CHUNK_SIZE;
-        long remainingSize = pack.getFile().length() - offset;
-        byte[] packData = new byte[(int) MathUtils.constrain(remainingSize, 0, ResourcePack.CHUNK_SIZE)];
+        long remainingSize;
+        byte[] packData;
+        File file;
 
-        try (InputStream inputStream = new FileInputStream(pack.getFile())) {
+        if (resourcePack == null) {
+            file = behaviorPack.getFile();
+            data.setProgress(packet.getChunkIndex() * BehaviorPack.CHUNK_SIZE);
+            remainingSize = file.length() - offset;
+            packData = new byte[(int) MathUtils.constrain(remainingSize, 0, BehaviorPack.CHUNK_SIZE)];
+        } else {
+            file = resourcePack.getFile();
+            data.setProgress(packet.getChunkIndex() * ResourcePack.CHUNK_SIZE);
+            remainingSize = file.length() - offset;
+            packData = new byte[(int) MathUtils.constrain(remainingSize, 0, ResourcePack.CHUNK_SIZE)];
+        }
+
+
+        try (InputStream inputStream = new FileInputStream(file)) {
             inputStream.skip(offset);
             inputStream.read(packData, 0, packData.length);
         } catch (Exception e) {
@@ -300,7 +315,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         ResourcePack resourcePack = ResourcePack.PACKS.get(packID[0]);
         BehaviorPack behaviorPack = BehaviorPack.PACKS.get(packID[0]);
 
-        if (resourcePack == null) {
+        if (behaviorPack == null) {
             ResourcePackManifest.Header header = resourcePack.getManifest().getHeader();
             data.setPackId(header.getUuid());
             int chunkCount = (int) Math.ceil((int) resourcePack.getFile().length() / (double) ResourcePack.CHUNK_SIZE);
@@ -315,7 +330,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             BehaviorPackManifest.Header header = behaviorPack.getManifest().getHeader();
 
             data.setPackId(header.getUuid());
-            int chunkCount = (int) Math.ceil((int) behaviorPack.getFile().length() / (double) ResourcePack.CHUNK_SIZE);
+            int chunkCount = (int) Math.ceil((int) behaviorPack.getFile().length() / (double) BehaviorPack.CHUNK_SIZE);
             data.setChunkCount(chunkCount);
             data.setCompressedPackSize(behaviorPack.getFile().length());
             data.setMaxChunkSize(BehaviorPack.CHUNK_SIZE);
