@@ -34,6 +34,8 @@ import com.nukkitx.protocol.bedrock.packet.*;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.configuration.GeyserConfiguration;
+import org.geysermc.geyser.pack.BehaviorPack;
+import org.geysermc.geyser.pack.BehaviorPackManifest;
 import org.geysermc.geyser.pack.ResourcePack;
 import org.geysermc.geyser.pack.ResourcePackManifest;
 import org.geysermc.geyser.registry.BlockRegistries;
@@ -144,6 +146,12 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                     header.getUuid().toString(), header.getVersionString(), resourcePack.getFile().length(),
                             resourcePack.getContentKey(), "", header.getUuid().toString(), false, false));
         }
+        for(BehaviorPack behaviorPack : BehaviorPack.PACKS.values()) {
+            BehaviorPackManifest.Header header = behaviorPack.getManifest().getHeader();
+            resourcePacksInfo.getBehaviorPackInfos().add(new ResourcePacksInfoPacket.Entry(
+                    header.getUuid().toString(), header.getVersionString(), behaviorPack.getFile().length(),
+                            behaviorPack.getContentKey(), "", header.getUuid().toString(), false, false));
+        }
         resourcePacksInfo.setForcedToAccept(GeyserImpl.getInstance().getConfig().isForceResourcePacks());
         session.sendUpstreamPacket(resourcePacksInfo);
 
@@ -172,11 +180,16 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             case HAVE_ALL_PACKS:
                 ResourcePackStackPacket stackPacket = new ResourcePackStackPacket();
                 stackPacket.setExperimentsPreviouslyToggled(false);
-                stackPacket.setForcedToAccept(false); // Leaving this as false allows the player to choose to download or not
+                stackPacket.setForcedToAccept(true); // Leaving this as false allows the player to choose to download or not
                 stackPacket.setGameVersion(session.getClientData().getGameVersion());
 
                 for (ResourcePack pack : ResourcePack.PACKS.values()) {
                     ResourcePackManifest.Header header = pack.getManifest().getHeader();
+                    stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
+                }
+
+                for (BehaviorPack pack : BehaviorPack.PACKS.values()) {
+                    BehaviorPackManifest.Header header = pack.getManifest().getHeader();
                     stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
                 }
 
@@ -284,18 +297,33 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     private void sendPackDataInfo(String id) {
         ResourcePackDataInfoPacket data = new ResourcePackDataInfoPacket();
         String[] packID = id.split("_");
-        ResourcePack pack = ResourcePack.PACKS.get(packID[0]);
-        ResourcePackManifest.Header header = pack.getManifest().getHeader();
+        ResourcePack resourcePack = ResourcePack.PACKS.get(packID[0]);
+        BehaviorPack behaviorPack = BehaviorPack.PACKS.get(packID[0]);
 
-        data.setPackId(header.getUuid());
-        int chunkCount = (int) Math.ceil((int) pack.getFile().length() / (double) ResourcePack.CHUNK_SIZE);
-        data.setChunkCount(chunkCount);
-        data.setCompressedPackSize(pack.getFile().length());
-        data.setMaxChunkSize(ResourcePack.CHUNK_SIZE);
-        data.setHash(pack.getSha256());
-        data.setPackVersion(packID[1]);
-        data.setPremium(false);
-        data.setType(ResourcePackType.RESOURCE);
+        if (resourcePack == null) {
+            ResourcePackManifest.Header header = resourcePack.getManifest().getHeader();
+            data.setPackId(header.getUuid());
+            int chunkCount = (int) Math.ceil((int) resourcePack.getFile().length() / (double) ResourcePack.CHUNK_SIZE);
+            data.setChunkCount(chunkCount);
+            data.setCompressedPackSize(resourcePack.getFile().length());
+            data.setMaxChunkSize(ResourcePack.CHUNK_SIZE);
+            data.setHash(resourcePack.getSha256());
+            data.setPackVersion(packID[1]);
+            data.setPremium(false);
+            data.setType(ResourcePackType.RESOURCE);
+        } else {
+            BehaviorPackManifest.Header header = behaviorPack.getManifest().getHeader();
+
+            data.setPackId(header.getUuid());
+            int chunkCount = (int) Math.ceil((int) behaviorPack.getFile().length() / (double) ResourcePack.CHUNK_SIZE);
+            data.setChunkCount(chunkCount);
+            data.setCompressedPackSize(behaviorPack.getFile().length());
+            data.setMaxChunkSize(BehaviorPack.CHUNK_SIZE);
+            data.setHash(behaviorPack.getSha256());
+            data.setPackVersion(packID[1]);
+            data.setPremium(false);
+            data.setType(ResourcePackType.BEHAVIOR);
+        }
 
         session.sendUpstreamPacket(data);
     }

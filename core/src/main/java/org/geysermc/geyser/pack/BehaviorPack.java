@@ -25,13 +25,21 @@
 
 package org.geysermc.geyser.pack;
 
+import lombok.Getter;
 import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.api.event.lifecycle.GeyserLoadBehaviorPacksEvent;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.FileUtils;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -55,24 +63,41 @@ public class BehaviorPack {
     private BehaviorPackManifest manifest;
     private BehaviorPackManifest.Version version;
 
+    @Getter
+    private String contentKey;
+
     /**
      * Loop through the packs directory and locate valid resource pack files
      */
     public static void loadPacks() {
-        File directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/BehaviorPack").toFile();
+        Path directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/ResourcePack");
 
-        if (!directory.exists()) {
-            directory.mkdir();
+        if (!Files.exists(directory)) {
+            try {
+                Files.createDirectory(directory);
+            } catch (IOException e) {
+                GeyserImpl.getInstance().getLogger().error("Could not create packs directory", e);
+            }
+        }
 
-            // As we just created the directory it will be empty
+        List<Path> behaviorPacks;
+        try {
+            behaviorPacks = Files.walk(directory).collect(Collectors.toList());
+        } catch (IOException e) {
+            GeyserImpl.getInstance().getLogger().error("Could not list packs directory", e);
             return;
         }
 
-        for (File file : directory.listFiles()) {
-            if (file.getName().endsWith(".zip") || file.getName().endsWith(".mcpack")) {
-                BehaviorPack behaviorPack = new BehaviorPack();
+        GeyserLoadBehaviorPacksEvent event = new GeyserLoadBehaviorPacksEvent(behaviorPacks);
+        GeyserImpl.getInstance().eventBus().fire(event);
 
-                behaviorPack.sha256 = FileUtils.calculateSHA256(file);
+        for (Path path : event.behaviorPacks()) {
+            File file = path.toFile();
+
+            if (file.getName().endsWith(".zip") || file.getName().endsWith(".mcpack")) {
+                BehaviorPack pack = new BehaviorPack();
+
+                pack.sha256 = FileUtils.calculateSHA256(file);
 
                 Stream<? extends ZipEntry> stream = null;
                 try {
@@ -86,17 +111,22 @@ public class BehaviorPack {
                                 // Sometimes a pack_manifest file is present and not in a valid format,
                                 // but a manifest file is, so we null check through that one
                                 if (manifest.getHeader().getUuid() != null) {
-                                    behaviorPack.file = file;
-                                    behaviorPack.manifest = manifest;
-                                    behaviorPack.version = BehaviorPackManifest.Version.fromArray(manifest.getHeader().getVersion());
+                                    pack.file = file;
+                                    pack.manifest = manifest;
+                                    pack.version = BehaviorPackManifest.Version.fromArray(manifest.getHeader().getVersion());
 
-                                    PACKS.put(behaviorPack.getManifest().getHeader().getUuid().toString(), behaviorPack);
+                                    PACKS.put(pack.getManifest().getHeader().getUuid().toString(), pack);
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
                         }
                     });
+
+                    // Check if a file exists with the same name as the resource pack suffixed by .key,
+                    // and set this as content key. (e.g. test.zip, key file would be test.zip.key)
+                    File keyFile = new File(file.getParentFile(), file.getName() + ".key");
+                    pack.contentKey = keyFile.exists() ? Files.readString(keyFile.toPath(), StandardCharsets.UTF_8) : "";
                 } catch (Exception e) {
                     GeyserImpl.getInstance().getLogger().error(GeyserLocale.getLocaleStringLog("geyser.resource_pack.broken", file.getName()));
                     e.printStackTrace();

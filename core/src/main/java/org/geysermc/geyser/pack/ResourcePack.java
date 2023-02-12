@@ -70,7 +70,19 @@ public class ResourcePack {
      * Loop through the packs directory and locate valid resource pack files
      */
     public static void loadPacks() {
+        Path main = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs");
         Path directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/ResourcePack");
+
+        if (!Files.exists(main)) {
+            try {
+                Files.createDirectory(main);
+            } catch (IOException e) {
+                GeyserImpl.getInstance().getLogger().error("Could not create packs directory", e);
+            }
+
+            // As we just created the directory it will be empty
+            return;
+        }
 
         if (!Files.exists(directory)) {
             try {
