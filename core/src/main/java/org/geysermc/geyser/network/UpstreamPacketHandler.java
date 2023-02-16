@@ -263,7 +263,6 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
     @Override
     public boolean handle(ResourcePackChunkRequestPacket packet) {
-        System.out.println(packet);
         ResourcePackChunkDataPacket data = new ResourcePackChunkDataPacket();
         ResourcePack resourcePack = ResourcePack.PACKS.get(packet.getPackId().toString());
         BehaviorPack behaviorPack = BehaviorPack.PACKS.get(packet.getPackId().toString());

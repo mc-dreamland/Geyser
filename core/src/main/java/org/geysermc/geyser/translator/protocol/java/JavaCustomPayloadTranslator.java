@@ -28,18 +28,13 @@ package org.geysermc.geyser.translator.protocol.java;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundCustomPayloadPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
-import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
 import com.nukkitx.protocol.bedrock.packet.NeteaseCustomPacket;
-import com.nukkitx.protocol.bedrock.packet.NeteaseMarketOpenPacket;
 import com.nukkitx.protocol.bedrock.packet.TransferPacket;
 import com.nukkitx.protocol.bedrock.packet.UnknownPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.geysermc.cumulus.Forms;
-import org.geysermc.cumulus.form.Form;
-import org.geysermc.cumulus.form.util.FormType;
 import org.geysermc.cumulus.form.Form;
 import org.geysermc.cumulus.form.util.FormType;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
@@ -49,7 +44,6 @@ import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
-import org.geysermc.cumulus.Forms;
 import org.msgpack.MessagePack;
 import org.msgpack.type.ArrayValue;
 import org.msgpack.type.Value;
@@ -60,7 +54,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 
@@ -142,24 +135,6 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
 
             int packetId = data[0] & 0xFF;
 
-            if (packetId == 203) {
-                ByteArrayDataInput packetBytes = ByteStreams.newDataInput(data);
-                packetBytes.readByte();
-                packetId = packetBytes.readInt();
-                String check = packetBytes.readUTF();
-                NeteaseMarketOpenPacket neteaseMarketPacket = new NeteaseMarketOpenPacket();
-                neteaseMarketPacket.setCategory(packetBytes.readUTF());
-                neteaseMarketPacket.setEventName(packetBytes.readUTF());
-                session.sendUpstreamPacket(neteaseMarketPacket);
-            }
-            if (packetId == 1000) {
-                ByteArrayDataInput packetBytes = ByteStreams.newDataInput(data);
-                packetBytes.readByte();
-                packetId = packetBytes.readInt();
-                String check = packetBytes.readUTF();
-                session.setQuickSwitch(packetBytes.readBoolean());
-            }
-
             ByteBuf packetData = Unpooled.wrappedBuffer(data, 1, data.length - 1);
 
             var toSend = new UnknownPacket();
@@ -186,7 +161,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
                     neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
                     neteaseCustomPacket.setEventName(packData.get(2).toString().replace("\"", ""));
                     if (packData.get(3).isMapValue()) {
-                        neteaseCustomPacket.setData(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
+                        neteaseCustomPacket.setMsgPackMap(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
                         neteaseCustomPacket.setJson(originJson);
                     }
                 } else if (originJson.getType().equals(ValueType.ARRAY)) {
@@ -198,7 +173,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
                     neteaseCustomPacket.setSystem(packData.get(1).toString().replace("\"", ""));
                     neteaseCustomPacket.setEventName(packData.get(2).toString().replace("\"", ""));
                     if (packData.get(3).isMapValue()) {
-                        neteaseCustomPacket.setData(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
+                        neteaseCustomPacket.setMsgPackMap(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
                         neteaseCustomPacket.setJson(originJson);
                     }
                 }
@@ -207,31 +182,6 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             }
             session.sendUpstreamPacket(neteaseCustomPacket);
 
-        } else if (channel.equals("floodgate:packet")) {
-            byte[] data = packet.getData();
-            int packetId = 0;
-            String check = null;
-            ByteArrayDataInput packetBytes = ByteStreams.newDataInput(data);
-            try {
-                packetBytes.readByte();
-                packetId = packetBytes.readInt();
-                check = packetBytes.readUTF();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            if (packetId != 0 && check != null && check.equals("NeteaseMarketOpen")) {
-                if (packetId == 203) {
-                    NeteaseMarketOpenPacket neteaseMarketPacket = new NeteaseMarketOpenPacket();
-                    neteaseMarketPacket.setCategory(packetBytes.readUTF());
-                    neteaseMarketPacket.setEventName(packetBytes.readUTF());
-                    session.sendUpstreamPacket(neteaseMarketPacket);
-                }
-            } else if (packetId != 0 && check != null && check.equals("GeyserSetQuickChange")) {
-                if (packetId == 1000) {
-                    session.setQuickSwitch(packetBytes.readBoolean());
-                }
-            }
         }
     }
 

@@ -879,16 +879,6 @@ public class LoggingPacketHandler implements BedrockPacketHandler {
     }
 
     @Override
-    public boolean handle(NeteaseMarketReceivePacket packet) {
-        return defaultHandler(packet);
-    }
-
-    @Override
-    public boolean handle(NeteaseMarketOpenPacket packet) {
-        return defaultHandler(packet);
-    }
-
-    @Override
     public boolean handle(FeatureRegistryPacket packet) {
         return defaultHandler(packet);
     }
