@@ -26,10 +26,6 @@
 package com.nukkitx.protocol.bedrock.v475.serializer;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import com.nimbusds.jose.shaded.json.JSONObject;
-import com.nimbusds.jose.shaded.json.parser.JSONParser;
 import com.nukkitx.protocol.bedrock.BedrockPacketHelper;
 import com.nukkitx.protocol.bedrock.BedrockPacketSerializer;
 import com.nukkitx.protocol.bedrock.packet.NeteaseCustomPacket;
@@ -42,12 +38,8 @@ import org.msgpack.MessagePack;
 import org.msgpack.type.ArrayValue;
 import org.msgpack.type.Value;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.zip.GZIPInputStream;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class NeteaseCustomSerializer_v475 implements BedrockPacketSerializer<NeteaseCustomPacket>{
@@ -92,7 +84,7 @@ public class NeteaseCustomSerializer_v475 implements BedrockPacketSerializer<Net
             packet.setSystem(packData.get(1).toString().replace("\"", ""));
             packet.setEventName(packData.get(2).toString().replace("\"", ""));
             if (packData.get(3).isMapValue()) {
-                packet.setData(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
+                packet.setMsgPackMap(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
             }
             packet.setJson(originJson);
             packet.setUnKnowId(buffer.readUnsignedInt());
