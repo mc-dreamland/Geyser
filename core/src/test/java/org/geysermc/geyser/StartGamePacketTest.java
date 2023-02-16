@@ -35,7 +35,21 @@ import com.nukkitx.protocol.bedrock.v475.serializer.StartGameSerializer_v475;
 import com.nukkitx.protocol.bedrock.v503.Bedrock_v503;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import lombok.SneakyThrows;
+import org.geysermc.geyser.util.FileUtils;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
 
 public class StartGamePacketTest {
 
@@ -94,7 +108,7 @@ public class StartGamePacketTest {
         packet.setEnchantmentSeed(VarInts.readInt(buffer));
         helper.readArray(buffer, packet.getBlockProperties(), (buf, packetHelper) -> {
             String name = packetHelper.readString(buf);
-            NbtMap properties = (NbtMap)packetHelper.readTag(buf);
+            NbtMap properties = (NbtMap) packetHelper.readTag(buf);
             return new BlockPropertyData(name, properties);
         });
         helper.readArray(buffer, packet.getItemEntries(), session, (buf, packetHelper, aSession) -> {
@@ -151,7 +165,8 @@ public class StartGamePacketTest {
         packet.setOnlySpawningV1Villagers(buffer.readBoolean());
         packet.setVanillaVersion(helper.readString(buffer));
         packet.setLimitedWorldWidth(16);
-        packet.setLimitedWorldHeight(16);;
+        packet.setLimitedWorldHeight(16);
+        ;
 //        packet.setLimitedWorldWidth(buffer.readIntLE());
 //        packet.setLimitedWorldHeight(buffer.readIntLE());
         packet.setNetherType(buffer.readBoolean());
@@ -172,5 +187,28 @@ public class StartGamePacketTest {
     protected long readSeed(ByteBuf buffer) {
         return VarInts.readInt(buffer);
     }
+
+
+    @Test
+    @SneakyThrows
+    public void fasionResource() {
+        List<File> json = FileUtils.loopFiles("/bedrock/skin/fasion/", pathname -> pathname.getName().endsWith(".json"));
+        for (File file : json) {
+            String s = new String(FileUtils.readAllBytes(file), StandardCharsets.UTF_8).replace("\t","");
+            System.out.println(file.getName().split("\\.")[0]);
+        }
+        List<File> png = FileUtils.loopFiles("bedrock/skin/fasion/", pathname -> pathname.getName().endsWith(".png"));
+        for (File file : png) {
+            System.out.println(file.getAbsolutePath());
+        }
+    }
+
+    @Test
+    public void onloop(){
+        List<File> files = FileUtils.
+                loopFiles("jar:file:F:/Minecraft%20Server/PocketServer/bungee/plugins/Geyser-BungeeCord.jar!/bedrock/skin/fasion/",pathname -> pathname.getName().endsWith(".json"));
+        System.out.println(files);
+    }
+    public static final String EMPTY = "";
 
 }

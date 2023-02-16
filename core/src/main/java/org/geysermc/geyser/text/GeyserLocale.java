@@ -25,7 +25,6 @@
 
 package org.geysermc.geyser.text;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.geysermc.geyser.GeyserBootstrap;
 import org.geysermc.geyser.GeyserImpl;
 
