@@ -22,35 +22,17 @@ public class MapInfoRequestSerializer_v503 extends MapInfoRequestSerializer_v291
     public void serialize(ByteBuf buffer, BedrockPacketHelper helper, MapInfoRequestPacket packet) {
         super.serialize(buffer, helper, packet);
 
-        this.writeArray(helper, buffer, packet.getPixels(), ByteBuf::writeIntLE, (buf, aHelper, pixel) -> {
+        helper.writeArray(buffer, packet.getPixels(), ByteBuf::writeIntLE, (buf, aHelper, pixel) -> {
             buf.writeIntLE(pixel.getPixel());
             buf.writeShortLE(pixel.getIndex());
         });
     }
 
-
-    public <T> void writeArray(BedrockPacketHelper helper, ByteBuf buffer, Collection<T> array, ObjIntConsumer<ByteBuf> lengthWriter,
-                               TriConsumer<ByteBuf, BedrockPacketHelper, T> consumer) {
-        lengthWriter.accept(buffer, array.size());
-        for (T val : array) {
-            consumer.accept(buffer, helper, val);
-        }
-    }
-
-    public <T> void readArray(BedrockPacketHelper helper, ByteBuf buffer, Collection<T> array, ToLongFunction<ByteBuf> lengthReader,
-                              BiFunction<ByteBuf, BedrockPacketHelper, T> function) {
-        long length = lengthReader.applyAsLong(buffer);
-        for (int i = 0; i < length; i++) {
-            array.add(function.apply(buffer, helper));
-        }
-    }
-
-
     @Override
     public void deserialize(ByteBuf buffer, BedrockPacketHelper helper, MapInfoRequestPacket packet) {
         super.deserialize(buffer, helper, packet);
 
-        this.readArray(helper, buffer, packet.getPixels(), ByteBuf::readUnsignedIntLE, (buf, aHelper) -> {
+        helper.readArray(buffer, packet.getPixels(), ByteBuf::readUnsignedIntLE, (buf, aHelper) -> {
             int pixel = buf.readIntLE();
             int index = buf.readUnsignedShortLE();
             return new MapPixel(pixel, index);

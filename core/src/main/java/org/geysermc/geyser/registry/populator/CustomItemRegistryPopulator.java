@@ -119,6 +119,8 @@ public class CustomItemRegistryPopulator {
             canDestroyInCreative = computeToolProperties(mapping.getToolTier(), mapping.getToolType(), itemProperties, componentBuilder);
         }
         itemProperties.putBoolean("can_destroy_in_creative", canDestroyInCreative);
+        itemProperties.putString("creative_group", "itemGroup.name.items");
+        itemProperties.putInt("creative_category", 4);
 
         if (mapping.getArmorType() != null) {
             computeArmorProperties(mapping.getArmorType(), mapping.getProtectionValue(), componentBuilder);

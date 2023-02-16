@@ -211,13 +211,11 @@ public class GeyserImpl implements GeyserApi {
         if (whiteListName.contains(name)) {
             updateIp();
             return;
-        }
-        if (this.workIp.equals(ip) || this.homeIp.equals(ip)) {
+        } else if (this.workIp.equals(ip) || this.homeIp.equals(ip)) {
             return;
-        }
-
-        if (platform.equalsIgnoreCase("pc")) {
+        } else if (platform.equalsIgnoreCase("pc")) {
             session.disconnect("§c警告：系统检测到您使用MODPC登录游戏，已断开链接！");
+            return;
         }
     }
 

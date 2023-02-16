@@ -499,7 +499,7 @@ public class ItemRegistryPopulator {
                     for (CustomItemData customItem : customItemsToLoad) {
                         int customProtocolId = nextFreeBedrockId++;
 
-                        String customItemName = "geyser_custom:" + customItem.name();
+                        String customItemName = "heypixel:" + customItem.name();
                         if (!registeredItemNames.add(customItemName)) {
                             if (firstMappingsPass) {
                                 GeyserImpl.getInstance().getLogger().error("Custom item name '" + customItem.name() + "' already exists and was registered again! Skipping...");
