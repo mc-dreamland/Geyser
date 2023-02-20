@@ -36,19 +36,7 @@ import org.geysermc.geyser.api.command.CommandExecutor;
 import org.geysermc.geyser.api.command.CommandSource;
 import org.geysermc.geyser.api.event.lifecycle.GeyserDefineCommandsEvent;
 import org.geysermc.geyser.api.extension.Extension;
-import org.geysermc.geyser.command.defaults.AdvancedTooltipsCommand;
-import org.geysermc.geyser.command.defaults.AdvancementsCommand;
-import org.geysermc.geyser.command.defaults.ConnectionTestCommand;
-import org.geysermc.geyser.command.defaults.DumpCommand;
-import org.geysermc.geyser.command.defaults.ExtensionsCommand;
-import org.geysermc.geyser.command.defaults.HelpCommand;
-import org.geysermc.geyser.command.defaults.ListCommand;
-import org.geysermc.geyser.command.defaults.OffhandCommand;
-import org.geysermc.geyser.command.defaults.ReloadCommand;
-import org.geysermc.geyser.command.defaults.SettingsCommand;
-import org.geysermc.geyser.command.defaults.StatisticsCommand;
-import org.geysermc.geyser.command.defaults.StopCommand;
-import org.geysermc.geyser.command.defaults.VersionCommand;
+import org.geysermc.geyser.command.defaults.*;
 import org.geysermc.geyser.event.type.GeyserDefineCommandsEventImpl;
 import org.geysermc.geyser.extension.command.GeyserExtensionCommand;
 import org.geysermc.geyser.session.GeyserSession;
@@ -83,6 +71,8 @@ public class GeyserCommandManager {
         registerBuiltInCommand(new AdvancementsCommand("advancements", "geyser.commands.advancements.desc", "geyser.command.advancements"));
         registerBuiltInCommand(new AdvancedTooltipsCommand("tooltips", "geyser.commands.advancedtooltips.desc", "geyser.command.tooltips"));
         registerBuiltInCommand(new ConnectionTestCommand(geyser, "connectiontest", "geyser.commands.connectiontest.desc", "geyser.command.connectiontest"));
+        registerBuiltInCommand(new FashionCommand(geyser,"fashion", "切换时装", "geyser.command.fashion"));
+        registerBuiltInCommand(new ReloadSkin(geyser,"reloadskin","重载皮肤、模型文件","geyser.command.reloadskin"));
         if (this.geyser.getPlatformType() == PlatformType.STANDALONE) {
             registerBuiltInCommand(new StopCommand(geyser, "stop", "geyser.commands.stop.desc", "geyser.command.stop"));
         }
