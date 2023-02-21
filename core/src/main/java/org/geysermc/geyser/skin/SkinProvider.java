@@ -26,17 +26,15 @@
 package org.geysermc.geyser.skin;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
-import com.github.steveice10.opennbt.tag.builtin.IntArrayTag;
-import com.github.steveice10.opennbt.tag.builtin.Tag;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.GeyserLocale;
@@ -44,6 +42,8 @@ import org.geysermc.geyser.util.FileUtils;
 import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.geyser.util.WebUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -60,28 +60,28 @@ import java.util.function.Predicate;
 import java.util.zip.GZIPInputStream;
 
 public class SkinProvider {
-    public static final boolean ALLOW_THIRD_PARTY_CAPES = GeyserImpl.getInstance().getConfig().isAllowThirdPartyCapes();
+    private static final boolean ALLOW_THIRD_PARTY_CAPES = GeyserImpl.getInstance().getConfig().isAllowThirdPartyCapes();
     static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(ALLOW_THIRD_PARTY_CAPES ? 21 : 14);
 
-    public static final byte[] STEVE_SKIN = new ProvidedSkin("bedrock/skin/skin_steve.png").getSkin();
-    public static final Skin EMPTY_SKIN = new Skin(-1, "steve", STEVE_SKIN);
-    public static final byte[] ALEX_SKIN = new ProvidedSkin("bedrock/skin/skin_alex.png").getSkin();
-    public static final Skin EMPTY_SKIN_ALEX = new Skin(-1, "alex", ALEX_SKIN);
-    private static final Map<String, Skin> permanentSkins = new HashMap<>() {{
-        put("steve", EMPTY_SKIN);
-        put("alex", EMPTY_SKIN_ALEX);
-    }};
-    private static final Cache<String, Skin> cachedSkins = CacheBuilder.newBuilder()
+    static final Skin EMPTY_SKIN;
+    static final Cape EMPTY_CAPE = new Cape("", "no-cape", ByteArrays.EMPTY_ARRAY, -1, true);
+
+    private static final Cache<String, Cape> CACHED_JAVA_CAPES = CacheBuilder.newBuilder()
+            .expireAfterAccess(1, TimeUnit.HOURS)
+            .build();
+    private static final Cache<String, Skin> CACHED_JAVA_SKINS = CacheBuilder.newBuilder()
             .expireAfterAccess(1, TimeUnit.HOURS)
             .build();
 
-    private static final Map<String, CompletableFuture<Skin>> requestedSkins = new ConcurrentHashMap<>();
-
-    public static final Cape EMPTY_CAPE = new Cape("", "no-cape", new byte[0], -1, true);
-    private static final Cache<String, Cape> cachedCapes = CacheBuilder.newBuilder()
+    private static final Cache<String, Cape> CACHED_BEDROCK_CAPES = CacheBuilder.newBuilder()
             .expireAfterAccess(1, TimeUnit.HOURS)
             .build();
+    private static final Cache<String, Skin> CACHED_BEDROCK_SKINS = CacheBuilder.newBuilder()
+            .expireAfterAccess(1, TimeUnit.HOURS)
+            .build();
+
     private static final Map<String, CompletableFuture<Cape>> requestedCapes = new ConcurrentHashMap<>();
+    private static final Map<String, CompletableFuture<Skin>> requestedSkins = new ConcurrentHashMap<>();
 
     private static final Map<UUID, SkinGeometry> cachedGeometry = new ConcurrentHashMap<>();
 
@@ -89,18 +89,36 @@ public class SkinProvider {
      * Citizens NPCs use UUID version 2, while legitimate Minecraft players use version 4, and
      * offline mode players use version 3.
      */
-    public static final Predicate<UUID> IS_NPC = uuid -> uuid.version() == 2;
+    private static final Predicate<UUID> IS_NPC = uuid -> uuid.version() == 2;
 
-    public static final boolean ALLOW_THIRD_PARTY_EARS = GeyserImpl.getInstance().getConfig().isAllowThirdPartyEars();
-    public static final String EARS_GEOMETRY;
-    public static final String EARS_GEOMETRY_SLIM;
-    public static final SkinGeometry SKULL_GEOMETRY;
-    public static final SkinGeometry WEARING_CUSTOM_SKULL;
-    public static final SkinGeometry WEARING_CUSTOM_SKULL_SLIM;
-
-    public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final boolean ALLOW_THIRD_PARTY_EARS = GeyserImpl.getInstance().getConfig().isAllowThirdPartyEars();
+    private static final String EARS_GEOMETRY;
+    private static final String EARS_GEOMETRY_SLIM;
+    static final SkinGeometry SKULL_GEOMETRY;
+    static final SkinGeometry WEARING_CUSTOM_SKULL;
+    static final SkinGeometry WEARING_CUSTOM_SKULL_SLIM;
 
     static {
+        // Generate the empty texture to use as an emergency fallback
+        final int pink = -524040;
+        final int black = -16777216;
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream(64 * 4 + 64 * 4);
+        for (int y = 0; y < 64; y++) {
+            for (int x = 0; x < 64; x++) {
+                int rgba;
+                if (y > 32) {
+                    rgba = x >= 32 ? pink : black;
+                } else {
+                    rgba = x >= 32 ? black : pink;
+                }
+                outputStream.write((rgba >> 16) & 0xFF); // Red
+                outputStream.write((rgba >> 8) & 0xFF); // Green
+                outputStream.write(rgba & 0xFF); // Blue
+                outputStream.write((rgba >> 24) & 0xFF); // Alpha
+            }
+        }
+        EMPTY_SKIN = new Skin(-1, "geysermc:empty", outputStream.toByteArray());
+
         /* Load in the normal ears geometry */
         EARS_GEOMETRY = new String(FileUtils.readAllBytes("bedrock/skin/geometry.humanoid.ears.json"), StandardCharsets.UTF_8);
 
@@ -144,11 +162,72 @@ public class SkinProvider {
         }
     }
 
-    public static boolean hasCapeCached(String capeUrl) {
-        return cachedCapes.getIfPresent(capeUrl) != null;
+    /**
+     * Search our cached database for an already existing, translated skin of this Java URL.
+     */
+    static Skin getCachedSkin(String skinUrl) {
+        return CACHED_JAVA_SKINS.getIfPresent(skinUrl);
     }
 
-    public static boolean hasSkinCached(String skinUrl){
+    /**
+     * If skin data fails to apply, or there is no skin data to apply, determine what skin we should give as a fallback.
+     */
+    static SkinData determineFallbackSkinData(UUID uuid) {
+        Skin skin = null;
+        Cape cape = null;
+        SkinGeometry geometry = SkinGeometry.WIDE;
+
+        if (GeyserImpl.getInstance().getConfig().getRemote().authType() != AuthType.ONLINE) {
+            // Let's see if this player is a Bedrock player, and if so, let's pull their skin.
+            GeyserSession session = GeyserImpl.getInstance().connectionByUuid(uuid);
+            if (session != null) {
+                String skinId = session.getClientData().getSkinId();
+                skin = CACHED_BEDROCK_SKINS.getIfPresent(skinId);
+                String capeId = session.getClientData().getCapeId();
+                cape = CACHED_BEDROCK_CAPES.getIfPresent(capeId);
+                geometry = cachedGeometry.getOrDefault(uuid, geometry);
+            }
+        }
+
+        if (skin == null) {
+            // We don't have a skin for the player right now. Fall back to a default.
+            ProvidedSkins.ProvidedSkin providedSkin = ProvidedSkins.getDefaultPlayerSkin(uuid);
+            skin = providedSkin.getData();
+            geometry = providedSkin.isSlim() ? SkinProvider.SkinGeometry.SLIM : SkinProvider.SkinGeometry.WIDE;
+        }
+
+        if (cape == null) {
+            cape = EMPTY_CAPE;
+        }
+
+        return new SkinData(skin, cape, geometry);
+    }
+
+    /**
+     * Used as a fallback if an official Java cape doesn't exist for this user.
+     */
+    @Nonnull
+    private static Cape getCachedBedrockCape(UUID uuid) {
+        GeyserSession session = GeyserImpl.getInstance().connectionByUuid(uuid);
+        if (session != null) {
+            String capeId = session.getClientData().getCapeId();
+            Cape bedrockCape = CACHED_BEDROCK_CAPES.getIfPresent(capeId);
+            if (bedrockCape != null) {
+                return bedrockCape;
+            }
+        }
+        return EMPTY_CAPE;
+    }
+
+    @Nullable
+    static Cape getCachedCape(String capeUrl) {
+        if (capeUrl == null) {
+            return null;
+        }
+        return CACHED_JAVA_CAPES.getIfPresent(capeUrl);
+    }
+
+        public static boolean hasSkinCached(String skinUrl){
         return cachedSkins.getIfPresent(skinUrl) != null;
     }
 
@@ -164,19 +243,27 @@ public class SkinProvider {
     public static CompletableFuture<SkinProvider.SkinData> requestSkinData(PlayerEntity entity) {
         SkinManager.GameProfileData data = SkinManager.GameProfileData.from(entity);
         GeyserImpl.getInstance().getLogger().debug("Entity RequestSkin:"+entity.getUsername() + " url: "+data.skinUrl());
+        if (data == null) {
+            // This player likely does not have a textures property
+            return CompletableFuture.completedFuture(determineFallbackSkinData(entity.getUuid()));
+        }
+
         return requestSkinAndCape(entity.getUuid(), data.skinUrl(), data.capeUrl())
                 .thenApplyAsync(skinAndCape -> {
                     try {
-                        Skin skin = skinAndCape.getSkin();
-                        Cape cape = skinAndCape.getCape();
-                        SkinGeometry geometry = SkinGeometry.getLegacy(data.isAlex());
+                        Skin skin = skinAndCape.skin();
+                        Cape cape = skinAndCape.cape();
+                        SkinGeometry geometry = data.isAlex() ? SkinGeometry.SLIM : SkinGeometry.WIDE;
 
-                        if (cape.isFailed()) {
-                            cape = getOrDefault(requestBedrockCape(entity.getUuid()),
-                                    EMPTY_CAPE, 3);
+                        // Whether we should see if this player has a Bedrock skin we should check for on failure of
+                        // any skin property
+                        boolean checkForBedrock = entity.getUuid().version() != 4;
+
+                        if (cape.failed() && checkForBedrock) {
+                            cape = getCachedBedrockCape(entity.getUuid());
                         }
 
-                        if (cape.isFailed() && ALLOW_THIRD_PARTY_CAPES) {
+                        if (cape.failed() && ALLOW_THIRD_PARTY_CAPES) {
                             cape = getOrDefault(requestUnofficialCape(
                                     cape, entity.getUuid(),
                                     entity.getUsername(), false
@@ -189,7 +276,7 @@ public class SkinProvider {
 
                         boolean isDeadmau5 = "deadmau5".equals(entity.getUsername());
                         // Not a bedrock player check for ears
-                        if (geometry.isFailed() && (ALLOW_THIRD_PARTY_EARS || isDeadmau5)) {
+                        if (geometry.failed() && (ALLOW_THIRD_PARTY_EARS || isDeadmau5)) {
                             boolean isEars;
 
                             // Its deadmau5, gotta support his skin :)
@@ -220,11 +307,11 @@ public class SkinProvider {
                         GeyserImpl.getInstance().getLogger().error(GeyserLocale.getLocaleStringLog("geyser.skin.fail", entity.getUuid()), e);
                     }
 
-                    return new SkinData(skinAndCape.getSkin(), skinAndCape.getCape(), null);
+                    return new SkinData(skinAndCape.skin(), skinAndCape.cape(), null);
                 });
     }
 
-    public static CompletableFuture<SkinAndCape> requestSkinAndCape(UUID playerId, String skinUrl, String capeUrl) {
+    private static CompletableFuture<SkinAndCape> requestSkinAndCape(UUID playerId, String skinUrl, String capeUrl) {
         return CompletableFuture.supplyAsync(() -> {
             long time = System.currentTimeMillis();
             String newSkinUrl = skinUrl;
@@ -249,7 +336,7 @@ public class SkinProvider {
         }, EXECUTOR_SERVICE);
     }
 
-    public static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
+    static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
         GeyserImpl.getInstance().getLogger().debug(playerId+"请求皮肤 url:"+textureUrl);
         if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(EMPTY_SKIN);
         //  从 cachedSkins 里面拿皮肤
@@ -262,7 +349,8 @@ public class SkinProvider {
         }
 
         // 从缓存的 url拿皮肤
-        Skin cachedSkin = getCachedSkin(textureUrl);
+        Skin cachedSkin = getCachedSkin(textureUrl); //TODO check not null
+        Skin cachedSkin = CACHED_JAVA_SKINS.getIfPresent(textureUrl);
         if (cachedSkin != null) {
             GeyserImpl.getInstance().getLogger().debug("检测到 cachedSkin缓存 "+playerId);
             return CompletableFuture.completedFuture(cachedSkin);
@@ -273,7 +361,8 @@ public class SkinProvider {
             future = CompletableFuture.supplyAsync(() -> supplySkin(playerId, textureUrl), EXECUTOR_SERVICE)
                     .whenCompleteAsync((skin, throwable) -> {
                         skin.updated = true;
-                        cachedSkins.put(textureUrl, skin);
+                        cachedSkins.put(textureUrl, skin); // TODO
+                        CACHED_JAVA_SKINS.put(textureUrl, skin);
                         requestedSkins.remove(textureUrl);
                     });
             if (textureUrl.endsWith("?pe")){
@@ -294,16 +383,21 @@ public class SkinProvider {
             // 成功HTTP拿到皮肤进行缓存
             Skin skin = supplySkin(playerId, textureUrl);
             future = CompletableFuture.completedFuture(skin);
-            cachedSkins.put(textureUrl, skin);
+            cachedSkins.put(textureUrl, skin); // TODO
+            CACHED_JAVA_SKINS.put(textureUrl, skin);
         }
         return future;
     }
 
-    public static CompletableFuture<Cape> requestCape(String capeUrl, CapeProvider provider, boolean newThread) {
+    private static CompletableFuture<Cape> requestCape(String capeUrl, CapeProvider provider, boolean newThread) {
         if (capeUrl == null || capeUrl.isEmpty()) return CompletableFuture.completedFuture(EMPTY_CAPE);
-        if (requestedCapes.containsKey(capeUrl)) return requestedCapes.get(capeUrl); // already requested
+        CompletableFuture<Cape> requestedCape = requestedCapes.get(capeUrl);
+        if (requestedCape != null) {
+            return requestedCape;
+        }
 
         Cape cachedCape = cachedCapes.getIfPresent(capeUrl);
+        Cape cachedCape = CACHED_JAVA_CAPES.getIfPresent(capeUrl);
         if (cachedCape != null) {
             return CompletableFuture.completedFuture(cachedCape);
         }
@@ -313,6 +407,7 @@ public class SkinProvider {
             future = CompletableFuture.supplyAsync(() -> supplyCape(capeUrl, provider), EXECUTOR_SERVICE)
                     .whenCompleteAsync((cape, throwable) -> {
                         cachedCapes.put(capeUrl, cape);
+                        CACHED_JAVA_CAPES.put(capeUrl, cape);
                         requestedCapes.remove(capeUrl);
                     });
             requestedCapes.put(capeUrl, future);
@@ -320,13 +415,14 @@ public class SkinProvider {
             Cape cape = supplyCape(capeUrl, provider); // blocking
             future = CompletableFuture.completedFuture(cape);
             cachedCapes.put(capeUrl, cape);
+            CACHED_JAVA_CAPES.put(capeUrl, cape);
         }
         return future;
     }
 
     public static CompletableFuture<Cape> requestUnofficialCape(Cape officialCape, UUID playerId,
                                                                 String username, boolean newThread) {
-        if (officialCape.isFailed() && ALLOW_THIRD_PARTY_CAPES) {
+        if (officialCape.failed() && ALLOW_THIRD_PARTY_CAPES) {
             for (CapeProvider provider : CapeProvider.VALUES) {
                 if (provider.type != CapeUrlType.USERNAME && IS_NPC.test(playerId)) {
                     continue;
@@ -336,7 +432,7 @@ public class SkinProvider {
                         requestCape(provider.getUrlFor(playerId, username), provider, newThread),
                         EMPTY_CAPE, 4
                 );
-                if (!cape1.isFailed()) {
+                if (!cape1.failed()) {
                     return CompletableFuture.completedFuture(cape1);
                 }
             }
@@ -385,17 +481,14 @@ public class SkinProvider {
         return CompletableFuture.completedFuture(officialSkin);
     }
 
-    public static CompletableFuture<Cape> requestBedrockCape(UUID playerID) {
-        Cape bedrockCape = cachedCapes.getIfPresent(playerID.toString() + ".Bedrock");
-        if (bedrockCape == null) {
-            bedrockCape = EMPTY_CAPE;
-        }
-        return CompletableFuture.completedFuture(bedrockCape);
+    static void storeBedrockSkin(UUID playerID, String skinId, byte[] skinData) {
+        Skin skin = new Skin(playerID, skinId, skinData, System.currentTimeMillis(), true, false);
+        CACHED_BEDROCK_SKINS.put(skin.getTextureUrl(), skin);
     }
 
-    public static CompletableFuture<SkinGeometry> requestBedrockGeometry(SkinGeometry currentGeometry, UUID playerID) {
-        SkinGeometry bedrockGeometry = cachedGeometry.getOrDefault(playerID, currentGeometry);
-        return CompletableFuture.completedFuture(bedrockGeometry);
+    static void storeBedrockCape(String capeId, byte[] capeData) {
+        Cape cape = new Cape(capeId, capeId, capeData, System.currentTimeMillis(), false);
+        CACHED_BEDROCK_CAPES.put(capeId, cape);
     }
 
     public static void storeBedrockSkin(UUID playerID, String skinID, byte[] skinData) {
@@ -419,7 +512,8 @@ public class SkinProvider {
      * @param skin The skin to cache
      */
     public static void storeEarSkin(Skin skin) {
-        cachedSkins.put(skin.getTextureUrl(), skin);
+        cachedSkins.put(skin.getTextureUrl(), skin); // TODO
+        CACHED_JAVA_SKINS.put(skin.getTextureUrl(), skin);
     }
 
     /**
@@ -434,7 +528,7 @@ public class SkinProvider {
 
     private static Skin supplySkin(UUID uuid, String textureUrl) {
         try {
-            byte[] skin = requestImage(textureUrl, null);
+            byte[] skin = requestImageData(textureUrl, null);
             return new Skin(uuid, textureUrl, skin, System.currentTimeMillis(), false, false);
         } catch (Exception ignored) {} // just ignore I guess
 
@@ -463,9 +557,9 @@ public class SkinProvider {
     }
 
     private static Cape supplyCape(String capeUrl, CapeProvider provider) {
-        byte[] cape = EMPTY_CAPE.getCapeData();
+        byte[] cape = EMPTY_CAPE.capeData();
         try {
-            cape = requestImage(capeUrl, provider);
+            cape = requestImageData(capeUrl, provider);
         } catch (Exception ignored) {
         } // just ignore I guess
 
@@ -522,11 +616,11 @@ public class SkinProvider {
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private static byte[] requestImage(String imageUrl, CapeProvider provider) throws Exception {
+    public static BufferedImage requestImage(String imageUrl, CapeProvider provider) throws IOException {
         BufferedImage image = null;
 
         // First see if we have a cached file. We also update the modification stamp so we know when the file was last used
-        File imageFile = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("cache").resolve("images").resolve(UUID.nameUUIDFromBytes(imageUrl.getBytes()) + ".png").toFile();
+        File imageFile = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("cache").resolve("images").resolve(UUID.nameUUIDFromBytes(imageUrl.getBytes()).toString() + ".png").toFile();
         if (imageFile.exists()) {
             try {
                 GeyserImpl.getInstance().getLogger().debug("Reading cached image from file " + imageFile.getPath() + " for " + imageUrl);
@@ -582,60 +676,71 @@ public class SkinProvider {
             // TODO remove alpha channel
         }
 
+        return image;
+    }
+
+    private static byte[] requestImageData(String imageUrl, CapeProvider provider) throws Exception {
+        BufferedImage image = requestImage(imageUrl, provider);
         byte[] data = bufferedImageToImageData(image);
         image.flush();
         return data;
     }
 
     /**
-     * If a skull has a username but no textures, request them.
+     * Request textures from a player's UUID
      *
-     * @param skullOwner the CompoundTag of the skull with no textures
+     * @param uuid the player's UUID without any hyphens
      * @return a completable GameProfile with textures included
      */
-    public static CompletableFuture<String> requestTexturesFromUsername(CompoundTag skullOwner) {
+    public static CompletableFuture<String> requestTexturesFromUUID(String uuid) {
         return CompletableFuture.supplyAsync(() -> {
-            Tag uuidTag = skullOwner.get("Id");
-            String uuidToString = "";
-            JsonNode node;
-            boolean retrieveUuidFromInternet = !(uuidTag instanceof IntArrayTag); // also covers null check
-
-            if (!retrieveUuidFromInternet) {
-                int[] uuidAsArray = ((IntArrayTag) uuidTag).getValue();
-                // thank u viaversion
-                UUID uuid = new UUID((long) uuidAsArray[0] << 32 | ((long) uuidAsArray[1] & 0xFFFFFFFFL),
-                        (long) uuidAsArray[2] << 32 | ((long) uuidAsArray[3] & 0xFFFFFFFFL));
-                retrieveUuidFromInternet = uuid.version() != 4;
-                uuidToString = uuid.toString().replace("-", "");
-            }
-
             try {
-                if (retrieveUuidFromInternet) {
-                    // Offline skin, or no present UUID
-                    node = WebUtils.getJson("https://api.mojang.com/users/profiles/minecraft/" + skullOwner.get("Name").getValue());
-                    JsonNode id = node.get("id");
-                    if (id == null) {
-                        GeyserImpl.getInstance().getLogger().debug("No UUID found in Mojang response for " + skullOwner.get("Name").getValue());
-                        return null;
-                    }
-                    uuidToString = id.asText();
-                }
-
-                // Get textures from UUID
-                node = WebUtils.getJson("https://sessionserver.mojang.com/session/minecraft/profile/" + uuidToString);
+                JsonNode node = WebUtils.getJson("https://sessionserver.mojang.com/session/minecraft/profile/" + uuid);
                 JsonNode properties = node.get("properties");
                 if (properties == null) {
-                    GeyserImpl.getInstance().getLogger().debug("No properties found in Mojang response for " + uuidToString);
+                    GeyserImpl.getInstance().getLogger().debug("No properties found in Mojang response for " + uuid);
                     return null;
                 }
                 return node.get("properties").get(0).get("value").asText();
             } catch (Exception e) {
+                GeyserImpl.getInstance().getLogger().debug("Unable to request textures for " + uuid);
                 if (GeyserImpl.getInstance().getConfig().isDebugMode()) {
                     e.printStackTrace();
                 }
                 return null;
             }
         }, EXECUTOR_SERVICE);
+    }
+
+    /**
+     * Request textures from a player's username
+     *
+     * @param username the player's username
+     * @return a completable GameProfile with textures included
+     */
+    public static CompletableFuture<String> requestTexturesFromUsername(String username) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Offline skin, or no present UUID
+                JsonNode node = WebUtils.getJson("https://api.mojang.com/users/profiles/minecraft/" + username);
+                JsonNode id = node.get("id");
+                if (id == null) {
+                    GeyserImpl.getInstance().getLogger().debug("No UUID found in Mojang response for " + username);
+                    return null;
+                }
+                return id.asText();
+            } catch (Exception e) {
+                if (GeyserImpl.getInstance().getConfig().isDebugMode()) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        }, EXECUTOR_SERVICE).thenCompose(uuid -> {
+            if (uuid == null) {
+                return CompletableFuture.completedFuture(null);
+            }
+            return requestTexturesFromUUID(uuid);
+        });
     }
 
     private static BufferedImage downloadImage(String imageUrl, CapeProvider provider) throws IOException {
@@ -653,7 +758,7 @@ public class SkinProvider {
     }
 
     private static BufferedImage readFiveZigCape(String url) throws IOException {
-        JsonNode element = OBJECT_MAPPER.readTree(WebUtils.getBody(url));
+        JsonNode element = GeyserImpl.JSON_MAPPER.readTree(WebUtils.getBody(url));
         if (element != null && element.isObject()) {
             JsonNode capeElement = element.get("d");
             if (capeElement == null || capeElement.isNull()) return null;
@@ -732,13 +837,12 @@ public class SkinProvider {
         return defaultValue;
     }
 
-    @AllArgsConstructor
-    @Getter
-    public static class SkinAndCape {
-        private final Skin skin;
-        private final Cape cape;
+    public record SkinAndCape(Skin skin, Cape cape) {
     }
 
+    /**
+     * Represents a full package of skin, cape, and geometry.
+     */
     public record SkinData(Skin skin, Cape cape, SkinGeometry geometry) {
     }
 
@@ -752,29 +856,19 @@ public class SkinProvider {
         private boolean updated;
         private boolean ears;
 
-        private Skin(long requestedOn, String textureUrl, byte[] skinData) {
+        Skin(long requestedOn, String textureUrl, byte[] skinData) {
             this.requestedOn = requestedOn;
             this.textureUrl = textureUrl;
             this.skinData = skinData;
         }
     }
 
-    @AllArgsConstructor
-    @Getter
-    public static class Cape {
-        private final String textureUrl;
-        private final String capeId;
-        private final byte[] capeData;
-        private final long requestedOn;
-        private final boolean failed;
+    public record Cape(String textureUrl, String capeId, byte[] capeData, long requestedOn, boolean failed) {
     }
 
-    @AllArgsConstructor
-    @Getter
-    public static class SkinGeometry {
-        private final String geometryName;
-        private final String geometryData;
-        private final boolean failed;
+    public record SkinGeometry(String geometryName, String geometryData, boolean failed) {
+        public static SkinGeometry WIDE = getLegacy(false);
+        public static SkinGeometry SLIM = getLegacy(true);
 
         /**
          * Generate generic geometry

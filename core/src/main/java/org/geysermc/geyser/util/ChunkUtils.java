@@ -44,6 +44,7 @@ import org.geysermc.geyser.level.chunk.GeyserChunkSection;
 import org.geysermc.geyser.level.chunk.bitarray.SingletonBitArray;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
 
@@ -125,16 +126,22 @@ public class ChunkUtils {
             // Otherwise, let's still store our reference to the item frame, but let the new block take precedence for now
         }
 
-        if (BlockStateValues.getSkullVariant(blockState) == -1) {
+        int blockId = session.getBlockMappings().getBedrockBlockId(blockState);
+        int skullVariant = BlockStateValues.getSkullVariant(blockState);
+        if (skullVariant == -1) {
             // Skull is gone
             session.getSkullCache().removeSkull(position);
+        } else if (skullVariant == 3) {
+            // The changed block was a player skull so check if a custom block was defined for this skull
+            SkullCache.Skull skull = session.getSkullCache().updateSkull(position, blockState);
+            if (skull != null && skull.getCustomRuntimeId() != -1) {
+                blockId = skull.getCustomRuntimeId();
+            }
         }
 
         // Prevent moving_piston from being placed
         // It's used for extending piston heads, but it isn't needed on Bedrock and causes pistons to flicker
         if (!BlockStateValues.isMovingPiston(blockState)) {
-            int blockId = session.getBlockMappings().getBedrockBlockId(blockState);
-
             UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
             updateBlockPacket.setDataLayer(0);
             updateBlockPacket.setBlockPosition(position);

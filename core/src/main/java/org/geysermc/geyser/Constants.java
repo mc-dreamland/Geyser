@@ -30,7 +30,6 @@ import java.net.URISyntaxException;
 
 public final class Constants {
     public static final URI GLOBAL_API_WS_URI;
-    public static final String NTP_SERVER = "time.cloudflare.com";
 
     public static final String NEWS_OVERVIEW_URL = "https://api.geysermc.org/v2/news/";
     public static final String NEWS_PROJECT_NAME = "geyser";
@@ -42,6 +41,10 @@ public final class Constants {
 
     static final String SAVED_REFRESH_TOKEN_FILE = "saved-refresh-tokens.json";
 
+    public static final String GEYSER_NAMESPACE = "geyser_custom";
+
+    public static final String MINECRAFT_SKIN_SERVER_URL = "https://textures.minecraft.net/texture/";
+
     static {
         URI wsUri = null;
         try {
@@ -49,6 +52,7 @@ public final class Constants {
                     .replace("http://","")
                     .replace("https://","")+"/geyser");
         } catch (URISyntaxException e) {
+            GeyserImpl.getInstance().getLogger().error("Unable to resolve api.geysermc.org! Check your internet connection.");
             e.printStackTrace();
         }
         GLOBAL_API_WS_URI = wsUri;

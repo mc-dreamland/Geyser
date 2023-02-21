@@ -360,6 +360,9 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
     @JsonProperty("online-mode")
     private boolean onlineMode = false;
 
+    @JsonProperty("disable-compression")
+    private boolean isDisableCompression = true;
+
     @JsonProperty("config-version")
     private int configVersion = 0;
 

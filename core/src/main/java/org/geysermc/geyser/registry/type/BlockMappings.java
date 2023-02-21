@@ -27,11 +27,14 @@ package org.geysermc.geyser.registry.type;
 
 import com.nukkitx.nbt.NbtList;
 import com.nukkitx.nbt.NbtMap;
+import com.nukkitx.protocol.bedrock.data.BlockPropertyData;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import lombok.Builder;
 import lombok.Value;
+import org.geysermc.geyser.api.block.custom.CustomBlockState;
 
+import java.util.List;
 import java.util.Map;
 
 @Builder
@@ -44,8 +47,10 @@ public class BlockMappings {
     int blockStateVersion;
 
     int[] javaToBedrockBlocks;
+    int[] javaToVanillaBedrockBlocks;
 
     NbtList<NbtMap> bedrockBlockStates;
+    int[] remappedVanillaIds;
 
     int commandBlockRuntimeId;
 
@@ -54,11 +59,21 @@ public class BlockMappings {
 
     IntSet jigsawStateIds;
 
+    List<BlockPropertyData> blockProperties;
+    Object2IntMap<CustomBlockState> customBlockStateIds;
+
     public int getBedrockBlockId(int state) {
         if (state >= this.javaToBedrockBlocks.length) {
             return bedrockAirId;
         }
         return this.javaToBedrockBlocks[state];
+    }
+
+    public int getVanillaBedrockBlockId(int state) {
+        if (state >= this.javaToVanillaBedrockBlocks.length) {
+            return bedrockAirId;
+        }
+        return this.javaToVanillaBedrockBlocks[state];
     }
 
     public int getItemFrame(NbtMap tag) {

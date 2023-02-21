@@ -38,6 +38,10 @@ import com.nukkitx.protocol.bedrock.data.inventory.ComponentItemData;
 import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
 import com.nukkitx.protocol.bedrock.packet.StartGamePacket;
 import com.nukkitx.protocol.bedrock.v503.Bedrock_v503;
+import com.nukkitx.protocol.bedrock.v544.Bedrock_v544;
+import com.nukkitx.protocol.bedrock.v544.Bedrock_v544;
+import com.nukkitx.protocol.bedrock.v560.Bedrock_v560;
+import com.nukkitx.protocol.bedrock.v567.Bedrock_v567;
 import it.unimi.dsi.fastutil.ints.*;
 import com.nukkitx.protocol.bedrock.v527.Bedrock_v527;
 import com.nukkitx.protocol.bedrock.v534.Bedrock_v534;
@@ -47,25 +51,39 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.GeyserBootstrap;
 import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.api.item.custom.CustomItemOptions;
 import org.geysermc.geyser.api.item.custom.NonVanillaCustomItemData;
 import org.geysermc.geyser.event.type.GeyserDefineCustomItemsEventImpl;
 import org.geysermc.geyser.inventory.item.StoredItemMappings;
 import org.geysermc.geyser.item.GeyserCustomMappingData;
-import org.geysermc.geyser.item.mappings.MappingsConfigReader;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
-import org.geysermc.geyser.registry.type.*;
+import org.geysermc.geyser.registry.mappings.MappingsConfigReader;
+import org.geysermc.geyser.registry.type.BlockMappings;
+import org.geysermc.geyser.registry.type.GeyserMappingItem;
+import org.geysermc.geyser.registry.type.ItemMapping;
+import org.geysermc.geyser.registry.type.ItemMappings;
+import org.geysermc.geyser.registry.type.NonVanillaItemRegistration;
+import org.geysermc.geyser.registry.type.PaletteItem;
 import org.geysermc.geyser.util.ItemUtils;
 import org.geysermc.geyser.util.collection.FixedInt2IntMap;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Populates the item registries.
@@ -85,6 +103,8 @@ public class ItemRegistryPopulator {
                 Collections.singletonMap("minecraft:trader_llama_spawn_egg", "minecraft:llama_spawn_egg")));
         paletteVersions.put("1_19_10", new PaletteVersion(Bedrock_v534.V534_CODEC.getProtocolVersion(), Collections.emptyMap()));
         paletteVersions.put("1_19_20", new PaletteVersion(Bedrock_v544.V544_CODEC.getProtocolVersion(), Collections.emptyMap()));
+        paletteVersions.put("1_19_50", new PaletteVersion(Bedrock_v560.V560_CODEC.getProtocolVersion(), Collections.emptyMap()));
+        paletteVersions.put("1_19_60", new PaletteVersion(Bedrock_v567.V567_CODEC.getProtocolVersion(), Collections.emptyMap()));
 
         GeyserBootstrap bootstrap = GeyserImpl.getInstance().getBootstrap();
 
@@ -117,7 +137,7 @@ public class ItemRegistryPopulator {
         MappingsConfigReader mappingsConfigReader = new MappingsConfigReader();
         if (customItemsAllowed) {
             // Load custom items from mappings files
-            mappingsConfigReader.loadMappingsFromJson((key, item) -> {
+            mappingsConfigReader.loadItemMappingsFromJson((key, item) -> {
                 if (CustomItemRegistryPopulator.initialCheck(key, item, items)) {
                     customItems.get(key).add(item);
                 }
@@ -219,6 +239,8 @@ public class ItemRegistryPopulator {
             // Temporary mapping to create stored items
             Map<String, ItemMapping> identifierToMapping = new Object2ObjectOpenHashMap<>();
 
+            BlockMappings blockMappings = BlockRegistries.BLOCKS.forVersion(palette.getValue().protocolVersion());
+
             int netId = 1;
             List<ItemData> creativeItems = new ArrayList<>();
             for (JsonNode itemNode : creativeItemEntries) {
@@ -237,6 +259,10 @@ public class ItemRegistryPopulator {
                 JsonNode blockRuntimeIdNode = itemNode.get("blockRuntimeId");
                 if (blockRuntimeIdNode != null) {
                     blockRuntimeId = blockRuntimeIdNode.asInt();
+
+                    if (blockMappings.getRemappedVanillaIds().length != 0) {
+                        blockRuntimeId = blockMappings.getRemappedVanillaIds()[blockRuntimeId];
+                    }
                 }
                 JsonNode nbtNode = itemNode.get("nbt_b64");
                 if (nbtNode != null) {
@@ -293,8 +319,6 @@ public class ItemRegistryPopulator {
                     }
                 }
             }
-
-            BlockMappings blockMappings = BlockRegistries.BLOCKS.forVersion(palette.getValue().protocolVersion());
 
             int itemIndex = 0;
             int javaFurnaceMinecartId = 0;
@@ -370,7 +394,10 @@ public class ItemRegistryPopulator {
                             // and the last, if relevant. We then iterate over all those values and get their Bedrock equivalents
                             Integer lastBlockRuntimeId = entry.getValue().getLastBlockRuntimeId() == null ? firstBlockRuntimeId : entry.getValue().getLastBlockRuntimeId();
                             for (int i = firstBlockRuntimeId; i <= lastBlockRuntimeId; i++) {
-                                int bedrockBlockRuntimeId = blockMappings.getBedrockBlockId(i);
+                                // For now we opt to preserve the pre custom block phase and just use the vanilla blocks in the creative inventory
+                                // In the future if we get the mappings for categories it we could put the custom blocks in the creative inventory
+                                // This would likely also require changes to recipe handling
+                                int bedrockBlockRuntimeId = blockMappings.getVanillaBedrockBlockId(i);
                                 NbtMap blockTag = blockMappings.getBedrockBlockStates().get(bedrockBlockRuntimeId);
                                 String bedrockName = blockTag.getString("name");
                                 if (!bedrockName.equals(correctBedrockIdentifier)) {
@@ -499,7 +526,7 @@ public class ItemRegistryPopulator {
                     for (CustomItemData customItem : customItemsToLoad) {
                         int customProtocolId = nextFreeBedrockId++;
 
-                        String customItemName = "heypixel:" + customItem.name();
+                        String customItemName = Constants.GEYSER_NAMESPACE + ":" + customItem.name();
                         if (!registeredItemNames.add(customItemName)) {
                             if (firstMappingsPass) {
                                 GeyserImpl.getInstance().getLogger().error("Custom item name '" + customItem.name() + "' already exists and was registered again! Skipping...");
@@ -665,6 +692,20 @@ public class ItemRegistryPopulator {
                 }
             }
 
+            // Register the item forms of custom blocks
+            Object2IntMap<CustomBlockData> customBlockItemIds = Object2IntMaps.emptyMap();
+            if (BlockRegistries.CUSTOM_BLOCKS.get().length != 0) {
+                customBlockItemIds = new Object2IntOpenHashMap<>();
+                for (CustomBlockData customBlock : BlockRegistries.CUSTOM_BLOCKS.get()) {
+                    int customProtocolId = nextFreeBedrockId++;
+                    String identifier = customBlock.identifier();
+
+                    entries.put(identifier, new StartGamePacket.ItemEntry(identifier, (short) customProtocolId));
+                    customBlockItemIds.put(customBlock, customProtocolId);
+                    customIdMappings.put(customProtocolId, identifier);
+                }
+            }
+
             ItemMappings itemMappings = ItemMappings.builder()
                     .items(mappings.toArray(new ItemMapping[0]))
                     .creativeItems(creativeItems.toArray(new ItemData[0]))
@@ -679,6 +720,7 @@ public class ItemRegistryPopulator {
                     .componentItemData(componentItemData)
                     .lodestoneCompass(lodestoneEntry)
                     .customIdMappings(customIdMappings)
+                    .customBlockItemIds(customBlockItemIds)
                     .build();
 
             Registries.ITEMS.register(palette.getValue().protocolVersion(), itemMappings);

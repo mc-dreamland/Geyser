@@ -62,7 +62,6 @@ import com.github.steveice10.packetlib.event.session.*;
 import com.github.steveice10.packetlib.packet.Packet;
 import com.github.steveice10.packetlib.tcp.TcpClientSession;
 import com.github.steveice10.packetlib.tcp.TcpSession;
-import com.nukkitx.math.GenericMath;
 import com.nukkitx.math.vector.*;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.network.VarInts;
@@ -71,7 +70,9 @@ import com.nukkitx.protocol.bedrock.BedrockPacketHelper;
 import com.nukkitx.protocol.bedrock.BedrockServerSession;
 import com.nukkitx.protocol.bedrock.BedrockSession;
 import com.nukkitx.protocol.bedrock.data.*;
+import com.nukkitx.protocol.bedrock.data.command.CommandEnumData;
 import com.nukkitx.protocol.bedrock.data.command.CommandPermission;
+import com.nukkitx.protocol.bedrock.data.command.SoftEnumUpdateType;
 import com.nukkitx.protocol.bedrock.data.entity.EntityFlag;
 import com.nukkitx.protocol.bedrock.packet.*;
 import com.nukkitx.protocol.bedrock.v448.serializer.AvailableCommandsSerializer_v448;
@@ -80,7 +81,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -126,7 +126,6 @@ import org.geysermc.geyser.inventory.recipe.GeyserStonecutterData;
 import org.geysermc.geyser.level.JavaDimension;
 import org.geysermc.geyser.level.WorldManager;
 import org.geysermc.geyser.level.physics.CollisionManager;
-import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.network.netty.LocalSession;
 import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.registry.type.BlockMappings;
@@ -144,7 +143,6 @@ import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.util.ChunkUtils;
 import org.geysermc.geyser.util.DimensionUtils;
 import org.geysermc.geyser.util.LoginEncryptionUtils;
-import org.geysermc.geyser.util.MathUtils;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -191,7 +189,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     private final AdvancementsCache advancementsCache;
     private final BookEditCache bookEditCache;
-    private final ChunkCache chunkCache;
+    private @org.checkerframework.checker.nullness.qual.NonNull final ChunkCache chunkCache;
     private final EntityCache entityCache;
     private final EntityEffectCache effectCache;
     private final FormCache formCache;
@@ -271,8 +269,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      */
     private final Set<Vector3i> lecternCache;
 
-    @Setter
-    private Vector3f lastBreak;
 
     @Setter
     private boolean startClearChunkCache;
@@ -316,6 +312,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      */
     @Setter
     private String worldName = null;
+    /**
+     * As of Java 1.19.3, the client only uses these for commands.
+     */
+    @Setter
+    private String[] levels;
 
     private boolean sneaking;
 
@@ -453,6 +454,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private long lastInteractionTime;
 
     /**
+     * Stores when the player started to break a block. Used to allow correct break time for custom blocks.
+     */
+    @Setter
+    private long blockBreakStartTime;
+
+    /**
      * Stores whether the player intended to place a bucket.
      */
     @Setter
@@ -472,9 +479,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     /**
      * Counts how many ticks have occurred since an arm animation started.
-     * -1 means there is no active arm swing.
+     * -1 means there is no active arm swing; -2 means an arm swing will start in a tick.
      */
-    @Getter(AccessLevel.NONE)
     private int armAnimationTicks = -1;
 
     /**
@@ -553,6 +559,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      */
     @Setter
     private ScheduledFuture<?> lookBackScheduledFuture = null;
+
+    /**
+     * Used to return players back to their vehicles if the server doesn't want them unmounting.
+     */
+    @Setter
+    private ScheduledFuture<?> mountVehicleScheduledFuture = null;
 
     private MinecraftProtocol protocol;
 
@@ -1092,6 +1104,17 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     }
 
     /**
+     * Moves task to the session event loop if already not in it. Otherwise, the task is automatically ran.
+     */
+    public void ensureInEventLoop(Runnable runnable) {
+        if (eventLoop.inEventLoop()) {
+            runnable.run();
+            return;
+        }
+        executeInEventLoop(runnable);
+    }
+
+    /**
      * Executes a task and prints a stack trace if an error occurs.
      */
     public void executeInEventLoop(Runnable runnable) {
@@ -1161,7 +1184,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                 entity.tick();
             }
 
-            if (armAnimationTicks != -1) {
+            if (armAnimationTicks >= 0) {
                 // As of 1.18.2 Java Edition, it appears that the swing time is dynamically updated depending on the
                 // player's effect status, but the animation can cut short if the duration suddenly decreases
                 // (from suddenly no longer having mining fatigue, for example)
@@ -1200,7 +1223,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     public void startSneaking() {
         // Toggle the shield, if there is no ongoing arm animation
         // This matches Bedrock Edition behavior as of 1.18.12
-        if (armAnimationTicks == -1) {
+        if (armAnimationTicks < 0) {
             attemptToBlock();
         }
 
@@ -1333,6 +1356,16 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     }
 
     /**
+     * For https://github.com/GeyserMC/Geyser/issues/2113 and combating arm ticking activating being delayed in
+     * BedrockAnimateTranslator.
+     */
+    public void armSwingPending() {
+        if (armAnimationTicks == -1) {
+            armAnimationTicks = -2;
+        }
+    }
+
+    /**
      * Indicates to the client to stop blocking and tells the Java server the same.
      */
     private boolean disableBlocking() {
@@ -1344,6 +1377,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
             return true;
         }
         return false;
+    }
+
+    public void requestOffhandSwap() {
+        ServerboundPlayerActionPacket swapHandsPacket = new ServerboundPlayerActionPacket(PlayerAction.SWAP_HANDS, Vector3i.ZERO,
+                Direction.DOWN, 0);
+        sendDownstreamPacket(swapHandsPacket);
     }
 
     /**
@@ -1385,18 +1424,21 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * Sends a chat message to the Java server.
      */
     public void sendChat(String message) {
-        sendDownstreamPacket(new ServerboundChatPacket(message, Instant.now().toEpochMilli(), 0L, ByteArrays.EMPTY_ARRAY, false, Collections.emptyList(), null));
+        sendDownstreamPacket(new ServerboundChatPacket(message, Instant.now().toEpochMilli(), 0L, null, 0, new BitSet()));
     }
 
     /**
      * Sends a command to the Java server.
      */
     public void sendCommand(String command) {
-        sendDownstreamPacket(new ServerboundChatCommandPacket(command, Instant.now().toEpochMilli(), 0L, Collections.emptyList(), false, Collections.emptyList(), null));
+        sendDownstreamPacket(new ServerboundChatCommandPacket(command, Instant.now().toEpochMilli(), 0L, Collections.emptyList(), 0, new BitSet()));
     }
 
     public void setServerRenderDistance(int renderDistance) {
-        renderDistance = GenericMath.ceil(++renderDistance * MathUtils.SQRT_OF_TWO); //square to circle
+        // +1 is for Fabric and Spigot
+        // Without the client misses loading some chunks per https://github.com/GeyserMC/Geyser/issues/3490
+        // Fog still appears essentially normally
+        renderDistance = renderDistance + 1;
         this.serverRenderDistance = renderDistance;
 
         ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
@@ -1487,6 +1529,16 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         startGamePacket.setMultiplayerCorrelationId("");
 
         startGamePacket.setItemEntries(this.itemMappings.getItemEntries());
+        // Needed for custom block mappings and custom skulls system
+        startGamePacket.getBlockProperties().addAll(this.blockMappings.getBlockProperties());
+
+        // See https://learn.microsoft.com/en-us/minecraft/creator/documents/experimentalfeaturestoggle for info on each experiment
+        // data_driven_items (Holiday Creator Features) is needed for blocks and items
+        startGamePacket.getExperiments().add(new ExperimentData("data_driven_items", true));
+        // Needed for block properties for states
+        startGamePacket.getExperiments().add(new ExperimentData("upcoming_creator_features", true));
+        // Needed for certain molang queries used in blocks and items
+        startGamePacket.getExperiments().add(new ExperimentData("experimental_molang_features", true));
 
         startGamePacket.setVanillaVersion("*");
         startGamePacket.setInventoriesServerAuthoritative(true);
@@ -1687,6 +1739,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         boolean spectator = gameMode == GameMode.SPECTATOR;
         boolean worldImmutable = gameMode == GameMode.ADVENTURE || spectator;
 
+        // TODO add more version support in if
         if (GameProtocol.supports1_19_10(this)) {
             UpdateAdventureSettingsPacket adventureSettingsPacket = new UpdateAdventureSettingsPacket();
             adventureSettingsPacket.setNoMvP(false);
@@ -1962,5 +2015,20 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     public boolean isNewVersion() {
         return this.getUpstream().getProtocolVersion() >= Bedrock_v503.V503_CODEC.getProtocolVersion();
+    }
+
+    public void addCommandEnum(String name, String... enums) {
+        softEnumPacket(name, SoftEnumUpdateType.ADD, enums);
+    }
+
+    public void removeCommandEnum(String name, String... enums) {
+        softEnumPacket(name, SoftEnumUpdateType.REMOVE, enums);
+    }
+
+    private void softEnumPacket(String name, SoftEnumUpdateType type, String... enums) {
+        UpdateSoftEnumPacket packet = new UpdateSoftEnumPacket();
+        packet.setType(type);
+        packet.setSoftEnum(new CommandEnumData(name, enums, true));
+        sendUpstreamPacket(packet);
     }
 }
