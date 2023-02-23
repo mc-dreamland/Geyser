@@ -89,6 +89,7 @@ public class MappingsReader_v1 extends MappingsReader {
 
     public void readBlockMappingsV1(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomBlockMapping> consumer) {
         JsonNode blocksNode = mappingsRoot.get("blocks");
+        JsonNode skullNode = mappingsRoot.get("skull_blocks");
 
         if (blocksNode != null && blocksNode.isObject()) {
             blocksNode.fields().forEachRemaining(entry -> {
@@ -96,6 +97,21 @@ public class MappingsReader_v1 extends MappingsReader {
                     try {
                         String identifier = Identifier.formalize(entry.getKey());
                         CustomBlockMapping customBlockMapping = this.readBlockMappingEntry(identifier, entry.getValue());
+                        consumer.accept(identifier, customBlockMapping);
+                    } catch (Exception e) {
+                        GeyserImpl.getInstance().getLogger().error("Error in registering blocks for custom mapping file: " + file.toString());
+                        GeyserImpl.getInstance().getLogger().error("due to entry: " + entry, e);
+                    }
+                }
+            });
+        }
+
+        if (skullNode != null && skullNode.isObject()) {
+            skullNode.fields().forEachRemaining(entry -> {
+                if (entry.getValue().isObject()) {
+                    try {
+                        String identifier = entry.getKey();
+                        CustomBlockMapping customBlockMapping = this.readSkullBlockMappingEntry(identifier, entry.getValue());
                         consumer.accept(identifier, customBlockMapping);
                     } catch (Exception e) {
                         GeyserImpl.getInstance().getLogger().error("Error in registering blocks for custom mapping file: " + file.toString());
@@ -198,7 +214,7 @@ public class MappingsReader_v1 extends MappingsReader {
             CustomBlockData blockData = customBlockDataBuilder
                     .components(createCustomBlockComponents(node, identifier, name))
                     .build();
-            return new CustomBlockMapping(blockData, Map.of(identifier, blockData.defaultBlockState()), identifier, !onlyOverrideStates);
+            return new CustomBlockMapping(blockData, Map.of(identifier, blockData.defaultBlockState()), identifier, !onlyOverrideStates, false);
         }
 
         Map<String, CustomBlockComponents> componentsMap = new LinkedHashMap<>();
@@ -228,7 +244,6 @@ public class MappingsReader_v1 extends MappingsReader {
                     .filter(Predicate.not(componentsMap::containsKey))
                     .forEach(state -> componentsMap.put(state, createCustomBlockComponents(null, state, name)));
         }
-
         if (componentsMap.isEmpty()) {
             throw new InvalidCustomMappingsFileException("Unknown Java block: " + identifier);
         }
@@ -239,6 +254,38 @@ public class MappingsReader_v1 extends MappingsReader {
         customBlockDataBuilder.components(createCustomBlockComponents(node, firstState, name));
 
         return createCustomBlockMapping(customBlockDataBuilder, componentsMap, identifier, !onlyOverrideStates);
+    }
+
+    /**
+     * Read a block mapping entry from a JSON node and Java identifier
+     * @param identifier The Java identifier of the block
+     * @param node The {@link JsonNode} containing the block mapping entry
+     * @return The {@link CustomBlockMapping} record to be read by {@link org.geysermc.geyser.registry.populator.CustomBlockRegistryPopulator#registerCustomBedrockBlocks}
+     * @throws InvalidCustomMappingsFileException If the JSON node is invalid
+     */
+    @Override
+    public CustomBlockMapping readSkullBlockMappingEntry(String identifier, JsonNode node) throws InvalidCustomMappingsFileException {
+        if (node == null || !node.isObject()) {
+            throw new InvalidCustomMappingsFileException("Invalid block mappings entry:" + node);
+        }
+
+        String name = node.get("name").asText();
+        if (name == null || name.isEmpty()) {
+            throw new InvalidCustomMappingsFileException("A block entry has no name");
+        }
+
+        // If this is true, we will only register the states the user has specified rather than all the possible block states
+        boolean onlyOverrideStates = node.has("only_override_states") && node.get("only_override_states").asBoolean();
+
+        // Create the data for the overall block
+        CustomBlockData.Builder customBlockDataBuilder = new CustomBlockDataBuilder()
+                .name(name);
+
+            // There is only one Java block state to override
+        CustomBlockData blockData = customBlockDataBuilder
+                .components(createCustomBlockComponents(node, identifier, name))
+                .build();
+        return new CustomBlockMapping(blockData, Map.of(identifier, blockData.defaultBlockState()), identifier, !onlyOverrideStates, true);
     }
 
     private CustomBlockMapping createCustomBlockMapping(CustomBlockData.Builder customBlockDataBuilder, Map<String, CustomBlockComponents> componentsMap, String identifier, boolean overrideItem) {
@@ -281,7 +328,7 @@ public class MappingsReader_v1 extends MappingsReader {
         Map<String, CustomBlockState> states = blockStateBuilders.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().apply(customBlockData.blockStateBuilder())));
 
-        return new CustomBlockMapping(customBlockData, states, identifier, overrideItem);
+        return new CustomBlockMapping(customBlockData, states, identifier, overrideItem, false);
     }
 
     /**

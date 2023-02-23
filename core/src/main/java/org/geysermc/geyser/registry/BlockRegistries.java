@@ -110,6 +110,7 @@ public class BlockRegistries {
      * A registry which stores clean Java Ids and the custom block it should be replaced with in the context of items.
      */
     public static final SimpleMappedRegistry<String, CustomBlockData> CUSTOM_BLOCK_ITEM_OVERRIDES = SimpleMappedRegistry.create(RegistryLoaders.empty(Object2ObjectOpenHashMap::new));
+    public static final SimpleMappedRegistry<String, CustomBlockData> CUSTOM_BLOCK_HEAD_OVERRIDES = SimpleMappedRegistry.create(RegistryLoaders.empty(Object2ObjectOpenHashMap::new));
 
     /**
      * A registry which stores skin texture hashes to custom skull blocks.

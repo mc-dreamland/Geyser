@@ -32,6 +32,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
 import org.geysermc.geyser.entity.type.player.SkullPlayerEntity;
 import org.geysermc.geyser.level.block.BlockStateValues;
@@ -81,6 +82,16 @@ public class SkullCache {
     public Skull putSkull(Vector3i position, UUID uuid, String texturesProperty, int blockState) {
         Skull skull = skulls.computeIfAbsent(position, Skull::new);
         skull.uuid = uuid;
+
+
+        if (texturesProperty!= null && texturesProperty.startsWith("geyser_custom_block_")) {
+            return putSkull(position, texturesProperty, blockState);
+        }
+
+        if (skull.ownerName != null && skull.ownerName.startsWith("geyser_custom_block_")) {
+            return putSkull(position, skull.ownerName, blockState);
+        }
+
         if (!texturesProperty.equals(skull.texturesProperty)) {
             skull.texturesProperty = texturesProperty;
             skull.skinHash = null;
@@ -135,6 +146,21 @@ public class SkullCache {
                 }
             }
         }
+        return skull;
+    }
+
+    public Skull putSkull(Vector3i position, String skullOwnerName, int blockState) {
+        Skull skull = skulls.computeIfAbsent(position, Skull::new);
+        skull.uuid = null;
+        skull.ownerName = skullOwnerName;
+        skull.skinHash = null;
+        skull.blockState = blockState;
+        skull.customRuntimeId = translateCustomSkull(skull, blockState);
+
+        if (skull.customRuntimeId != -1) {
+            return skull;
+        }
+        skull.distanceSquared = position.distanceSquared(lastPlayerPosition.getX(), lastPlayerPosition.getY(), lastPlayerPosition.getZ());
         return skull;
     }
 
@@ -264,10 +290,20 @@ public class SkullCache {
         return -1;
     }
 
+    private int translateCustomSkull(Skull skull, int blockState) {
+        CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(skull.ownerName.replace("geyser_custom_block_", ""));
+        if (customBlockData != null) {
+            //TODO 处理 旋转问题
+            return session.getBlockMappings().getCustomBlockStateIds().getOrDefault(customBlockData.defaultBlockState(), -1);
+        }
+        return -1;
+    }
+
     @RequiredArgsConstructor
     @Data
     public static class Skull {
         private UUID uuid;
+        private String ownerName;
         private String texturesProperty;
         private String skinHash;
 

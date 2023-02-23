@@ -63,4 +63,6 @@ public abstract class GeyserDefineCustomBlocksEvent implements Event {
      * @param customBlockData the custom block data with which to override java item identifier
      */
     public abstract void registerBlockItemOverride(@NonNull String javaIdentifier, @NonNull CustomBlockData customBlockData);
+
+    public abstract void registerBlockHeadOverride(@NonNull String headOwnerName, @NonNull CustomBlockData customBlockData);
 }

@@ -34,7 +34,9 @@ import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.nbt.NbtMapBuilder;
 import com.nukkitx.protocol.bedrock.packet.UpdateBlockPacket;
 import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.level.block.BlockStateValues;
+import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.skin.SkinProvider;
@@ -59,6 +61,14 @@ public class SkullBlockEntityTranslator extends BlockEntityTranslator implements
         }
         builder.put("Rotation", rotation);
         builder.put("SkullType", skullVariant);
+    }
+
+    private static String getOwnerName(CompoundTag owner) {
+        String username = null;
+        if (owner.get("Name") instanceof StringTag nameTag) {
+            username = nameTag.getValue().toLowerCase(Locale.ROOT);
+        }
+        return username;
     }
 
     private static UUID getUUID(CompoundTag owner) {
@@ -102,6 +112,19 @@ public class SkullBlockEntityTranslator extends BlockEntityTranslator implements
             return -1;
         }
         UUID uuid = getUUID(owner);
+
+        String name = getOwnerName(owner);
+        if (name != null && name.startsWith("geyser_custom_block_")) {
+            String blockName = name.replace("geyser_custom_block_", "");
+
+            CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(blockName);
+            if (customBlockData == null) {
+                return -1;
+            }
+
+            SkullCache.Skull skull = session.getSkullCache().putSkull(blockPosition, name, blockState);
+            return skull.getCustomRuntimeId();
+        }
 
         CompletableFuture<String> texturesFuture = getTextures(owner, uuid);
         if (texturesFuture.isDone()) {

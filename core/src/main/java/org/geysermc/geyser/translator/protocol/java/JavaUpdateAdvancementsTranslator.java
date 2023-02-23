@@ -85,6 +85,7 @@ public class JavaUpdateAdvancementsTranslator extends PacketTranslator<Clientbou
                     String frameTitle = advancement.getDisplayColor() + MinecraftLocale.getLocaleString("advancements.toast." + frameType, session.locale());
                     String advancementName = MessageTranslator.convertMessage(advancement.getDisplayData().getTitle(), session.locale());
 
+                    // TODO 需要处理一下老版本
                     ToastRequestPacket toastRequestPacket = new ToastRequestPacket();
                     toastRequestPacket.setTitle(frameTitle);
                     toastRequestPacket.setContent(advancementName);

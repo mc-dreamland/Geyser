@@ -25,11 +25,7 @@ import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.mappings.MappingsConfigReader;
 import org.geysermc.geyser.registry.type.CustomSkull;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class CustomBlockRegistryPopulator {
 
@@ -44,6 +40,7 @@ public class CustomBlockRegistryPopulator {
         Set<CustomBlockData> customBlocks = new ObjectOpenHashSet<>();
         Int2ObjectMap<CustomBlockState> blockStateOverrides = new Int2ObjectOpenHashMap<>();
         Map<String, CustomBlockData> customBlockItemOverrides = new HashMap<>();
+        Map<String, CustomBlockData> customBlockHeadOverrides = new HashMap<>();
         GeyserImpl.getInstance().getEventBus().fire(new GeyserDefineCustomBlocksEvent() {
             @Override
             public void registerCustomBlock(@NonNull CustomBlockData customBlockData) {
@@ -82,17 +79,30 @@ public class CustomBlockRegistryPopulator {
                 }
                 customBlockItemOverrides.put(javaIdentifier, customBlockData);
             }
+
+            @Override
+            public void registerBlockHeadOverride(@NonNull String headOwnerName, @NonNull CustomBlockData customBlockData) {
+                if (!customBlocks.contains(customBlockData)) {
+                    throw new IllegalArgumentException("Custom block is unregistered. Name: " + customBlockData.name());
+                }
+                customBlockHeadOverrides.put(headOwnerName, customBlockData);
+            }
         });
     
         for (CustomSkull customSkull : BlockRegistries.CUSTOM_SKULLS.get().values()) {
             customBlocks.add(customSkull.getCustomBlockData());
         }
 
+        //TODO 读取自定义头颅转换为方块.
+
         MappingsConfigReader mappingsConfigReader = new MappingsConfigReader();
         mappingsConfigReader.loadBlockMappingsFromJson((key, block) -> {
             customBlocks.add(block.data());
-            if (block.overrideItem()) {
+            if (block.overrideItem() && !block.replaceSkull()) {
                 customBlockItemOverrides.put(block.javaIdentifier(), block.data());
+            }
+            if (block.replaceSkull()) {
+                customBlockHeadOverrides.put(block.javaIdentifier(), block.data());
             }
             block.states().forEach((javaIdentifier, customBlockState) -> {
                 int id = BlockRegistries.JAVA_IDENTIFIERS.getOrDefault(javaIdentifier, -1);
@@ -107,6 +117,9 @@ public class CustomBlockRegistryPopulator {
         GeyserImpl.getInstance().getLogger().info("Registered " + blockStateOverrides.size() + " custom block overrides.");
 
         BlockRegistries.CUSTOM_BLOCK_ITEM_OVERRIDES.set(customBlockItemOverrides);
+        GeyserImpl.getInstance().getLogger().info("Registered " + customBlockItemOverrides.size() + " custom block item overrides.");
+
+        BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.set(customBlockHeadOverrides);
         GeyserImpl.getInstance().getLogger().info("Registered " + customBlockItemOverrides.size() + " custom block item overrides.");
     }
 
