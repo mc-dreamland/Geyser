@@ -106,7 +106,7 @@ public interface CustomBlockComponents {
      *
      * @return The light emission value.
      */
-    Integer lightEmission();
+    Float lightEmission();
 
     /**
      * Gets the light dampening component
@@ -114,7 +114,7 @@ public interface CustomBlockComponents {
      *
      * @return The light dampening value.
      */
-    Integer lightDampening();
+    Float lightDampening();
 
     /**
      * Gets the rotation component
@@ -139,6 +139,16 @@ public interface CustomBlockComponents {
      * @return If the block should place only air.
      */
     boolean placeAir();
+
+    Float destory_time();
+
+    Integer netease_face_directional();
+
+    List<NeteaseBoxComponent> netease_aabb_collision();
+
+    List<NeteaseBoxComponent> netease_aabb_clip();
+
+    boolean netease_block_entity();
 
     /**
      * Gets the set of tags
@@ -165,9 +175,9 @@ public interface CustomBlockComponents {
 
         Builder friction(Float friction);
 
-        Builder lightEmission(Integer lightEmission);
+        Builder lightEmission(Float lightEmission);
 
-        Builder lightDampening(Integer lightDampening);
+        Builder lightDampening(Float lightDampening);
 
         Builder rotation(RotationComponent rotation);
 
@@ -176,6 +186,14 @@ public interface CustomBlockComponents {
         Builder placeAir(boolean placeAir);
 
         Builder tags(Set<String> tags);
+
+        Builder destroy_time(float destroy_time);
+        Builder netease_face_directional(int netease_face_directional);
+        Builder netease_aabb_collision(List<NeteaseBoxComponent> netease_aabb_collision);
+
+        Builder netease_aabb_clip(List<NeteaseBoxComponent> netease_aabb_clip);
+
+        Builder netease_block_entity(boolean netease_block_entity);
 
         CustomBlockComponents build();
     }

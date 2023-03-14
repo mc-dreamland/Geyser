@@ -67,7 +67,7 @@ public class CustomSkull {
         CustomBlockComponents components = new GeyserCustomBlockComponents.CustomBlockComponentsBuilder()
                 .destructibleByMining(1.5f)
                 .materialInstance("*", new MaterialInstance("geyser." + skinHash + "_player_skin", "alpha_test", true, true))
-                .lightDampening(0)
+                .lightDampening(0.0f)
                 .placeAir(true)
                 .build();
 

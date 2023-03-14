@@ -281,11 +281,100 @@ public class MappingsReader_v1 extends MappingsReader {
         CustomBlockData.Builder customBlockDataBuilder = new CustomBlockDataBuilder()
                 .name(name);
 
-            // There is only one Java block state to override
-        CustomBlockData blockData = customBlockDataBuilder
-                .components(createCustomBlockComponents(node, identifier, name))
+        if (BlockRegistries.JAVA_IDENTIFIERS.get().containsKey(identifier)) {
+            throw new InvalidCustomMappingsFileException("Skull block entry for " + identifier + " is a java block, please rename.");
+        }
+
+        Map<String, CustomBlockComponents> componentsMap = new LinkedHashMap<>();
+
+        JsonNode stateOverrides = node.get("state_overrides");
+
+        if (stateOverrides == null) {
+            CustomBlockData blockData = customBlockDataBuilder
+                    .components(createCustomBlockComponents(node, identifier, name))
+                    .build();
+            return new CustomBlockMapping(blockData, Map.of(identifier, blockData.defaultBlockState()), identifier, !onlyOverrideStates, true);
+        }
+
+        if (stateOverrides.isObject()) {
+            // Load components for specific Java block states
+            Iterator<Map.Entry<String, JsonNode>> fields = stateOverrides.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> overrideEntry = fields.next();
+                String state = "minecraft:player_head" + "[" + overrideEntry.getKey() + "]";
+                if (!BlockRegistries.JAVA_IDENTIFIERS.get().containsKey(state)) {
+                    throw new InvalidCustomMappingsFileException("Unknown Java block state: " + state + " for state_overrides.");
+                }
+                state = state.replace("minecraft:player_head", identifier);
+                componentsMap.put(state, createCustomBlockComponents(overrideEntry.getValue(), state, name));
+            }
+        }
+        if (componentsMap.isEmpty() && onlyOverrideStates) {
+            throw new InvalidCustomMappingsFileException("Block entry for " + "minecraft:player_head" + " has only_override_states set to true, but has no state_overrides.");
+        }
+
+//        if (!onlyOverrideStates) {
+//            // Create components for any remaining Java block states
+//            BlockRegistries.JAVA_IDENTIFIERS.get().keySet()
+//                    .stream()
+//                    .filter(s -> s.startsWith("minecraft:player_head" + "["))
+//                    .filter(Predicate.not(componentsMap::containsKey))
+//                    .forEach(state -> componentsMap.put(state, createCustomBlockComponents(null, state, name)));
+//        }
+        if (componentsMap.isEmpty()) {
+            throw new InvalidCustomMappingsFileException("Unknown Java block: " + identifier);
+        }
+
+        // We pass in the first state and just use the hitbox from that as the default
+        // Each state will have its own so this is fine
+        String firstState = componentsMap.keySet().iterator().next();
+        customBlockDataBuilder.components(createCustomBlockComponents(node, firstState, name));
+
+        CustomBlockMapping customBlockMapping = createCustomSkullBlockMapping(customBlockDataBuilder, componentsMap, identifier, !onlyOverrideStates);
+        return customBlockMapping;
+    }
+
+    private CustomBlockMapping createCustomSkullBlockMapping(CustomBlockData.Builder customBlockDataBuilder, Map<String, CustomBlockComponents> componentsMap, String identifier, boolean overrideItem) {
+        Map<String, LinkedHashSet<String>> valuesMap = new Object2ObjectOpenHashMap<>();
+
+        List<CustomBlockPermutation> permutations = new ArrayList<>();
+        Map<String, Function<CustomBlockState.Builder, CustomBlockState>> blockStateBuilders = new Object2ObjectOpenHashMap<>();
+
+        // For each Java block state, extract the property values, create a CustomBlockPermutation,
+        // and a CustomBlockState builder
+        for (Map.Entry<String, CustomBlockComponents> entry : componentsMap.entrySet()) {
+            String state = entry.getKey();
+            String[] pairs = splitStateString(state);
+
+            String[] conditions = new String[pairs.length];
+            Function<CustomBlockState.Builder, CustomBlockState.Builder> blockStateBuilder = Function.identity();
+
+            for (int i = 0; i < pairs.length; i++) {
+                String[] parts = pairs[i].split("=");
+                String property = parts[0];
+                String value = parts[1];
+
+                valuesMap.computeIfAbsent(property, k -> new LinkedHashSet<>())
+                        .add(value);
+
+                conditions[i] = String.format("q.block_property('%s') == '%s'", property, value);
+                blockStateBuilder = blockStateBuilder.andThen(builder -> builder.stringProperty(property, value));
+            }
+
+            permutations.add(new CustomBlockPermutation(entry.getValue(), String.join(" && ", conditions)));
+            blockStateBuilders.put(state, blockStateBuilder.andThen(CustomBlockState.Builder::build));
+        }
+
+        valuesMap.forEach((key, value) -> customBlockDataBuilder.stringProperty(key, new ArrayList<>(value)));
+
+        CustomBlockData customBlockData = customBlockDataBuilder
+                .permutations(permutations)
                 .build();
-        return new CustomBlockMapping(blockData, Map.of(identifier, blockData.defaultBlockState()), identifier, !onlyOverrideStates, true);
+        // Build CustomBlockStates for each Java block state we wish to override
+        Map<String, CustomBlockState> states = blockStateBuilders.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().apply(customBlockData.blockStateBuilder())));
+
+        return new CustomBlockMapping(customBlockData, states, identifier, overrideItem, true);
     }
 
     private CustomBlockMapping createCustomBlockMapping(CustomBlockData.Builder customBlockDataBuilder, Map<String, CustomBlockComponents> componentsMap, String identifier, boolean overrideItem) {
@@ -371,6 +460,28 @@ public class MappingsReader_v1 extends MappingsReader {
             builder.geometry(node.get("geometry").asText());
         }
 
+        if (node.has("destroy_time")) {
+            builder.destroy_time(node.get("destroy_time").floatValue());
+        }
+
+        if (node.has("netease_face_directional")) {
+            builder.netease_face_directional(node.get("netease_face_directional").asInt());
+        }
+
+        if (node.has("netease_aabb")) {
+            JsonNode jsonNode = node.get("netease_aabb");
+            if (jsonNode.has("clip")) {
+                builder.netease_aabb_clip(createNetEaseBoxComponent(jsonNode.get("clip")));
+            }
+            if (jsonNode.has("collision")) {
+                builder.netease_aabb_collision(createNetEaseBoxComponent(jsonNode.get("collision")));
+            }
+        }
+
+        if (node.has("netease_block_entity")) {
+            builder.netease_block_entity(true);
+        }
+
         String displayName = name;
         if (node.has("display_name")) {
             displayName = node.get("display_name").asText();
@@ -382,11 +493,11 @@ public class MappingsReader_v1 extends MappingsReader {
         }
 
         if (node.has("light_emission")) {
-            builder.lightEmission(node.get("light_emission").asInt());
+            builder.lightEmission(node.get("light_emission").floatValue());
         }
 
         if (node.has("light_dampening")) {
-            builder.lightDampening(node.get("light_dampening").asInt());
+            builder.lightDampening(node.get("light_dampening").floatValue());
         }
 
         boolean placeAir = true;
@@ -501,6 +612,57 @@ public class MappingsReader_v1 extends MappingsReader {
                 float sizeZ = size.get(2).floatValue();
 
                 return new BoxComponent(originX, originY, originZ, sizeX, sizeY, sizeZ);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Creates a {@link BoxComponent} from a JSON Node
+     * @param node the JSON node
+     * @return the {@link BoxComponent}
+     */
+    private List<NeteaseBoxComponent> createNetEaseBoxComponent(JsonNode node) {
+        List<NeteaseBoxComponent> boxComponents = new ArrayList<>();
+        if (node != null && node.isObject()) {
+            if (node.has("min") && node.has("max")) {
+                JsonNode min = node.get("min");
+                float minX = min.get(0).floatValue();
+                float minY = min.get(1).floatValue();
+                float minZ = min.get(2).floatValue();
+
+                JsonNode max = node.get("max");
+                float maxX = max.get(0).floatValue();
+                float maxY = max.get(1).floatValue();
+                float maxZ = max.get(2).floatValue();
+
+                if (node.has("enable")) {
+                    boxComponents.add(new NeteaseBoxComponent(node.get("enable").asText(), minX, minY, minZ, maxX, maxY, maxZ));
+                } else {
+                    boxComponents.add(new NeteaseBoxComponent("1.000000", minX, minY, minZ, maxX, maxY, maxZ));
+                }
+                return boxComponents;
+            }
+        }
+        if (node != null && node.isArray()) {
+            for (JsonNode nodeInfo : node) {
+                if (nodeInfo.has("min") && nodeInfo.has("max")) {
+                    JsonNode min = nodeInfo.get("min");
+                    float minX = min.get(0).floatValue();
+                    float minY = min.get(1).floatValue();
+                    float minZ = min.get(2).floatValue();
+
+                    JsonNode max = nodeInfo.get("max");
+                    float maxX = max.get(0).floatValue();
+                    float maxY = max.get(1).floatValue();
+                    float maxZ = max.get(2).floatValue();
+                    if (nodeInfo.has("enable")) {
+                        boxComponents.add(new NeteaseBoxComponent(nodeInfo.get("enable").asText(), minX, minY, minZ, maxX, maxY, maxZ));
+                    } else {
+                        boxComponents.add(new NeteaseBoxComponent("1.000000", minX, minY, minZ, maxX, maxY, maxZ));
+                    }
+                    return boxComponents;
+                }
             }
         }
         return null;

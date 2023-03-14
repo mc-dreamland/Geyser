@@ -308,7 +308,7 @@ public class SkinManager {
             if (skinObject.hasNonNull("pe")) {
                 String skinUrl = skinObject.get("data").asText();
                 GeyserImpl.getInstance().getLogger().debug("loadFromJson PE " + skinUrl);
-                return new GameProfileData(skinUrl, SkinProvider.EMPTY_CAPE.getTextureUrl(), skinObject.get("alex").asBoolean());
+                return new GameProfileData(skinUrl, SkinProvider.EMPTY_CAPE.textureUrl(), skinObject.get("alex").asBoolean());
             }
 
             if (textures == null) {
@@ -338,32 +338,7 @@ public class SkinManager {
                     capeUrl = capeUrlNode.asText().replace("http://", "https://");
                 }
             }
-            return new GameProfileData(skinUrl, capeUrl, isAlex);
-        }
 
-        /**
-         * @return default skin with default cape when texture data is invalid, or the Bedrock player's skin if this
-         * is a Bedrock player.
-         */
-        private static GameProfileData loadBedrockOrOfflineSkin(PlayerEntity entity) {
-            // Fallback to the offline mode of working it out
-            UUID uuid = entity.getUuid();
-            boolean isAlex = (Math.abs(uuid.hashCode() % 2) == 1);
-
-            String skinUrl = isAlex ? SkinProvider.EMPTY_SKIN_ALEX.getTextureUrl() : SkinProvider.EMPTY_SKIN.getTextureUrl();
-            String capeUrl = SkinProvider.EMPTY_CAPE.getTextureUrl();
-            if (("steve".equals(skinUrl) || "alex".equals(skinUrl)) && GeyserImpl.getInstance().getConfig().getRemote().authType() != AuthType.ONLINE) {
-                GeyserSession session = GeyserImpl.getInstance().connectionByUuid(uuid);
-
-                if (session != null) {
-                    skinUrl = session.getClientData().getSkinId();
-                    capeUrl = session.getClientData().getCapeId();
-                }
-                if (session == null && GeyserImpl.getInstance().getConfig().getRemote().authType() == AuthType.FLOODGATE) {
-                    skinUrl = GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/" + uuid+"?pe";
-                }
-                GeyserImpl.getInstance().getLogger().debug("loadOfflinSkin: "+entity.getUsername() + " url: "+skinUrl);
-            }
             return new GameProfileData(skinUrl, capeUrl, isAlex);
         }
     }

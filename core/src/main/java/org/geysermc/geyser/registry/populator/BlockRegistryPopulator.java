@@ -32,6 +32,7 @@ import com.nukkitx.nbt.*;
 import com.nukkitx.protocol.bedrock.v503.Bedrock_v503;
 import com.nukkitx.protocol.bedrock.v527.Bedrock_v527;
 import com.nukkitx.protocol.bedrock.data.BlockPropertyData;
+import com.nukkitx.protocol.bedrock.v534.Bedrock_v534;
 import com.nukkitx.protocol.bedrock.v544.Bedrock_v544;
 import com.nukkitx.protocol.bedrock.v560.Bedrock_v560;
 import com.nukkitx.protocol.bedrock.v567.Bedrock_v567;
@@ -55,12 +56,7 @@ import org.geysermc.geyser.util.BlockUtils;
 import java.io.DataInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.zip.GZIPInputStream;
 
@@ -166,6 +162,7 @@ public final class BlockRegistryPopulator {
                     }
                     return null;
                 })
+                .put(ObjectIntPair.of("1_19_0", Bedrock_v534.V534_CODEC.getProtocolVersion()), emptyMapper)
                 .put(ObjectIntPair.of("1_19_20", Bedrock_v544.V544_CODEC.getProtocolVersion()), emptyMapper)
                 .put(ObjectIntPair.of("1_19_50", Bedrock_v560.V560_CODEC.getProtocolVersion()), emptyMapper)
                 .put(ObjectIntPair.of("1_19_60", Bedrock_v567.V567_CODEC.getProtocolVersion()), emptyMapper)
@@ -173,6 +170,7 @@ public final class BlockRegistryPopulator {
 
         for (Map.Entry<ObjectIntPair<String>, BiFunction<String, NbtMapBuilder, String>> palette : blockMappers.entrySet()) {
             int protocolVersion = palette.getKey().valueInt();
+            List<Integer> customRuntimeIdList = new ArrayList<>();
             List<NbtMap> vanillaBlockStates;
             List<NbtMap> blockStates;
             try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResource(String.format("bedrock/block_palette.%s.nbt", palette.getKey().key()));
@@ -220,11 +218,22 @@ public final class BlockRegistryPopulator {
             }
 
             Object2IntMap<CustomBlockState> customBlockStateIds = Object2IntMaps.emptyMap();
+            int startRuntimeId = -1;
             if (BlockRegistries.CUSTOM_BLOCKS.get().length != 0) {
                 customBlockStateIds = new Object2IntOpenHashMap<>(customExtBlockStates.size());
                 for (int i = 0; i < customExtBlockStates.size(); i++) {
                     NbtMap tag = customBlockStates.get(i);
                     CustomBlockState blockState = customExtBlockStates.get(i);
+                    if (blockState.block().components().netease_face_directional() != null && blockState.block().components().netease_face_directional() == 1) {
+                        if (startRuntimeId != -1) {
+                            startRuntimeId = Math.min(startRuntimeId, blockStateOrderedMap.getOrDefault(tag, -1));
+                        } else {
+                            startRuntimeId = blockStateOrderedMap.getOrDefault(tag, -1);
+                        }
+                        if (blockStateOrderedMap.getOrDefault(tag, -1) != -1) {
+                            customRuntimeIdList.add(blockStateOrderedMap.getOrDefault(tag, -1));
+                        }
+                    }
                     customBlockStateIds.put(blockState, blockStateOrderedMap.getOrDefault(tag, -1));
                 }
 
@@ -302,29 +311,30 @@ public final class BlockRegistryPopulator {
                     flowerPotBlocks.put(cleanJavaIdentifier.intern(), blockStates.get(bedrockRuntimeId));
                 }
 
-                javaToVanillaBedrockBlocks[javaRuntimeId] = vanillaBedrockRuntimeId;
-                javaToBedrockBlocks[javaRuntimeId] = bedrockRuntimeId;
+                javaToVanillaBedrockBlocks[javaRuntimeId] = vanillaBedrockRuntimeId + manageRuntimeId(customRuntimeIdList , vanillaBedrockRuntimeId);
+                javaToBedrockBlocks[javaRuntimeId] = bedrockRuntimeId + manageRuntimeId(customRuntimeIdList , bedrockRuntimeId);
+
             }
 
             if (commandBlockRuntimeId == -1) {
                 throw new AssertionError("Unable to find command block in palette");
             }
-            builder.commandBlockRuntimeId(commandBlockRuntimeId);
+            builder.commandBlockRuntimeId(commandBlockRuntimeId + manageRuntimeId(customRuntimeIdList , commandBlockRuntimeId));
 
             if (waterRuntimeId == -1) {
                 throw new AssertionError("Unable to find water in palette");
             }
-            builder.bedrockWaterId(waterRuntimeId);
+            builder.bedrockWaterId(waterRuntimeId + manageRuntimeId(customRuntimeIdList , waterRuntimeId));
 
             if (airRuntimeId == -1) {
                 throw new AssertionError("Unable to find air in palette");
             }
-            builder.bedrockAirId(airRuntimeId);
+            builder.bedrockAirId(airRuntimeId + manageRuntimeId(customRuntimeIdList , airRuntimeId));
 
             if (movingBlockRuntimeId == -1) {
                 throw new AssertionError("Unable to find moving block in palette");
             }
-            builder.bedrockMovingBlockId(movingBlockRuntimeId);
+            builder.bedrockMovingBlockId(movingBlockRuntimeId + manageRuntimeId(customRuntimeIdList , movingBlockRuntimeId));
 
             // Loop around again to find all item frame runtime IDs
             for (Object2IntMap.Entry<NbtMap> entry : blockStateOrderedMap.object2IntEntrySet()) {
@@ -345,9 +355,21 @@ public final class BlockRegistryPopulator {
                     .blockProperties(customBlockProperties)
                     .customBlockStateIds(customBlockStateIds)
                     .build());
+
+            BlockRegistries.customBlockRuntimeList.put(palette.getKey().valueInt(), customRuntimeIdList);
         }
 
         BLOCKS_JSON = null;
+    }
+
+    public static int manageRuntimeId(List<Integer> customIdList, int runtimeId) {
+        int i = 0;
+        for (Integer integer : customIdList) {
+            if (runtimeId > integer) {
+                i += 3;
+            }
+        }
+        return i;
     }
 
     public static void registerJavaBlocks() {

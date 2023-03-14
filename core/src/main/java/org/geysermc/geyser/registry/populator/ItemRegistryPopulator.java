@@ -232,6 +232,7 @@ public class ItemRegistryPopulator {
             Map<String, ItemMapping> identifierToMapping = new Object2ObjectOpenHashMap<>();
 
             BlockMappings blockMappings = BlockRegistries.BLOCKS.forVersion(palette.getValue().protocolVersion());
+            List<Integer> customBlockRuntimeList = BlockRegistries.customBlockRuntimeList.get(palette.getValue().protocolVersion());
 
             int netId = 1;
             List<ItemData> creativeItems = new ArrayList<>();
@@ -389,7 +390,12 @@ public class ItemRegistryPopulator {
                                 // For now we opt to preserve the pre custom block phase and just use the vanilla blocks in the creative inventory
                                 // In the future if we get the mappings for categories it we could put the custom blocks in the creative inventory
                                 // This would likely also require changes to recipe handling
-                                int bedrockBlockRuntimeId = blockMappings.getVanillaBedrockBlockId(i);
+                                int bedrockBlockRuntimeId = -1;
+
+                                bedrockBlockRuntimeId = blockMappings.getVanillaBedrockBlockId(i) - BlockRegistryPopulator.manageRuntimeId(customBlockRuntimeList, blockMappings.getVanillaBedrockBlockId(i));
+
+
+//                                bedrockBlockRuntimeId = blockMappings.getVanillaBedrockBlockId(i);
                                 NbtMap blockTag = blockMappings.getBedrockBlockStates().get(bedrockBlockRuntimeId);
                                 String bedrockName = blockTag.getString("name");
                                 if (!bedrockName.equals(correctBedrockIdentifier)) {
@@ -441,7 +447,8 @@ public class ItemRegistryPopulator {
                                             }
                                         }
                                         if (valid) {
-                                            bedrockBlockId = i;
+
+                                            bedrockBlockId = i + BlockRegistryPopulator.manageRuntimeId(customBlockRuntimeList, i);
                                             break;
                                         }
                                     }
@@ -462,6 +469,12 @@ public class ItemRegistryPopulator {
                                     NbtMap states = blockMappings.getBedrockBlockStates().get(itemData.getBlockRuntimeId()).getCompound("states");
                                     boolean valid = true;
                                     for (Map.Entry<String, Object> nbtEntry : requiredBlockStates.entrySet()) {
+
+                                        // WHY?
+                                        if (!states.containsKey(nbtEntry.getKey())) {
+                                            valid = false;
+                                            break;
+                                        }
                                         if (!states.get(nbtEntry.getKey()).equals(nbtEntry.getValue())) {
                                             // A required block state doesn't match - this one is not valid
                                             valid = false;

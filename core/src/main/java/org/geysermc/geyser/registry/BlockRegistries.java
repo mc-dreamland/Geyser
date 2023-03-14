@@ -44,6 +44,9 @@ import org.geysermc.geyser.registry.type.CustomSkull;
 import org.geysermc.geyser.translator.collision.BlockCollision;
 import org.geysermc.geyser.util.collection.Object2IntBiMap;
 
+import java.util.HashMap;
+import java.util.List;
+
 /**
  * Holds all the block registries in Geyser.
  */
@@ -53,6 +56,8 @@ public class BlockRegistries {
      * primarily Bedrock version-specific data.
      */
     public static final VersionedRegistry<BlockMappings> BLOCKS = VersionedRegistry.create(RegistryLoaders.empty(Int2ObjectOpenHashMap::new));
+
+    public static final HashMap<Integer, List<Integer>> customBlockRuntimeList = new HashMap<Integer, List<Integer>>();
 
     /**
      * A mapped registry which stores Java to Bedrock block identifiers.

@@ -212,7 +212,10 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
                 if (GeyserImpl.getInstance().getConfig().isAddNonBedrockItems()) {
                     // Allow custom items to work
+                    stackPacket.getExperiments().add(new ExperimentData("vanilla_experiments", true));
                     stackPacket.getExperiments().add(new ExperimentData("data_driven_items", true));
+                    stackPacket.getExperiments().add(new ExperimentData("upcoming_creator_features", true));
+                    stackPacket.getExperiments().add(new ExperimentData("experimental_molang_features", true));
                 }
 
                 session.sendUpstreamPacket(stackPacket);

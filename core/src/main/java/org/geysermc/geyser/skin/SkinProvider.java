@@ -32,7 +32,6 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
@@ -57,7 +56,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Predicate;
-import java.util.zip.GZIPInputStream;
 
 public class SkinProvider {
     private static final boolean ALLOW_THIRD_PARTY_CAPES = GeyserImpl.getInstance().getConfig().isAllowThirdPartyCapes();
@@ -227,22 +225,8 @@ public class SkinProvider {
         return CACHED_JAVA_CAPES.getIfPresent(capeUrl);
     }
 
-        public static boolean hasSkinCached(String skinUrl){
-        return cachedSkins.getIfPresent(skinUrl) != null;
-    }
-
-    public static Skin getCachedSkin(String skinUrl) {
-        return permanentSkins.getOrDefault(skinUrl, cachedSkins.getIfPresent(skinUrl));
-    }
-
-    public static Cape getCachedCape(String capeUrl) {
-        Cape cape = capeUrl != null ? cachedCapes.getIfPresent(capeUrl) : EMPTY_CAPE;
-        return cape != null ? cape : EMPTY_CAPE;
-    }
-
-    public static CompletableFuture<SkinProvider.SkinData> requestSkinData(PlayerEntity entity) {
+    static CompletableFuture<SkinProvider.SkinData> requestSkinData(PlayerEntity entity) {
         SkinManager.GameProfileData data = SkinManager.GameProfileData.from(entity);
-        GeyserImpl.getInstance().getLogger().debug("Entity RequestSkin:"+entity.getUsername() + " url: "+data.skinUrl());
         if (data == null) {
             // This player likely does not have a textures property
             return CompletableFuture.completedFuture(determineFallbackSkinData(entity.getUuid()));
@@ -269,10 +253,6 @@ public class SkinProvider {
                                     entity.getUsername(), false
                             ), EMPTY_CAPE, CapeProvider.VALUES.length * 3);
                         }
-
-                        geometry = getOrDefault(requestBedrockGeometry(
-                                geometry, entity.getUuid()
-                        ), geometry, 3);
 
                         boolean isDeadmau5 = "deadmau5".equals(entity.getUsername());
                         // Not a bedrock player check for ears
@@ -314,20 +294,10 @@ public class SkinProvider {
     private static CompletableFuture<SkinAndCape> requestSkinAndCape(UUID playerId, String skinUrl, String capeUrl) {
         return CompletableFuture.supplyAsync(() -> {
             long time = System.currentTimeMillis();
-            String newSkinUrl = skinUrl;
 
-            if ("steve".equals(skinUrl) || "alex".equals(skinUrl)) {
-                GeyserSession session = GeyserImpl.getInstance().connectionByUuid(playerId);
-
-                if (session != null) {
-                    newSkinUrl = session.getClientData().getSkinId();
-                }
-            }
-
-            // 向 URL 请求皮肤、披风数据
             CapeProvider provider = capeUrl != null ? CapeProvider.MINECRAFT : null;
             SkinAndCape skinAndCape = new SkinAndCape(
-                    getOrDefault(requestSkin(playerId, newSkinUrl, false), EMPTY_SKIN, 5),
+                    getOrDefault(requestSkin(playerId, skinUrl, false), EMPTY_SKIN, 5),
                     getOrDefault(requestCape(capeUrl, provider, false), EMPTY_CAPE, 5)
             );
 
@@ -349,7 +319,6 @@ public class SkinProvider {
         }
 
         // 从缓存的 url拿皮肤
-        Skin cachedSkin = getCachedSkin(textureUrl); //TODO check not null
         Skin cachedSkin = CACHED_JAVA_SKINS.getIfPresent(textureUrl);
         if (cachedSkin != null) {
             GeyserImpl.getInstance().getLogger().debug("检测到 cachedSkin缓存 "+playerId);
@@ -361,14 +330,13 @@ public class SkinProvider {
             future = CompletableFuture.supplyAsync(() -> supplySkin(playerId, textureUrl), EXECUTOR_SERVICE)
                     .whenCompleteAsync((skin, throwable) -> {
                         skin.updated = true;
-                        cachedSkins.put(textureUrl, skin); // TODO
                         CACHED_JAVA_SKINS.put(textureUrl, skin);
                         requestedSkins.remove(textureUrl);
                     });
             if (textureUrl.endsWith("?pe")){
                 future = CompletableFuture.supplyAsync(()-> requestSkin(playerId,textureUrl),EXECUTOR_SERVICE).whenCompleteAsync((skin,throwable)->{
                     skin.updated = true;
-                    cachedSkins.put(textureUrl,skin);
+                    CACHED_JAVA_SKINS.put(textureUrl, skin);
                     requestedSkins.remove(textureUrl);
                 });
             }
@@ -377,13 +345,12 @@ public class SkinProvider {
             if (textureUrl.endsWith("?pe")){
                 Skin skin = requestSkin(playerId,textureUrl);
                 future = CompletableFuture.completedFuture(skin);
-                cachedSkins.put(textureUrl,skin);
+                CACHED_JAVA_SKINS.put(textureUrl, skin);
                 return future;
             }
             // 成功HTTP拿到皮肤进行缓存
             Skin skin = supplySkin(playerId, textureUrl);
             future = CompletableFuture.completedFuture(skin);
-            cachedSkins.put(textureUrl, skin); // TODO
             CACHED_JAVA_SKINS.put(textureUrl, skin);
         }
         return future;
@@ -396,7 +363,6 @@ public class SkinProvider {
             return requestedCape;
         }
 
-        Cape cachedCape = cachedCapes.getIfPresent(capeUrl);
         Cape cachedCape = CACHED_JAVA_CAPES.getIfPresent(capeUrl);
         if (cachedCape != null) {
             return CompletableFuture.completedFuture(cachedCape);
@@ -406,7 +372,6 @@ public class SkinProvider {
         if (newThread) {
             future = CompletableFuture.supplyAsync(() -> supplyCape(capeUrl, provider), EXECUTOR_SERVICE)
                     .whenCompleteAsync((cape, throwable) -> {
-                        cachedCapes.put(capeUrl, cape);
                         CACHED_JAVA_CAPES.put(capeUrl, cape);
                         requestedCapes.remove(capeUrl);
                     });
@@ -414,7 +379,6 @@ public class SkinProvider {
         } else {
             Cape cape = supplyCape(capeUrl, provider); // blocking
             future = CompletableFuture.completedFuture(cape);
-            cachedCapes.put(capeUrl, cape);
             CACHED_JAVA_CAPES.put(capeUrl, cape);
         }
         return future;
@@ -491,17 +455,7 @@ public class SkinProvider {
         CACHED_BEDROCK_CAPES.put(capeId, cape);
     }
 
-    public static void storeBedrockSkin(UUID playerID, String skinID, byte[] skinData) {
-        Skin skin = new Skin(playerID, skinID, skinData, System.currentTimeMillis(), true, false);
-        cachedSkins.put(skin.getTextureUrl(), skin);
-    }
-
-    public static void storeBedrockCape(UUID playerID, byte[] capeData) {
-        Cape cape = new Cape(playerID.toString() + ".Bedrock", playerID.toString(), capeData, System.currentTimeMillis(), false);
-        cachedCapes.put(playerID.toString() + ".Bedrock", cape);
-    }
-
-    public static void storeBedrockGeometry(UUID playerID, byte[] geometryName, byte[] geometryData) {
+    static void storeBedrockGeometry(UUID playerID, byte[] geometryName, byte[] geometryData) {
         SkinGeometry geometry = new SkinGeometry(new String(geometryName), new String(geometryData), false);
         cachedGeometry.put(playerID, geometry);
     }
@@ -512,7 +466,6 @@ public class SkinProvider {
      * @param skin The skin to cache
      */
     public static void storeEarSkin(Skin skin) {
-        cachedSkins.put(skin.getTextureUrl(), skin); // TODO
         CACHED_JAVA_SKINS.put(skin.getTextureUrl(), skin);
     }
 
@@ -522,7 +475,7 @@ public class SkinProvider {
      * @param playerID The UUID to cache it against
      * @param isSlim If the player is using an slim base
      */
-    public static void storeEarGeometry(UUID playerID, boolean isSlim) {
+    private static void storeEarGeometry(UUID playerID, boolean isSlim) {
         cachedGeometry.put(playerID, SkinGeometry.getEars(isSlim));
     }
 

@@ -1,5 +1,6 @@
 package org.geysermc.geyser.registry.populator;
 
+import com.nukkitx.nbt.NbtList;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.nbt.NbtMapBuilder;
 import com.nukkitx.nbt.NbtType;
@@ -12,10 +13,7 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockPermutation;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
-import org.geysermc.geyser.api.block.custom.component.BoxComponent;
-import org.geysermc.geyser.api.block.custom.component.CustomBlockComponents;
-import org.geysermc.geyser.api.block.custom.component.MaterialInstance;
-import org.geysermc.geyser.api.block.custom.component.PlacementConditions;
+import org.geysermc.geyser.api.block.custom.component.*;
 import org.geysermc.geyser.api.block.custom.component.PlacementConditions.Face;
 import org.geysermc.geyser.api.block.custom.property.CustomBlockProperty;
 import org.geysermc.geyser.api.block.custom.property.PropertyType;
@@ -97,6 +95,7 @@ public class CustomBlockRegistryPopulator {
 
         MappingsConfigReader mappingsConfigReader = new MappingsConfigReader();
         mappingsConfigReader.loadBlockMappingsFromJson((key, block) -> {
+            //TODO 新增根据实体方块title转换为自定义方块
             customBlocks.add(block.data());
             if (block.overrideItem() && !block.replaceSkull()) {
                 customBlockItemOverrides.put(block.javaIdentifier(), block.data());
@@ -120,7 +119,7 @@ public class CustomBlockRegistryPopulator {
         GeyserImpl.getInstance().getLogger().info("Registered " + customBlockItemOverrides.size() + " custom block item overrides.");
 
         BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.set(customBlockHeadOverrides);
-        GeyserImpl.getInstance().getLogger().info("Registered " + customBlockItemOverrides.size() + " custom block item overrides.");
+        GeyserImpl.getInstance().getLogger().info("Registered " + customBlockHeadOverrides.size() + " custom block head overrides.");
     }
 
     /**
@@ -152,6 +151,37 @@ public class CustomBlockRegistryPopulator {
                     .putCompound("states", states)
                     .build());
             customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+//            if (customBlock.components().netease_face_directional() != null && customBlock.components().netease_face_directional() == 1) {
+//
+//                NbtMapBuilder statesBuilder1 = NbtMap.builder();
+//                statesBuilder1.put("rotation", 1);
+//                states = statesBuilder.build();
+//                blockStates.add(NbtMap.builder()
+//                        .putString("name", customBlock.identifier() + "_face_2")
+//                        .putInt("version", stateVersion)
+//                        .putCompound("states", states)
+//                        .build());
+//                customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+//
+//                statesBuilder1.put("rotation", 2);
+//                states = statesBuilder1.build();
+//                blockStates.add(NbtMap.builder()
+//                        .putString("name", customBlock.identifier() + "_face_3")
+//                        .putInt("version", stateVersion)
+//                        .putCompound("states", states)
+//                        .build());
+//                customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+//
+//                statesBuilder1.put("rotation", 3);
+//                states = statesBuilder1.build();
+//                blockStates.add(NbtMap.builder()
+//                        .putString("name", customBlock.identifier() + "_face_4")
+//                        .putInt("version", stateVersion)
+//                        .putCompound("states", states)
+//                        .build());
+//                customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+//            }
+
         }
     }
 
@@ -269,9 +299,15 @@ public class CustomBlockRegistryPopulator {
             builder.putCompound("minecraft:light_emission", NbtMap.builder()
                     .putByte("emission", components.lightEmission().byteValue())
                     .build());
+            builder.putCompound("minecraft:block_light_emission", NbtMap.builder()
+                    .putFloat("emission", components.lightEmission().floatValue())
+                    .build());
         }
         if (components.lightDampening() != null) {
             builder.putCompound("minecraft:light_dampening", NbtMap.builder()
+                    .putByte("lightLevel", components.lightDampening().byteValue())
+                    .build());
+            builder.putCompound("minecraft:block_light_filter", NbtMap.builder()
                     .putByte("lightLevel", components.lightDampening().byteValue())
                     .build());
         }
@@ -293,6 +329,53 @@ public class CustomBlockRegistryPopulator {
                     .putString("triggerType", "geyser:place_event")
                     .build());
         }
+
+        if (components.destory_time() != null) {
+            builder.putCompound("minecraft:destroy_time", NbtMap.builder()
+                    .putFloat("value", components.destory_time())
+                    .build());
+        }
+
+        if (components.netease_face_directional() != null) {
+            builder.putCompound("netease:face_directional", NbtMap.builder()
+                    .putByte("direction", components.netease_face_directional().byteValue())
+                    .build());
+        }
+        if (components.netease_aabb_collision() != null || components.netease_aabb_clip() != null) {
+            NbtMapBuilder endMap = NbtMap.builder();
+            List<NeteaseBoxComponent> collision = components.netease_aabb_collision();
+            List<NeteaseBoxComponent> clip = components.netease_aabb_clip();
+
+            List<NbtMap> collisionNbtList = new ArrayList<>();
+            List<NbtMap> clipNbtList = new ArrayList<>();
+
+
+            for (NeteaseBoxComponent boxComponent : collision) {
+                NbtMap build = NbtMap.builder()
+                        .putString("enable", boxComponent.molang())
+                        .putList("aabb", NbtType.FLOAT, boxComponent.originX(), boxComponent.originY(), boxComponent.originZ(), boxComponent.sizeX(), boxComponent.sizeY(), boxComponent.sizeZ())
+                        .build();
+
+                collisionNbtList.add(build);
+            }
+            for (NeteaseBoxComponent boxComponent : clip) {
+                clipNbtList.add(NbtMap.builder()
+                        .putString("enable", boxComponent.molang())
+                        .putList("aabb", NbtType.FLOAT, boxComponent.originX(), boxComponent.originY(), boxComponent.originZ(), boxComponent.sizeX(), boxComponent.sizeY(), boxComponent.sizeZ())
+                        .build());
+            }
+            endMap.putList("clip", NbtType.COMPOUND, clipNbtList).putList("collision", NbtType.COMPOUND, collisionNbtList);
+            builder.putCompound("netease:aabb", endMap.build());
+        }
+
+        if (components.netease_block_entity()) {
+            builder.putCompound("netease:block_entity", NbtMap.builder()
+                    .putBoolean("movable", false)
+                    .putBoolean("tick", false)
+                    .build()
+            );
+        }
+
         if (!components.tags().isEmpty()) {
             components.tags().forEach(tag -> builder.putCompound("tag:" + tag, NbtMap.EMPTY));
         }

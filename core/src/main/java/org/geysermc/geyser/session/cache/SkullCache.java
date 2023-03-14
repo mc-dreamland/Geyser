@@ -25,8 +25,12 @@
 
 package org.geysermc.geyser.session.cache;
 
+import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
+import com.github.steveice10.opennbt.tag.builtin.StringTag;
+import com.github.steveice10.opennbt.tag.builtin.Tag;
 import com.nukkitx.math.vector.Vector3f;
 import com.nukkitx.math.vector.Vector3i;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMaps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Data;
 import lombok.Getter;
@@ -36,7 +40,9 @@ import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
 import org.geysermc.geyser.entity.type.player.SkullPlayerEntity;
 import org.geysermc.geyser.level.block.BlockStateValues;
+import org.geysermc.geyser.level.block.GeyserCustomBlockState;
 import org.geysermc.geyser.registry.BlockRegistries;
+import org.geysermc.geyser.registry.populator.BlockRegistryPopulator;
 import org.geysermc.geyser.registry.type.CustomSkull;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.skin.SkinManager;
@@ -160,6 +166,9 @@ public class SkullCache {
         if (skull.customRuntimeId != -1) {
             return skull;
         }
+        if (lastPlayerPosition == null) {
+            return skull;
+        }
         skull.distanceSquared = position.distanceSquared(lastPlayerPosition.getX(), lastPlayerPosition.getY(), lastPlayerPosition.getZ());
         return skull;
     }
@@ -224,6 +233,9 @@ public class SkullCache {
     }
 
     private void assignSkullEntity(Skull skull) {
+        if (getCustomSkullBlockName(skull) != null) {
+            return;
+        }
         if (skull.entity != null) {
             return;
         }
@@ -252,6 +264,9 @@ public class SkullCache {
     }
 
     private void reassignSkullEntity(Skull skull) {
+        if (getCustomSkullBlockName(skull) != null) {
+            return;
+        }
         boolean hadEntity = skull.entity != null;
         freeSkullEntity(skull);
 
@@ -291,12 +306,97 @@ public class SkullCache {
     }
 
     private int translateCustomSkull(Skull skull, int blockState) {
-        CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(skull.ownerName.replace("geyser_custom_block_", ""));
+        CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(getCustomSkullBlockName(skull));
         if (customBlockData != null) {
+            List<Integer> integers = BlockRegistries.customBlockRuntimeList.get(session.getUpstream().getProtocolVersion());
             //TODO 处理 旋转问题
-            return session.getBlockMappings().getCustomBlockStateIds().getOrDefault(customBlockData.defaultBlockState(), -1);
+            byte rotation = BlockStateValues.getSkullRotation(blockState);
+            Map<String, Object> p = new HashMap<>();
+            int rotation1 = getRotation(blockState, rotation);
+//            p.put("rotation", rotation1);
+//            GeyserCustomBlockState geyserCustomBlockState = new GeyserCustomBlockState(customBlockData, p);
+//            if (rotation1 == -1 || customBlockData.properties().size() == 0) {
+//                return session.getBlockMappings().getCustomBlockStateIds().getOrDefault(customBlockData.defaultBlockState(), -1);
+//            }
+//            return session.getBlockMappings().getCustomBlockStateIds().getOrDefault(geyserCustomBlockState, -1);
+
+            int orDefault = session.getBlockMappings().getCustomBlockStateIds().getOrDefault(customBlockData.defaultBlockState(), -1);
+
+            if (customBlockData.components().netease_face_directional() == null || customBlockData.components().netease_face_directional() != 1) {
+                rotation1 = 0;
+            }
+            return orDefault + rotation1 + BlockRegistryPopulator.manageRuntimeId(integers, orDefault);
         }
         return -1;
+    }
+
+    public int getRotation(int blockState, int rotation) {
+
+        if (rotation == -1) {
+            int wallR = BlockStateValues.getSkullWallDirections().get(blockState);
+            return switch (wallR) {
+                case 0 -> 0; // South
+                case 90 -> 1; // West
+                case 180 -> 2; // North
+                case 270 -> 3; // East
+                default -> 0;
+            };
+        } else {
+            return (rotation / 4) % 4;
+        }
+    }
+
+    public static String getCustomSkullBlockName(Skull skull) {
+        if (skull.ownerName != null && skull.ownerName.startsWith("geyser_custom_block_")) {
+            return skull.ownerName.replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
+        }
+
+        if (skull.texturesProperty != null && skull.texturesProperty.startsWith("geyser_custom_block_")) {
+            return skull.texturesProperty.replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
+        }
+
+        if (skull.skinHash != null && skull.skinHash.startsWith("geyser_custom_block_")) {
+            return skull.skinHash.replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
+        }
+
+        return null;
+    }
+
+    public static String getCustomSkullBlockName(CompoundTag nbt) {
+        if (nbt == null) return null;
+        if (nbt.contains("SkullOwner")) {
+            Tag skullOwner = nbt.get("SkullOwner");
+            if (skullOwner instanceof CompoundTag && ((CompoundTag) skullOwner).get("Name") instanceof StringTag skullName) {
+                if (skullName.getValue().toLowerCase(Locale.ROOT).startsWith("geyser_custom_block_")) {
+                    return skullName.getValue().replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
+                }
+            }
+        }
+
+        // TODO? 似乎头颅转换中，除了skullOwner以外的NBT不会传过来
+        if (nbt.contains("PublicBukkitValues")) {
+            Tag publicBukkitValues = nbt.get("PublicBukkitValues");
+
+            if (publicBukkitValues instanceof CompoundTag compoundTag) {
+                if (compoundTag.contains("slimefun:slimefun_block")) {
+                    Tag tag = compoundTag.get("slimefun:slimefun_block");
+                    if (tag instanceof StringTag stringTag) {
+                        return stringTag.getValue().toLowerCase(Locale.ROOT);
+                    }
+                }
+
+                if (compoundTag.contains("slimefun:slimefun_item")) {
+                    Tag tag = compoundTag.get("slimefun:slimefun_item");
+                    if (tag instanceof StringTag stringTag) {
+                        return stringTag.getValue().toLowerCase(Locale.ROOT);
+                    }
+                }
+            }
+
+        }
+
+
+        return null;
     }
 
     @RequiredArgsConstructor

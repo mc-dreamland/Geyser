@@ -65,7 +65,8 @@ public class JavaBlockEntityDataTranslator extends PacketTranslator<ClientboundB
                 packet.getNbt(), blockState), packet.getPosition());
         // Check for custom skulls.
         boolean hasCustomHeadBlock = false;
-        if (session.getPreferencesCache().showCustomSkulls() && packet.getNbt() != null && packet.getNbt().contains("SkullOwner")) {
+        if (session.getPreferencesCache().showCustomSkulls() && packet.getNbt() != null && (packet.getNbt().contains("SkullOwner") || packet.getNbt().contains("PublicBukkitValues"))) {
+
             int runtimeId = SkullBlockEntityTranslator.translateSkull(session, packet.getNbt(), position, blockState);
             if (runtimeId != -1) {
                 hasCustomHeadBlock = true;

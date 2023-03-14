@@ -63,14 +63,6 @@ public class SkullBlockEntityTranslator extends BlockEntityTranslator implements
         builder.put("SkullType", skullVariant);
     }
 
-    private static String getOwnerName(CompoundTag owner) {
-        String username = null;
-        if (owner.get("Name") instanceof StringTag nameTag) {
-            username = nameTag.getValue().toLowerCase(Locale.ROOT);
-        }
-        return username;
-    }
-
     private static UUID getUUID(CompoundTag owner) {
         if (owner.get("Id") instanceof IntArrayTag uuidTag && uuidTag.length() == 4) {
             int[] uuidAsArray = uuidTag.getValue();
@@ -107,24 +99,25 @@ public class SkullBlockEntityTranslator extends BlockEntityTranslator implements
 
     public static int translateSkull(GeyserSession session, CompoundTag tag, Vector3i blockPosition, int blockState) {
         CompoundTag owner = tag.get("SkullOwner");
+
+        String customSkullBlockName = SkullCache.getCustomSkullBlockName(tag);
+
+        if (customSkullBlockName != null) {
+
+            CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(customSkullBlockName);
+            if (customBlockData == null) {
+                return -1;
+            }
+
+            SkullCache.Skull skull = session.getSkullCache().putSkull(blockPosition, "geyser_custom_block_" + customSkullBlockName, blockState);
+            return skull.getCustomRuntimeId();
+        }
+
         if (owner == null) {
             session.getSkullCache().removeSkull(blockPosition);
             return -1;
         }
         UUID uuid = getUUID(owner);
-
-        String name = getOwnerName(owner);
-        if (name != null && name.startsWith("geyser_custom_block_")) {
-            String blockName = name.replace("geyser_custom_block_", "");
-
-            CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(blockName);
-            if (customBlockData == null) {
-                return -1;
-            }
-
-            SkullCache.Skull skull = session.getSkullCache().putSkull(blockPosition, name, blockState);
-            return skull.getCustomRuntimeId();
-        }
 
         CompletableFuture<String> texturesFuture = getTextures(owner, uuid);
         if (texturesFuture.isDone()) {

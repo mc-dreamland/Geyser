@@ -56,6 +56,7 @@ import org.geysermc.geyser.registry.type.CustomSkull;
 import org.geysermc.geyser.registry.type.ItemMapping;
 import org.geysermc.geyser.registry.type.ItemMappings;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.skin.SkinManager;
 import org.geysermc.geyser.text.MinecraftLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
@@ -324,14 +325,12 @@ public abstract class ItemTranslator {
             } else {
                 CompoundTag nbt = itemStack.getNbt();
 
-                if (nbt != null && nbt.contains("SkullOwner")) {
-                    Tag skullOwner = nbt.get("SkullOwner");
-                    if (skullOwner instanceof CompoundTag && ((CompoundTag) skullOwner).get("Name") instanceof StringTag skullName) {
-                        if (skullName.getValue().toLowerCase(Locale.ROOT).startsWith("geyser_custom_block_")) {
-                            String customBlock = skullName.getValue().replace("geyser_custom_block_", "");
-                            customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.getOrDefault(customBlock, null);
-                            itemId = session.getItemMappings().getCustomBlockItemIds().getInt(customBlockData);
-                        }
+                String customSkullBlockName = SkullCache.getCustomSkullBlockName(nbt);
+                if (customSkullBlockName != null) {
+                    CustomBlockData cd = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.getOrDefault(customSkullBlockName, null);
+                    if (cd != null) {
+                        itemId = session.getItemMappings().getCustomBlockItemIds().getInt(cd);
+                        return itemId;
                     }
                 }
             }
@@ -587,14 +586,16 @@ public abstract class ItemTranslator {
 
     private static CustomSkull getCustomSkull(GeyserSession session, CompoundTag nbt) {
         if (nbt != null && nbt.contains("SkullOwner")) {
-
-            if (nbt.get("SkullOwner") instanceof CompoundTag skullOwner) {
-                if (skullOwner.get("Name") instanceof StringTag name) {
-                    if (name.getValue().startsWith("geyser_custom_block_")) {
-                        return BlockRegistries.CUSTOM_SKULLS.get(name.getValue().replace("geyser_custom_block_", ""));
-                    }
-                }
-            } else {
+            if (!(nbt.get("SkullOwner") instanceof CompoundTag skullOwner)) {
+                // It's a username give up d:
+//
+//            if (nbt.get("SkullOwner") instanceof CompoundTag skullOwner) {
+//                if (skullOwner.get("Name") instanceof StringTag name) {
+//                    if (name.getValue().startsWith("geyser_custom_block_")) {
+//                        return BlockRegistries.CUSTOM_SKULLS.get(name.getValue().replace("geyser_custom_block_", ""));
+//                    }
+//                }
+//            } else {
                 return null;
             }
             SkinManager.GameProfileData data = SkinManager.GameProfileData.from(skullOwner);
@@ -612,20 +613,16 @@ public abstract class ItemTranslator {
     private static void translatePlayerHead(GeyserSession session, CompoundTag nbt, ItemData.Builder builder) {
 
         if (nbt != null) {
-            if (nbt.contains("SkullOwner")) {
-                Tag skullOwner = nbt.get("SkullOwner");
-                if (skullOwner instanceof CompoundTag && ((CompoundTag) skullOwner).get("Name") instanceof StringTag skullName) {
-                    if (skullName.getValue().toLowerCase(Locale.ROOT).startsWith("geyser_custom_block_")) {
-                        String customBlock = skullName.getValue().replace("geyser_custom_block_", "");
-                        CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.getOrDefault(customBlock, null);
+            String customSkullBlockName = SkullCache.getCustomSkullBlockName(nbt);
+            if (customSkullBlockName != null) {
+                CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.getOrDefault(customSkullBlockName, null);
+                if (customBlockData != null) {
+                    int itemId = session.getItemMappings().getCustomBlockItemIds().getInt(customBlockData);
+                    int blockRuntimeId = session.getBlockMappings().getCustomBlockStateIds().getInt(customBlockData.defaultBlockState());
 
-                        int itemId = session.getItemMappings().getCustomBlockItemIds().getInt(customBlockData);
-                        int blockRuntimeId = session.getBlockMappings().getCustomBlockStateIds().getInt(customBlockData.defaultBlockState());
-
-                        builder.id(itemId);
-                        builder.blockRuntimeId(blockRuntimeId);
-                        return;
-                    }
+                    builder.id(itemId);
+                    builder.blockRuntimeId(blockRuntimeId);
+                    return;
                 }
             }
         }
