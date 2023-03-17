@@ -25,7 +25,6 @@
 
 package com.nukkitx.protocol.bedrock.v475.serializer;
 
-import com.google.gson.Gson;
 import com.nukkitx.protocol.bedrock.BedrockPacketHelper;
 import com.nukkitx.protocol.bedrock.BedrockPacketSerializer;
 import com.nukkitx.protocol.bedrock.packet.NeteaseCustomPacket;
@@ -34,36 +33,14 @@ import io.netty.buffer.Unpooled;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
-import org.msgpack.MessagePack;
-import org.msgpack.type.ArrayValue;
-import org.msgpack.type.Value;
-
-import java.lang.reflect.Type;
-import java.util.HashMap;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class NeteaseCustomSerializer_v475 implements BedrockPacketSerializer<NeteaseCustomPacket>{
     public static final NeteaseCustomSerializer_v475 INSTANCE = new NeteaseCustomSerializer_v475();
-    private static final Gson gson = new Gson();
 
     @SneakyThrows
     @Override
     public void serialize(ByteBuf buffer, BedrockPacketHelper helper, NeteaseCustomPacket packet) {
-//        MessagePack messagePack = new MessagePack();
-//        Object[] objects = new Object[]{
-//                "ModEventS2C",
-//                new Object[]{
-//                        packet.getModName(),
-//                        packet.getSystem(),
-//                        packet.getEventName(),
-//                        new JSONObject(packet.getData())
-//                },
-//                null
-//        };
-//        Object parse = new JSONParser().parse(gson.toJsonTree(objects).toString());
-////        JsonElement v = JsonParser.parseString(gson.toJsonTree(objects).toString());
-////        System.out.println(v);
-//        byte[] write = messagePack.write(parse);
         byte[] msgPackData = packet.getMsgPackBytes();
         helper.writeByteArray(buffer, msgPackData);
         buffer.writeBytes(Unpooled.wrappedBuffer(new byte[]{8, -44, -108, 0}));
@@ -72,21 +49,8 @@ public class NeteaseCustomSerializer_v475 implements BedrockPacketSerializer<Net
     @Override
     public void deserialize(ByteBuf buffer, BedrockPacketHelper helper, NeteaseCustomPacket packet) {
         try {
-            MessagePack messagePack = new MessagePack();
             byte[] bytes = helper.readByteArray(buffer);
-            Value originJson = messagePack.read(bytes);
-            Value unConvert = messagePack.unconvert("value");
-            ArrayValue values = originJson.asMapValue().get(unConvert).asArrayValue();
-            if (!values.get(0).toString().equals("\"ModEventC2S\"") && !values.get(0).toString().equals("\"ModEventS2C\"") ) return;
-            ArrayValue packData = values.get(1).asMapValue().get(unConvert).asArrayValue();
-
-            packet.setModName(packData.get(0).toString().replace("\"", ""));
-            packet.setSystem(packData.get(1).toString().replace("\"", ""));
-            packet.setEventName(packData.get(2).toString().replace("\"", ""));
-            if (packData.get(3).isMapValue()) {
-                packet.setMsgPackMap(gson.fromJson(packData.get(3).toString(), (Type) HashMap.class));
-            }
-            packet.setJson(originJson);
+            packet.init(bytes);
             packet.setUnKnowId(buffer.readUnsignedInt());
         } catch (Exception e) {
             e.printStackTrace();
