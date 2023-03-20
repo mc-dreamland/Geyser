@@ -4,6 +4,7 @@
 
 ### Eclipse ###
 .metadata
+geyser/
 bin/
 tmp/
 *.tmp
