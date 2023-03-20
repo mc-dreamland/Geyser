@@ -598,6 +598,11 @@ public abstract class ItemTranslator {
 //            } else {
                 return null;
             }
+            if (skullOwner.get("Name") instanceof StringTag name) {
+                if (name.getValue().contains(":") || name.getValue().startsWith("geyser_custom_block_")) {
+                    return null;
+                }
+            }
             SkinManager.GameProfileData data = SkinManager.GameProfileData.from(skullOwner);
             if (data == null) {
                 session.getGeyser().getLogger().debug("Not sure how to handle skull head item display. " + nbt);

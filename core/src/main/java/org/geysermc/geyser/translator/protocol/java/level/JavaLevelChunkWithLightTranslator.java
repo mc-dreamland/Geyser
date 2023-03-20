@@ -39,6 +39,7 @@ import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.nbt.NBTOutputStream;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.nbt.NbtUtils;
+import com.nukkitx.protocol.bedrock.packet.BlockEntityDataPacket;
 import com.nukkitx.protocol.bedrock.packet.LevelChunkPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -49,6 +50,7 @@ import it.unimi.dsi.fastutil.ints.IntImmutableList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.entity.type.ItemFrameEntity;
 import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.level.block.BlockStateValues;
@@ -59,6 +61,7 @@ import org.geysermc.geyser.level.chunk.bitarray.BitArrayVersion;
 import org.geysermc.geyser.level.chunk.bitarray.SingletonBitArray;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.translator.level.BiomeTranslator;
 import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
 import org.geysermc.geyser.translator.level.block.entity.BlockEntityTranslator;
@@ -69,6 +72,7 @@ import org.geysermc.geyser.util.BlockEntityUtils;
 import org.geysermc.geyser.util.ChunkUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
@@ -107,6 +111,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         ByteBuf byteBuf = null;
         GeyserChunkSection[] sections = new GeyserChunkSection[javaChunks.length - (yOffset + (bedrockDimension.minY() >> 4))];
 
+        ArrayList<BlockEntityDataPacket> blockEntityDataPackets = new ArrayList<>();
         try {
             ByteBuf in = Unpooled.wrappedBuffer(packet.getChunkData());
             for (int sectionY = 0; sectionY < chunkSize; sectionY++) {
@@ -272,8 +277,9 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 bedrockBlockEntities.add(blockEntityTranslator.getBlockEntityTag(type, x + chunkBlockX, y, z + chunkBlockZ, tag, blockState));
 
                 // Check for custom skulls
-                if (session.getPreferencesCache().showCustomSkulls() && type == BlockEntityType.SKULL && tag != null && (tag.contains("SkullOwner") || tag.contains("PublicBukkitValues"))) {
-                    int runtimeId = SkullBlockEntityTranslator.translateSkull(session, tag, Vector3i.from(x + chunkBlockX, y, z + chunkBlockZ), blockState);
+                if (session.getPreferencesCache().showCustomSkulls() && type == BlockEntityType.SKULL && tag != null && (tag.contains("SkullOwner"))) {
+                    Vector3i skullLocation = Vector3i.from(x + chunkBlockX, y, z + chunkBlockZ);
+                    int runtimeId = SkullBlockEntityTranslator.translateSkull(session, tag, skullLocation, blockState);
                     if (runtimeId != -1) {
                         int bedrockSectionY = (y >> 4) - (bedrockDimension.minY() >> 4);
                         GeyserChunkSection bedrockSection = sections[bedrockSectionY];
@@ -284,6 +290,23 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                             sections[bedrockSectionY] = bedrockSection;
                         }
                         bedrockSection.setFullBlock(x, y & 0xF, z, 0, runtimeId);
+
+
+
+                        String customSkullBlockName = SkullCache.getCustomSkullBlockName(tag);
+                        CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(customSkullBlockName);
+
+                        if (customBlockData != null && customBlockData.components().netease_block_entity()) {
+                            NbtMap blockEntityTag = BlockEntityTranslator.getCustomSkullBlockEntityTag(type, skullLocation.getX(), skullLocation.getY(), skullLocation.getZ(),
+                                    tag, blockState, customBlockData.name());
+
+
+                            BlockEntityDataPacket blockEntityPacket = new BlockEntityDataPacket();
+                            blockEntityPacket.setBlockPosition(skullLocation);
+                            blockEntityPacket.setData(blockEntityTag);
+                            blockEntityDataPackets.add(blockEntityPacket);
+
+                        }
                     }
                 }
             }
@@ -367,6 +390,8 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         levelChunkPacket.setChunkZ(packet.getZ());
         levelChunkPacket.setData(payload);
         session.sendUpstreamPacket(levelChunkPacket);
+
+        blockEntityDataPackets.forEach(session::sendUpstreamPacket);
 
         for (Map.Entry<Vector3i, ItemFrameEntity> entry : session.getItemFrameCache().entrySet()) {
             Vector3i position = entry.getKey();

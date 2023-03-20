@@ -370,6 +370,9 @@ public class SkullCache {
                 if (skullName.getValue().toLowerCase(Locale.ROOT).startsWith("geyser_custom_block_")) {
                     return skullName.getValue().replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
                 }
+                if (skullName.getValue().contains(":")) {
+                    return skullName.getValue().split(":")[1].toLowerCase(Locale.ROOT);
+                }
             }
         }
 

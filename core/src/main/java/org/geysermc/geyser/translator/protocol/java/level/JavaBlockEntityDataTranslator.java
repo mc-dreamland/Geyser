@@ -29,11 +29,16 @@ import com.github.steveice10.mc.protocol.data.game.entity.player.GameMode;
 import com.github.steveice10.mc.protocol.data.game.level.block.BlockEntityType;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.level.ClientboundBlockEntityDataPacket;
 import com.nukkitx.math.vector.Vector3i;
+import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.protocol.bedrock.data.inventory.ContainerType;
+import com.nukkitx.protocol.bedrock.packet.BlockEntityDataPacket;
 import com.nukkitx.protocol.bedrock.packet.ContainerOpenPacket;
 import com.nukkitx.protocol.bedrock.packet.UpdateBlockPacket;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.level.block.BlockStateValues;
+import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.translator.level.block.entity.BlockEntityTranslator;
 import org.geysermc.geyser.translator.level.block.entity.RequiresBlockState;
 import org.geysermc.geyser.translator.level.block.entity.SkullBlockEntityTranslator;
@@ -61,11 +66,9 @@ public class JavaBlockEntityDataTranslator extends PacketTranslator<ClientboundB
         }
 
         Vector3i position = packet.getPosition();
-        BlockEntityUtils.updateBlockEntity(session, translator.getBlockEntityTag(type, position.getX(), position.getY(), position.getZ(),
-                packet.getNbt(), blockState), packet.getPosition());
         // Check for custom skulls.
         boolean hasCustomHeadBlock = false;
-        if (session.getPreferencesCache().showCustomSkulls() && packet.getNbt() != null && (packet.getNbt().contains("SkullOwner") || packet.getNbt().contains("PublicBukkitValues"))) {
+        if (session.getPreferencesCache().showCustomSkulls() && packet.getNbt() != null && (packet.getNbt().contains("SkullOwner"))) {
 
             int runtimeId = SkullBlockEntityTranslator.translateSkull(session, packet.getNbt(), position, blockState);
             if (runtimeId != -1) {
@@ -77,6 +80,21 @@ public class JavaBlockEntityDataTranslator extends PacketTranslator<ClientboundB
                 updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NEIGHBORS);
                 updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
                 session.sendUpstreamPacket(updateBlockPacket);
+
+                String customSkullBlockName = SkullCache.getCustomSkullBlockName(packet.getNbt());
+                CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(customSkullBlockName);
+                if (customBlockData != null && customBlockData.components().netease_block_entity()) {
+                    NbtMap blockEntityTag = BlockEntityTranslator.getCustomSkullBlockEntityTag(type, position.getX(), position.getY(), position.getZ(),
+                            packet.getNbt(), blockState, customBlockData.name());
+
+
+                    BlockEntityDataPacket blockEntityPacket = new BlockEntityDataPacket();
+                    blockEntityPacket.setBlockPosition(position);
+                    blockEntityPacket.setData(blockEntityTag);
+                    session.sendUpstreamPacket(blockEntityPacket);
+
+                }
+                //TODO 判断方块是否为客户端实体
             }
         }
         if (!hasCustomHeadBlock) {
