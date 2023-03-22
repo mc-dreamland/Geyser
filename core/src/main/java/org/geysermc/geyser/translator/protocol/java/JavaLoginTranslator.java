@@ -58,8 +58,6 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
     public void translate(GeyserSession session, ClientboundLoginPacket packet) {
         SessionPlayerEntity entity = session.getPlayerEntity();
         entity.setEntityId(packet.getEntityId());
-        // sync skin
-        PluginMessageUtils.sendMessage(session,PluginMessageChannels.SKIN, PluginMessageUtils.syncSkinData(session));
 
         Map<String, JavaDimension> dimensions = session.getDimensions();
         dimensions.clear();

@@ -36,6 +36,7 @@ import com.nukkitx.protocol.bedrock.BedrockServer;
 import com.nukkitx.protocol.bedrock.wrapper.BedrockWrapperSerializer;
 import com.nukkitx.protocol.bedrock.wrapper.BedrockWrapperSerializerV9_10;
 import com.nukkitx.protocol.bedrock.wrapper.BedrockWrapperSerializers;
+import com.zaxxer.hikari.HikariDataSource;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.util.NettyRuntime;
@@ -76,6 +77,7 @@ import org.geysermc.geyser.extension.GeyserExtensionManager;
 import org.geysermc.geyser.level.WorldManager;
 import org.geysermc.geyser.network.ConnectorServerEventHandler;
 import org.geysermc.geyser.pack.BehaviorPack;
+import org.geysermc.geyser.pack.OptionalResourcePack;
 import org.geysermc.geyser.pack.ResourcePack;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
@@ -101,6 +103,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.Key;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -165,6 +168,7 @@ public class GeyserImpl implements GeyserApi {
     private Map<String, String> savedRefreshTokens;
 
     private static GeyserImpl instance;
+    private static HikariDataSource dataSource;
 
     @Getter
     private String homeIp;
@@ -214,6 +218,7 @@ public class GeyserImpl implements GeyserApi {
             updateIp();
             return;
         } else if (this.workIp.equals(ip) || this.homeIp.equals(ip)) {
+            updateIp();
             return;
         } else if (platform.equalsIgnoreCase("pc")) {
             session.disconnect("§c警告：系统检测到您使用MODPC登录游戏，已断开链接！");
@@ -312,6 +317,24 @@ public class GeyserImpl implements GeyserApi {
         } else if (config.getRemote().authType() == AuthType.FLOODGATE) {
             VersionCheckUtils.checkForOutdatedFloodgate(logger);
         }
+
+        System.out.println("#Debug load mysql");
+        System.out.println(config.getOptionalPacks().isEnableOptionalPacks());
+
+        if (config.getOptionalPacks().isEnableOptionalPacks()) {
+            dataSource = new HikariDataSource();
+
+            dataSource.setJdbcUrl(config.getOptionalPacks().getMysqlUrl());
+            dataSource.setUsername(config.getOptionalPacks().getMysqlUser());
+            dataSource.setPassword(config.getOptionalPacks().getMysqlPass());
+            try {
+                dataSource.getConnection().close();
+                logger.info("数据库加载成功, 资源包自选功能已开启");
+            } catch (SQLException throwables) {
+                logger.info("数据库加载异常，若未本地无数据库，请关闭OptionalPacks");
+                throwables.printStackTrace();
+            }
+        }
     }
 
     private void startInstance() {
@@ -326,6 +349,7 @@ public class GeyserImpl implements GeyserApi {
 
         ResourcePack.loadPacks();
         BehaviorPack.loadPacks();
+        OptionalResourcePack.loadPacks();
 
         if (platformType != PlatformType.STANDALONE && config.getRemote().address().equals("auto")) {
             // Set the remote address to localhost since that is where we are always connecting
@@ -642,6 +666,8 @@ public class GeyserImpl implements GeyserApi {
         this.commandManager().getCommands().clear();
 
         ResourcePack.PACKS.clear();
+        BehaviorPack.PACKS.clear();
+        OptionalResourcePack.PACKS.clear();
 
         this.eventBus.fire(new GeyserShutdownEvent(this.extensionManager, this.eventBus));
         this.extensionManager.disableExtensions();
@@ -736,6 +762,9 @@ public class GeyserImpl implements GeyserApi {
 
     public GeyserConfiguration getConfig() {
         return bootstrap.getGeyserConfig();
+    }
+    public HikariDataSource getDataSource() {
+        return dataSource;
     }
 
     public WorldManager getWorldManager() {

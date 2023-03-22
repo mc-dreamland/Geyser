@@ -73,9 +73,7 @@ import com.nukkitx.protocol.bedrock.data.command.SoftEnumUpdateType;
 import com.nukkitx.protocol.bedrock.data.entity.EntityFlag;
 import com.nukkitx.protocol.bedrock.packet.*;
 import com.nukkitx.protocol.bedrock.v291.serializer.BlockEntityDataSerializer_v291;
-import com.nukkitx.protocol.bedrock.v448.serializer.AvailableCommandsSerializer_v448;
 import com.nukkitx.protocol.bedrock.v503.Bedrock_v503;
-import com.nukkitx.protocol.bedrock.v503.serializer.StartGameSerializer_v503;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -186,6 +184,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private boolean microsoftAccount;
 
     private final SessionPlayerEntity playerEntity;
+    @Setter
+    private String[] optionPacksUuid;
 
     private final AdvancementsCache advancementsCache;
     private final BookEditCache bookEditCache;

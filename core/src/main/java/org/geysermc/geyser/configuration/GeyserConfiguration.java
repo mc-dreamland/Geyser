@@ -47,6 +47,7 @@ public interface GeyserConfiguration {
     IRemoteConfiguration getRemote();
 
     IServiceConfiguration getService();
+    IOptionalPacks getOptionalPacks();
 
     List<String> getSavedUserLogins();
 
@@ -180,6 +181,13 @@ public interface GeyserConfiguration {
         boolean isEnabled();
 
         String getUniqueId();
+    }
+
+    interface IOptionalPacks {
+        boolean isEnableOptionalPacks();
+        String getMysqlUrl();
+        String getMysqlUser();
+        String getMysqlPass();
     }
 
     int getScoreboardPacketThreshold();

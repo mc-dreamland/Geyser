@@ -26,6 +26,7 @@ dependencies {
 
     api("com.netease.mc.pe:authlib-test:1.2")
     api("org.msgpack:msgpack:0.6.12")
+    api("com.zaxxer", "HikariCP", "4.0.3")
 
     api(libs.mcauthlib)
     api(libs.mcprotocollib) {

@@ -33,14 +33,12 @@ import com.nukkitx.protocol.bedrock.data.ResourcePackType;
 import com.nukkitx.protocol.bedrock.packet.*;
 import com.nukkitx.protocol.bedrock.v567.Bedrock_v567;
 import com.nukkitx.protocol.bedrock.v567.Bedrock_v567patch;
+import com.zaxxer.hikari.HikariDataSource;
 import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.configuration.GeyserConfiguration;
-import org.geysermc.geyser.pack.BehaviorPack;
-import org.geysermc.geyser.pack.BehaviorPackManifest;
-import org.geysermc.geyser.pack.ResourcePack;
-import org.geysermc.geyser.pack.ResourcePackManifest;
+import org.geysermc.geyser.pack.*;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.session.GeyserSession;
@@ -53,9 +51,11 @@ import org.geysermc.geyser.util.VersionCheckUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.OptionalInt;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
 
 public class UpstreamPacketHandler extends LoggingPacketHandler {
 
@@ -158,18 +158,47 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         geyser.getSessionManager().addPendingSession(session);
 
         ResourcePacksInfoPacket resourcePacksInfo = new ResourcePacksInfoPacket();
-        for(BehaviorPack behaviorPack : BehaviorPack.PACKS.values()) {
+        for (BehaviorPack behaviorPack : BehaviorPack.PACKS.values()) {
             BehaviorPackManifest.Header header = behaviorPack.getManifest().getHeader();
             resourcePacksInfo.getBehaviorPackInfos().add(new ResourcePacksInfoPacket.Entry(
                     header.getUuid().toString(), header.getVersionString(), behaviorPack.getFile().length(),
                     behaviorPack.getContentKey(), "", header.getUuid().toString(), false, false));
         }
-        for(ResourcePack resourcePack : ResourcePack.PACKS.values()) {
+        for (ResourcePack resourcePack : ResourcePack.PACKS.values()) {
             ResourcePackManifest.Header header = resourcePack.getManifest().getHeader();
             resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
                     header.getUuid().toString(), header.getVersionString(), resourcePack.getFile().length(),
                     resourcePack.getContentKey(), "", header.getUuid().toString(), false, false));
         }
+
+        if (geyser.getConfig().getOptionalPacks().isEnableOptionalPacks()) {
+            try {
+                Connection connection = geyser.getDataSource().getConnection();
+                final PreparedStatement sql = connection.prepareStatement("select used_packs from geyser_packs_player where player_uuid = ?");
+                sql.setString(1, session.getAuthData().uuid().toString());
+                final ResultSet set = sql.executeQuery();
+                if (set.next()) {
+                    String usedPacks = set.getString("used_packs");
+                    String[] split = usedPacks.replace(" ", "").split(",");
+                    session.setOptionPacksUuid(split);
+                    for (String splitPackUuid : split) {
+                        for (Map.Entry<String, OptionalResourcePack> packEntry : OptionalResourcePack.PACKS.entrySet()) {
+                            OptionalResourcePack optionalResourcePack = packEntry.getValue();
+                            String packUuid = packEntry.getKey();
+                            if (splitPackUuid.equals(packUuid)) {
+                                ResourcePackManifest.Header header = optionalResourcePack.getManifest().getHeader();
+                                resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
+                                        header.getUuid().toString(), header.getVersionString(), optionalResourcePack.getFile().length(),
+                                        optionalResourcePack.getContentKey(), "", header.getUuid().toString(), false, false));
+                            }
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                geyser.getLogger().error("§c获取玩家自选材质包列表失败！请检查数据库连接是否正常！");
+            }
+        }
+
         resourcePacksInfo.setForcedToAccept(GeyserImpl.getInstance().getConfig().isForceResourcePacks());
         session.sendUpstreamPacket(resourcePacksInfo);
 
@@ -208,6 +237,18 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                 for (ResourcePack pack : ResourcePack.PACKS.values()) {
                     ResourcePackManifest.Header header = pack.getManifest().getHeader();
                     stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
+                }
+                if (geyser.getConfig().getOptionalPacks().isEnableOptionalPacks()) {
+                    if (session.getOptionPacksUuid() != null) {
+                        for (String packUuid : session.getOptionPacksUuid()) {
+                            for (OptionalResourcePack pack : OptionalResourcePack.PACKS.values()) {
+                                if (packUuid.equals(pack.getManifest().getHeader().getUuid().toString())) {
+                                    ResourcePackManifest.Header header = pack.getManifest().getHeader();
+                                    stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (GeyserImpl.getInstance().getConfig().isAddNonBedrockItems()) {
@@ -286,6 +327,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         ResourcePackChunkDataPacket data = new ResourcePackChunkDataPacket();
         ResourcePack resourcePack = ResourcePack.PACKS.get(packet.getPackId().toString());
         BehaviorPack behaviorPack = BehaviorPack.PACKS.get(packet.getPackId().toString());
+        OptionalResourcePack optionalResourcePack = OptionalResourcePack.PACKS.get(packet.getPackId().toString());
 
         data.setChunkIndex(packet.getChunkIndex());
         data.setPackVersion(packet.getPackVersion());
@@ -296,16 +338,21 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         byte[] packData;
         File file;
 
-        if (resourcePack == null) {
+        if (resourcePack != null) {
+            file = resourcePack.getFile();
+            data.setProgress(packet.getChunkIndex() * ResourcePack.CHUNK_SIZE);
+            remainingSize = file.length() - offset;
+            packData = new byte[(int) MathUtils.constrain(remainingSize, 0, ResourcePack.CHUNK_SIZE)];
+        } else if (behaviorPack != null) {
             file = behaviorPack.getFile();
             data.setProgress(packet.getChunkIndex() * BehaviorPack.CHUNK_SIZE);
             remainingSize = file.length() - offset;
             packData = new byte[(int) MathUtils.constrain(remainingSize, 0, BehaviorPack.CHUNK_SIZE)];
         } else {
-            file = resourcePack.getFile();
-            data.setProgress(packet.getChunkIndex() * ResourcePack.CHUNK_SIZE);
+            file = optionalResourcePack.getFile();
+            data.setProgress(packet.getChunkIndex() * BehaviorPack.CHUNK_SIZE);
             remainingSize = file.length() - offset;
-            packData = new byte[(int) MathUtils.constrain(remainingSize, 0, ResourcePack.CHUNK_SIZE)];
+            packData = new byte[(int) MathUtils.constrain(remainingSize, 0, BehaviorPack.CHUNK_SIZE)];
         }
 
 
@@ -333,8 +380,9 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         String[] packID = id.split("_");
         ResourcePack resourcePack = ResourcePack.PACKS.get(packID[0]);
         BehaviorPack behaviorPack = BehaviorPack.PACKS.get(packID[0]);
+        OptionalResourcePack optionalResourcePack = OptionalResourcePack.PACKS.get(packID[0]);
 
-        if (behaviorPack == null) {
+        if (resourcePack != null) {
             ResourcePackManifest.Header header = resourcePack.getManifest().getHeader();
             data.setPackId(header.getUuid());
             int chunkCount = (int) Math.ceil((int) resourcePack.getFile().length() / (double) ResourcePack.CHUNK_SIZE);
@@ -345,9 +393,8 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             data.setPackVersion(packID[1]);
             data.setPremium(false);
             data.setType(ResourcePackType.RESOURCE);
-        } else {
+        } else if (behaviorPack != null) {
             BehaviorPackManifest.Header header = behaviorPack.getManifest().getHeader();
-
             data.setPackId(header.getUuid());
             int chunkCount = (int) Math.ceil((int) behaviorPack.getFile().length() / (double) BehaviorPack.CHUNK_SIZE);
             data.setChunkCount(chunkCount);
@@ -357,6 +404,17 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             data.setPackVersion(packID[1]);
             data.setPremium(false);
             data.setType(ResourcePackType.BEHAVIOR);
+        } else {
+            ResourcePackManifest.Header header = optionalResourcePack.getManifest().getHeader();
+            data.setPackId(header.getUuid());
+            int chunkCount = (int) Math.ceil((int) optionalResourcePack.getFile().length() / (double) OptionalResourcePack.CHUNK_SIZE);
+            data.setChunkCount(chunkCount);
+            data.setCompressedPackSize(optionalResourcePack.getFile().length());
+            data.setMaxChunkSize(OptionalResourcePack.CHUNK_SIZE);
+            data.setHash(optionalResourcePack.getSha256());
+            data.setPackVersion(packID[1]);
+            data.setPremium(false);
+            data.setType(ResourcePackType.RESOURCE);
         }
 
         session.sendUpstreamPacket(data);

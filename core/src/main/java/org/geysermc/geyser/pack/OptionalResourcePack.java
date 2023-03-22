@@ -47,11 +47,11 @@ import java.util.zip.ZipFile;
 /**
  * This represents a resource pack and all the data relevant to it
  */
-public class ResourcePack {
+public class OptionalResourcePack {
     /**
      * The list of loaded resource packs
      */
-    public static final Map<String, ResourcePack> PACKS = new HashMap<>();
+    public static final Map<String, OptionalResourcePack> PACKS = new HashMap<>();
 
     /**
      * The size of each chunk to use when sending the resource packs to clients in bytes
@@ -71,7 +71,7 @@ public class ResourcePack {
      */
     public static void loadPacks() {
         Path main = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs");
-        Path directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/ResourcePack");
+        Path directory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("packs/OptionalResourcePack");
 
         if (!Files.exists(main)) {
             try {
@@ -115,7 +115,7 @@ public class ResourcePack {
             File file = path.toFile();
 
             if (file.getName().endsWith(".zip") || file.getName().endsWith(".mcpack")) {
-                ResourcePack pack = new ResourcePack();
+                OptionalResourcePack pack = new OptionalResourcePack();
 
                 pack.sha256 = FileUtils.calculateSHA256(file);
 

@@ -27,12 +27,14 @@ package org.geysermc.geyser.translator.protocol.java;
 
 import com.github.steveice10.mc.auth.data.GameProfile;
 import com.github.steveice10.mc.protocol.packet.login.clientbound.ClientboundGameProfilePacket;
+import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.skin.SkinManager;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
+import org.geysermc.geyser.util.PluginMessageUtils;
 
 @Translator(packet = ClientboundGameProfilePacket.class)
 public class JavaGameProfileTranslator extends PacketTranslator<ClientboundGameProfilePacket> {
@@ -61,6 +63,9 @@ public class JavaGameProfileTranslator extends PacketTranslator<ClientboundGameP
             // is ready to handle the result of the global server.
             SkinManager.handleBedrockSkin(playerEntity, session.getClientData());
             session.getGeyser().getSkinUploader().syncSkin(session, session.getClientData());
+
+            // sync skin
+            PluginMessageUtils.sendMessage(session, PluginMessageChannels.SKIN, PluginMessageUtils.syncSkinData(session));
         }
 
         // We no longer need these variables; they're just taking up space in memory now

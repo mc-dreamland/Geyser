@@ -63,6 +63,9 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
     private RemoteConfiguration remote = new RemoteConfiguration();
     private ServiceConfiguration service = new ServiceConfiguration();
 
+    @JsonProperty("optional-packs")
+    private OptionalPacks optionalPacks = new OptionalPacks();
+
     @JsonProperty("saved-user-logins")
     private List<String> savedUserLogins = Collections.emptyList();
 
@@ -315,6 +318,21 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
         private String token = "114514";
         @JsonProperty("multiple")
         private double multiple = 1.45d;
+    }
+
+    @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class OptionalPacks implements IOptionalPacks {
+
+        @JsonProperty("enable-optional-packs")
+        private boolean enableOptionalPacks = false;
+
+        @JsonProperty("mysql-url")
+        private String mysqlUrl = "";
+        @JsonProperty("mysql-user")
+        private String mysqlUser = "";
+        @JsonProperty("mysql-pass")
+        private String mysqlPass = "";
     }
 
     @Getter
