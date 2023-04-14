@@ -103,6 +103,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.Key;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -169,6 +172,7 @@ public class GeyserImpl implements GeyserApi {
 
     private static GeyserImpl instance;
     private static HikariDataSource dataSource;
+    private static HashMap<Integer, String> optionalPacks = new HashMap<>();
 
     @Getter
     private String homeIp;
@@ -328,7 +332,17 @@ public class GeyserImpl implements GeyserApi {
             dataSource.setUsername(config.getOptionalPacks().getMysqlUser());
             dataSource.setPassword(config.getOptionalPacks().getMysqlPass());
             try {
-                dataSource.getConnection().close();
+                Connection connection = dataSource.getConnection();
+                final PreparedStatement sql = connection.prepareStatement("select * from hey_packs");
+                final ResultSet set = sql.executeQuery();
+                while (set.next()) {
+                    int packId = set.getInt("id");
+                    String packUUID = set.getString("pack_uuid");
+                    this.getOptionalPacks().put(packId, packUUID);
+                    logger.info("资源包已加载 -> " + packId + " : " + packUUID);
+                }
+
+                connection.close();
                 logger.info("数据库加载成功, 资源包自选功能已开启");
             } catch (SQLException throwables) {
                 logger.info("数据库加载异常，若未本地无数据库，请关闭OptionalPacks");
@@ -765,6 +779,9 @@ public class GeyserImpl implements GeyserApi {
     }
     public HikariDataSource getDataSource() {
         return dataSource;
+    }
+    public HashMap<Integer, String> getOptionalPacks() {
+        return optionalPacks;
     }
 
     public WorldManager getWorldManager() {

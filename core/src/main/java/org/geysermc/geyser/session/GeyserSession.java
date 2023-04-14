@@ -185,7 +185,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     private final SessionPlayerEntity playerEntity;
     @Setter
-    private String[] optionPacksUuid;
+    private List<String> optionPacksUuid;
 
     private final AdvancementsCache advancementsCache;
     private final BookEditCache bookEditCache;

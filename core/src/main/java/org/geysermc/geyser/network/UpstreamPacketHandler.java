@@ -174,18 +174,24 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         if (geyser.getConfig().getOptionalPacks().isEnableOptionalPacks()) {
             try {
                 Connection connection = geyser.getDataSource().getConnection();
-                final PreparedStatement sql = connection.prepareStatement("select used_packs from geyser_packs_player where player_uuid = ?");
+                final PreparedStatement sql = connection.prepareStatement("select used_pack from hey_packs_player where player_uuid = ?");
                 sql.setString(1, session.getAuthData().uuid().toString());
                 final ResultSet set = sql.executeQuery();
                 if (set.next()) {
-                    String usedPacks = set.getString("used_packs");
+                    String usedPacks = set.getString("used_pack");
                     String[] split = usedPacks.replace(" ", "").split(",");
-                    session.setOptionPacksUuid(split);
-                    for (String splitPackUuid : split) {
+                    ArrayList<String> packsUUID = new ArrayList<>();
+                    for (String splitPackId : split) {
                         for (Map.Entry<String, OptionalResourcePack> packEntry : OptionalResourcePack.PACKS.entrySet()) {
                             OptionalResourcePack optionalResourcePack = packEntry.getValue();
-                            String packUuid = packEntry.getKey();
-                            if (splitPackUuid.equals(packUuid)) {
+
+                            String getPackUUID = geyser.getOptionalPacks().getOrDefault(Integer.parseInt(splitPackId), null);
+                            if (getPackUUID == null) {
+                                continue;
+                            }
+                            if (getPackUUID.equals( packEntry.getKey())) {
+                                packsUUID.add(getPackUUID);
+
                                 ResourcePackManifest.Header header = optionalResourcePack.getManifest().getHeader();
                                 resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
                                         header.getUuid().toString(), header.getVersionString(), optionalResourcePack.getFile().length(),
@@ -193,9 +199,12 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                             }
                         }
                     }
+
+                    session.setOptionPacksUuid(packsUUID);
                 }
             } catch (SQLException e) {
                 geyser.getLogger().error("§c获取玩家自选材质包列表失败！请检查数据库连接是否正常！");
+                e.printStackTrace();
             }
         }
 
