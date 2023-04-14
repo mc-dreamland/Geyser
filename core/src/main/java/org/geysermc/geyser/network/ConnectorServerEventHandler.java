@@ -126,15 +126,6 @@ public class ConnectorServerEventHandler implements BedrockServerEventHandler {
             pong.setSubMotd(config.getBedrock().secondaryMotd());
         }
 
-        if (config.isPassthroughPlayerCounts() && pingInfo != null) {
-            pong.setPlayerCount(pingInfo.getPlayers().getOnline());
-            pong.setMaximumPlayerCount(pingInfo.getPlayers().getMax());
-        } else {
-            pong.setPlayerCount((int) (WebUtils.getTotalOnline() * geyser.getConfig().getService().getMultiple()));
-            pong.setMaximumPlayerCount(config.getMaxPlayers());
-//            geyser.getLogger().debug("pong web online: "+pong.getPlayerCount());
-        }
-
         // https://github.com/GeyserMC/Geyser/issues/3388
         pong.setMotd(pong.getMotd().replace(';', ':'));
         pong.setSubMotd(pong.getSubMotd().replace(';', ':'));
@@ -170,7 +161,7 @@ public class ConnectorServerEventHandler implements BedrockServerEventHandler {
             pong.setPlayerCount(pingInfo.getPlayers().getOnline());
             pong.setMaximumPlayerCount(pingInfo.getPlayers().getMax());
         } else {
-            pong.setPlayerCount(geyser.getSessionManager().getSessions().size());
+            pong.setPlayerCount((int) (WebUtils.getTotalOnline() * geyser.getConfig().getService().getMultiple()));
             pong.setMaximumPlayerCount(config.getMaxPlayers());
         }
 
