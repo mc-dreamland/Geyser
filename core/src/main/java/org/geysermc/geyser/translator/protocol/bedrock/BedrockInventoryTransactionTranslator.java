@@ -90,10 +90,14 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
 
 
 
-    private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 64f;
-    private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 49;
-    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 36;
-    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 36f;
+//    private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 64f;
+//    private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 49;
+//    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 36;
+//    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 36f;
+    private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 81f;
+    private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 144;
+    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 64;
+    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 64f;
 //    private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 100f;
 //    private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 100;
 //    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 56;
