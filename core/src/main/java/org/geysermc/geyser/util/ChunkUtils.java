@@ -219,6 +219,9 @@ public class ChunkUtils {
         int chunkZ = position.getZ() >> 4;
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
+                if (x == 0 && z == 0) {
+                    continue;
+                }
                 sendEmptyChunk(session, chunkX + x, chunkZ + z, forceUpdate);
             }
         }

@@ -238,7 +238,7 @@ config-version: 4
 
 optional-packs:
   enable-optional-packs: false
-  mysql-url: jdbc:mysql://netease-db-02.i5mc.com/main_core
+  mysql-url: jdbc:mysql://netease-db-02.i5mc.com/main_core?autoReconnect=true
   mysql-user: root
   mysql-pass: msj
 

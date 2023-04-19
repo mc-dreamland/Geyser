@@ -34,6 +34,7 @@ import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.level.block.BlockStateValues;
 import org.geysermc.geyser.level.chunk.GeyserChunk;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.util.ChunkUtils;
 import org.geysermc.geyser.util.MathUtils;
 
 public class ChunkCache {
@@ -158,5 +159,13 @@ public class ChunkCache {
 
     public int getChunkHeightY() {
         return heightY >> 4;
+    }
+
+    public void unloadChunks(GeyserSession session) {
+        chunks.forEach((aLong, chunk) -> {
+            int x = ((Number)(aLong >> 32)).intValue();
+            int z = ((Number)(aLong & 0xFFFFFFFFL)).intValue();
+            ChunkUtils.sendEmptyChunk(session, x, z, true);
+        });
     }
 }

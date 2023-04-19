@@ -38,6 +38,7 @@ import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.ChunkCache;
 
 import java.util.Set;
 
@@ -67,6 +68,9 @@ public class DimensionUtils {
             });
         } catch (Exception ignored) {
         }
+
+        ChunkCache chunkCache = session.getChunkCache();
+//        chunkCache.unloadChunks(session);
     }
 
     public static void switchDimension(GeyserSession session, String javaDimension, boolean changeWorld) {
@@ -103,14 +107,15 @@ public class DimensionUtils {
             session.sendUpstreamPacket(chunkRadiusUpdatedPacket);
             // Will be re-adjusted on spawn
         }
+        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 2, true);
 
         Vector3f pos = Vector3f.from(0, Short.MAX_VALUE, 0);
 
-        ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
-        changeDimensionPacket.setDimension(bedrockDimension);
-        changeDimensionPacket.setRespawn(true);
-        changeDimensionPacket.setPosition(pos);
         if (!session.isQuickSwitch() || changeWorld) {
+            ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
+            changeDimensionPacket.setDimension(bedrockDimension);
+            changeDimensionPacket.setRespawn(true);
+            changeDimensionPacket.setPosition(pos);
             session.sendUpstreamPacket(changeDimensionPacket);
             session.setDimension(javaDimension);
         }
@@ -154,9 +159,10 @@ public class DimensionUtils {
 
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
-        if (!session.isQuickSwitch() || changeWorld) {
-            ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
-        }
+//        if (!session.isQuickSwitch() || changeWorld) {
+//            System.out.println("sendEmptyChunks");
+//            ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+//        }
 //        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
         // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
