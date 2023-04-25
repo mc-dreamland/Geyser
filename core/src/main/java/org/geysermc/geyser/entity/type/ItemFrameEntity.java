@@ -40,11 +40,14 @@ import com.nukkitx.protocol.bedrock.packet.BlockEntityDataPacket;
 import com.nukkitx.protocol.bedrock.packet.UpdateBlockPacket;
 import lombok.Getter;
 import org.geysermc.geyser.entity.EntityDefinition;
+import org.geysermc.geyser.registry.BlockRegistries;
+import org.geysermc.geyser.registry.populator.BlockRegistryPopulator;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.inventory.item.ItemTranslator;
 import org.geysermc.geyser.util.InteractionResult;
 import org.geysermc.geyser.util.InventoryUtils;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -90,7 +93,8 @@ public class ItemFrameEntity extends Entity {
                 .putByte("item_frame_photo_bit", (byte) 0);
         blockBuilder.put("states", statesBuilder.build());
 
-        bedrockRuntimeId = session.getBlockMappings().getItemFrame(blockBuilder.build());
+        List<Integer> integers = BlockRegistries.customBlockRuntimeList.get(session.getUpstream().getProtocolVersion());
+        bedrockRuntimeId = session.getBlockMappings().getItemFrame(blockBuilder.build()) + BlockRegistryPopulator.manageRuntimeId(integers, session.getBlockMappings().getItemFrame(blockBuilder.build()));
         bedrockPosition = Vector3i.from(position.getFloorX(), position.getFloorY(), position.getFloorZ());
 
         session.getItemFrameCache().put(bedrockPosition, this);
