@@ -482,6 +482,20 @@ public class MappingsReader_v1 extends MappingsReader {
             builder.netease_block_entity(true);
         }
 
+        if (node.has("netease_tier")) {
+            builder.netease_tier(node.get("netease_tier").asText());
+        }
+
+        if (node.has("netease_solid")) {
+            builder.netease_solid(node.get("netease_solid").asBoolean());
+        }
+
+        if (node.has("netease:render_layer")) {
+            builder.netease_render_layer(node.get("netease:render_layer").asText());
+        }
+
+
+
         String displayName = name;
         if (node.has("display_name")) {
             displayName = node.get("display_name").asText();

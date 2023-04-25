@@ -376,6 +376,27 @@ public class CustomBlockRegistryPopulator {
             );
         }
 
+        if (components.netease_solid()) {
+            builder.putCompound("netease:solid", NbtMap.builder()
+                    .putBoolean("value", components.netease_solid())
+                    .build()
+            );
+        }
+
+        if (components.netease_tier() != null) {
+            builder.putCompound("netease:tier", NbtMap.builder()
+                    .putString("digger", components.netease_tier())
+                    .build()
+            );
+        }
+
+        if (components.netease_render_layer() != null) {
+            builder.putCompound("netease:render_layer", NbtMap.builder()
+                    .putString("value", components.netease_render_layer())
+                    .build()
+            );
+        }
+
         if (!components.tags().isEmpty()) {
             components.tags().forEach(tag -> builder.putCompound("tag:" + tag, NbtMap.EMPTY));
         }

@@ -60,6 +60,9 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
     List<NeteaseBoxComponent> netease_aabb_clip;
     boolean netease_block_entity;
     Set<String> tags;
+    String netease_tier;
+    boolean netease_solid;
+    String netease_render_layer;
 
     private GeyserCustomBlockComponents(CustomBlockComponentsBuilder builder) {
         this.selectionBox = builder.selectionBox;
@@ -84,6 +87,9 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         this.netease_aabb_collision = builder.netease_aabb_collision;
         this.netease_aabb_clip = builder.netease_aabb_clip;
         this.netease_block_entity = builder.netease_block_entity;
+        this.netease_solid = builder.netease_solid;
+        this.netease_tier = builder.netease_tier;
+        this.netease_render_layer = builder.netease_render_layer;
         if (builder.tags.isEmpty()) {
             this.tags = Set.of();
         } else {
@@ -186,6 +192,21 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         return tags;
     }
 
+    @Override
+    public String netease_tier() {
+        return netease_tier;
+    }
+
+    @Override
+    public boolean netease_solid() {
+        return netease_solid;
+    }
+
+    @Override
+    public String netease_render_layer() {
+        return netease_render_layer;
+    }
+
     public static class CustomBlockComponentsBuilder implements Builder {
         protected BoxComponent selectionBox;
         protected BoxComponent collisionBox;
@@ -206,6 +227,9 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         protected List<NeteaseBoxComponent> netease_aabb_collision;
         protected List<NeteaseBoxComponent> netease_aabb_clip;
         public boolean netease_block_entity;
+        public boolean netease_solid;
+        public String netease_tier;
+        public String netease_render_layer;
 
         private void validateBox(BoxComponent box) {
             if (box == null) {
@@ -376,6 +400,24 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         @Override
         public Builder netease_block_entity(boolean netease_block_entity) {
             this.netease_block_entity = netease_block_entity;
+            return this;
+        }
+
+        @Override
+        public Builder netease_tier(String netease_tier) {
+            this.netease_tier = netease_tier;
+            return this;
+        }
+
+        @Override
+        public Builder netease_solid(boolean netease_solid) {
+            this.netease_solid = netease_solid;
+            return this;
+        }
+
+        @Override
+        public Builder netease_render_layer(String netease_render_layer) {
+            this.netease_render_layer = netease_render_layer;
             return this;
         }
 

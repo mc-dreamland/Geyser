@@ -158,6 +158,12 @@ public interface CustomBlockComponents {
      */
     Set<String> tags();
 
+    String netease_tier();
+
+    boolean netease_solid();
+
+    String netease_render_layer();
+
     interface Builder {
         Builder selectionBox(BoxComponent selectionBox);
 
@@ -194,7 +200,11 @@ public interface CustomBlockComponents {
         Builder netease_aabb_clip(List<NeteaseBoxComponent> netease_aabb_clip);
 
         Builder netease_block_entity(boolean netease_block_entity);
+        Builder netease_tier(String netease_tier);
+        Builder netease_solid(boolean netease_solid);
 
         CustomBlockComponents build();
+
+        Builder netease_render_layer(String text);
     }
 }
