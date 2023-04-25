@@ -331,6 +331,7 @@ public class GeyserImpl implements GeyserApi {
             dataSource.setJdbcUrl(config.getOptionalPacks().getMysqlUrl());
             dataSource.setUsername(config.getOptionalPacks().getMysqlUser());
             dataSource.setPassword(config.getOptionalPacks().getMysqlPass());
+            dataSource.setMaximumPoolSize(60);
             try {
                 Connection connection = dataSource.getConnection();
                 final PreparedStatement sql = connection.prepareStatement("select * from hey_packs");

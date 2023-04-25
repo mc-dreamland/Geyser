@@ -202,6 +202,9 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
                     session.setOptionPacksUuid(packsUUID);
                 }
+                sql.close();
+                set.close();
+                connection.close();
             } catch (SQLException e) {
                 geyser.getLogger().error("§c获取玩家自选材质包列表失败！请检查数据库连接是否正常！");
                 e.printStackTrace();
