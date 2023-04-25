@@ -81,13 +81,12 @@ public class JavaBlockEntityDataTranslator extends PacketTranslator<ClientboundB
                 updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
                 session.sendUpstreamPacket(updateBlockPacket);
 
+                // 网易方块实体更新，用于显示模型
                 String customSkullBlockName = SkullCache.getCustomSkullBlockName(packet.getNbt());
                 CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(customSkullBlockName);
                 if (customBlockData != null && customBlockData.components().netease_block_entity()) {
                     NbtMap blockEntityTag = BlockEntityTranslator.getCustomSkullBlockEntityTag(type, position.getX(), position.getY(), position.getZ(),
                             packet.getNbt(), blockState, customBlockData.name());
-
-
                     BlockEntityDataPacket blockEntityPacket = new BlockEntityDataPacket();
                     blockEntityPacket.setBlockPosition(position);
                     blockEntityPacket.setData(blockEntityTag);

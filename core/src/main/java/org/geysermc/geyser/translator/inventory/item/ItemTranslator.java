@@ -588,18 +588,10 @@ public abstract class ItemTranslator {
         if (nbt != null && nbt.contains("SkullOwner")) {
             if (!(nbt.get("SkullOwner") instanceof CompoundTag skullOwner)) {
                 // It's a username give up d:
-//
-//            if (nbt.get("SkullOwner") instanceof CompoundTag skullOwner) {
-//                if (skullOwner.get("Name") instanceof StringTag name) {
-//                    if (name.getValue().startsWith("geyser_custom_block_")) {
-//                        return BlockRegistries.CUSTOM_SKULLS.get(name.getValue().replace("geyser_custom_block_", ""));
-//                    }
-//                }
-//            } else {
                 return null;
             }
             if (skullOwner.get("Name") instanceof StringTag name) {
-                if (name.getValue().contains(":") || name.getValue().startsWith("geyser_custom_block_")) {
+                if (name.getValue().contains(":") || name.getValue().startsWith("heypixel:")) {
                     return null;
                 }
             }

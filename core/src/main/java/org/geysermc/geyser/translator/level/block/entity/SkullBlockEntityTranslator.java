@@ -109,7 +109,7 @@ public class SkullBlockEntityTranslator extends BlockEntityTranslator implements
                 return -1;
             }
 
-            SkullCache.Skull skull = session.getSkullCache().putSkull(blockPosition, "geyser_custom_block_" + customSkullBlockName, blockState);
+            SkullCache.Skull skull = session.getSkullCache().putSkull(blockPosition, "heypixel:" + customSkullBlockName, blockState);
             return skull.getCustomRuntimeId();
         }
 

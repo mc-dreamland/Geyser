@@ -90,11 +90,11 @@ public class SkullCache {
         skull.uuid = uuid;
 
 
-        if (texturesProperty!= null && texturesProperty.startsWith("geyser_custom_block_")) {
+        if (texturesProperty!= null && texturesProperty.startsWith("heypixel:")) {
             return putSkull(position, texturesProperty, blockState);
         }
 
-        if (skull.ownerName != null && skull.ownerName.startsWith("geyser_custom_block_")) {
+        if (skull.ownerName != null && skull.ownerName.startsWith("heypixel:")) {
             return putSkull(position, skull.ownerName, blockState);
         }
 
@@ -335,10 +335,10 @@ public class SkullCache {
         if (rotation == -1) {
             int wallR = BlockStateValues.getSkullWallDirections().get(blockState);
             return switch (wallR) {
-                case 0 -> 0; // South
-                case 90 -> 1; // West
-                case 180 -> 2; // North
-                case 270 -> 3; // East
+                case 0 -> 2; // South
+                case 90 -> 3; // West
+                case 180 -> 4; // North
+                case 270 -> 0; // East
                 default -> 0;
             };
         } else {
@@ -347,16 +347,16 @@ public class SkullCache {
     }
 
     public static String getCustomSkullBlockName(Skull skull) {
-        if (skull.ownerName != null && skull.ownerName.startsWith("geyser_custom_block_")) {
-            return skull.ownerName.replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
+        if (skull.ownerName != null && skull.ownerName.startsWith("heypixel:")) {
+            return skull.ownerName.replace("heypixel:", "").toLowerCase(Locale.ROOT);
         }
 
-        if (skull.texturesProperty != null && skull.texturesProperty.startsWith("geyser_custom_block_")) {
-            return skull.texturesProperty.replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
+        if (skull.texturesProperty != null && skull.texturesProperty.startsWith("heypixel:")) {
+            return skull.texturesProperty.replace("heypixel:", "").toLowerCase(Locale.ROOT);
         }
 
-        if (skull.skinHash != null && skull.skinHash.startsWith("geyser_custom_block_")) {
-            return skull.skinHash.replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
+        if (skull.skinHash != null && skull.skinHash.startsWith("heypixel:")) {
+            return skull.skinHash.replace("heypixel:", "").toLowerCase(Locale.ROOT);
         }
 
         return null;
@@ -370,8 +370,8 @@ public class SkullCache {
                 if (skullName.getValue().toLowerCase(Locale.ROOT).startsWith("geyser_custom_block_")) {
                     return skullName.getValue().replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
                 }
-                if (skullName.getValue().contains(":")) {
-                    return skullName.getValue().split(":")[1].toLowerCase(Locale.ROOT);
+                if (skullName.getValue().toLowerCase(Locale.ROOT).startsWith("heypixel:")) {
+                    return skullName.getValue().replace("heypixel:", "").toLowerCase(Locale.ROOT);
                 }
             }
         }
