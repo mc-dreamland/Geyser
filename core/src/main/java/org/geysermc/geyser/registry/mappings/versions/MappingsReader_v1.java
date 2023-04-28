@@ -490,8 +490,8 @@ public class MappingsReader_v1 extends MappingsReader {
             builder.netease_solid(node.get("netease_solid").asBoolean());
         }
 
-        if (node.has("netease:render_layer")) {
-            builder.netease_render_layer(node.get("netease:render_layer").asText());
+        if (node.has("netease_render_layer")) {
+            builder.netease_render_layer(node.get("netease_render_layer").asText());
         }
 
 
