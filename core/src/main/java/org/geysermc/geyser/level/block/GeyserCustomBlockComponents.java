@@ -257,7 +257,7 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
                 if (box.originX() > box.sizeX() || box.originY() > box.sizeY() || box.originZ() > box.sizeZ()) {
                     throw new IllegalArgumentException("Box size must be non-negative.");
                 }
-                if (box.originX() < 0 || box.originY() < 0 || box.originZ() < 0 || box.sizeX() > 2 || box.sizeY() > 2 || box.sizeZ() > 2) {
+                if (box.originX() < -1 || box.originY() < -1 || box.originZ() < -1 || box.sizeX() > 2 || box.sizeY() > 2 || box.sizeZ() > 2) {
                     throw new IllegalArgumentException("Box bounds must be within (-1, -1, -1) and (2, 2, 2)");
                 }
             }
