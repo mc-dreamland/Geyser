@@ -55,8 +55,8 @@ public abstract class BlockEntityTranslator {
             blockName = "heypixel:" + blockName;
         }
         nbtMapBuilder.putString("_blockName", blockName);
-        nbtMapBuilder.putBoolean("_movable", false);
-        nbtMapBuilder.putBoolean("_tick", false);
+//        nbtMapBuilder.putBoolean("_movable", false);
+//        nbtMapBuilder.putBoolean("_tick", false);
         Random random = new Random();
         long l = random.nextLong(); //TODO 后续自增长？需缓存起来。用于一些操作。
         nbtMapBuilder.putLong("_uniqueId", l * -1);
