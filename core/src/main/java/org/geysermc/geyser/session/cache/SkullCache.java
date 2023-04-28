@@ -335,14 +335,20 @@ public class SkullCache {
         if (rotation == -1) {
             int wallR = BlockStateValues.getSkullWallDirections().get(blockState);
             return switch (wallR) {
-                case 0 -> 2; // South
-                case 90 -> 3; // West
-                case 180 -> 4; // North
-                case 270 -> 0; // East
+                case 0 -> 0; // South
+                case 90 -> 1; // West
+                case 180 -> 2; // North
+                case 270 -> 3; // East
                 default -> 0;
             };
         } else {
-            return (rotation / 4) % 4;
+            // 地面头颅朝向
+            if (rotation == 15) {
+                rotation = 0;
+            } else {
+                rotation += 1;
+            }
+            return ((rotation / 4) + 2) % 4;
         }
     }
 
