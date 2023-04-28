@@ -311,7 +311,7 @@ public final class BlockRegistryPopulator {
                     flowerPotBlocks.put(cleanJavaIdentifier.intern(), blockStates.get(bedrockRuntimeId));
                 }
 
-                javaToVanillaBedrockBlocks[javaRuntimeId] = vanillaBedrockRuntimeId + manageRuntimeId(customRuntimeIdList , vanillaBedrockRuntimeId);
+                javaToVanillaBedrockBlocks[javaRuntimeId] = vanillaBedrockRuntimeId;
                 javaToBedrockBlocks[javaRuntimeId] = bedrockRuntimeId + manageRuntimeId(customRuntimeIdList , bedrockRuntimeId);
 
             }

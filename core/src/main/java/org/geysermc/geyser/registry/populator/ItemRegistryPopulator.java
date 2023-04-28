@@ -392,10 +392,10 @@ public class ItemRegistryPopulator {
                                 // This would likely also require changes to recipe handling
                                 int bedrockBlockRuntimeId = -1;
 
-                                bedrockBlockRuntimeId = blockMappings.getVanillaBedrockBlockId(i) - BlockRegistryPopulator.manageRuntimeId(customBlockRuntimeList, blockMappings.getVanillaBedrockBlockId(i));
+//                                bedrockBlockRuntimeId = blockMappings.getVanillaBedrockBlockId(i) - BlockRegistryPopulator.manageRuntimeId(customBlockRuntimeList, blockMappings.getVanillaBedrockBlockId(i));
 
 
-//                                bedrockBlockRuntimeId = blockMappings.getVanillaBedrockBlockId(i);
+                                bedrockBlockRuntimeId = blockMappings.getVanillaBedrockBlockId(i);
                                 NbtMap blockTag = blockMappings.getBedrockBlockStates().get(bedrockBlockRuntimeId);
                                 String bedrockName = blockTag.getString("name");
                                 if (!bedrockName.equals(correctBedrockIdentifier)) {
@@ -436,10 +436,19 @@ public class ItemRegistryPopulator {
                                 // in it's "preferred" block state - I.E. the first matching block state in the list
                                 for (NbtMap blockTag : blockMappings.getBedrockBlockStates()) {
                                     i++;
+                                    Object name = blockTag.get("name");
+                                    boolean debug = false;
+                                    if (name.toString().equals("minecraft:planks") && palette.getKey().equals("1_18_30")) {
+//                                        System.out.println(i);
+//                                        System.out.println(blockTag);
+//                                        System.out.println(blockTag);
+                                        debug = true;
+                                    }
                                     if (blockTag.getString("name").equals(correctBedrockIdentifier)) {
                                         NbtMap states = blockTag.getCompound("states");
                                         boolean valid = true;
-                                        for (Map.Entry<String, Object> nbtEntry : requiredBlockStates.entrySet()) {
+                                        for (Map.Entry<String, Object> nbtEntry : requiredBlockStates.entrySet()) { // <- 问题出在这。
+                                            if (debug) System.out.println("???");
                                             if (!states.get(nbtEntry.getKey()).equals(nbtEntry.getValue())) {
                                                 // A required block state doesn't match - this one is not valid
                                                 valid = false;
