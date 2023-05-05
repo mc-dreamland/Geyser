@@ -376,12 +376,10 @@ public class CustomBlockRegistryPopulator {
             );
         }
 
-        if (components.netease_solid()) {
-            builder.putCompound("netease:solid", NbtMap.builder()
-                    .putBoolean("value", components.netease_solid())
-                    .build()
-            );
-        }
+        builder.putCompound("netease:solid", NbtMap.builder()
+                .putBoolean("value", components.netease_solid())
+                .build()
+        );
 
         if (components.netease_tier() != null) {
             builder.putCompound("netease:tier", NbtMap.builder()

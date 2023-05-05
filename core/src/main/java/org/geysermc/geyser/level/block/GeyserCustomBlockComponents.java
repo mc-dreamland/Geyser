@@ -227,7 +227,7 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         protected List<NeteaseBoxComponent> netease_aabb_collision;
         protected List<NeteaseBoxComponent> netease_aabb_clip;
         public boolean netease_block_entity;
-        public boolean netease_solid;
+        public boolean netease_solid = true;
         public String netease_tier;
         public String netease_render_layer;
 
