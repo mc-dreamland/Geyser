@@ -394,6 +394,8 @@ public final class BlockRegistryPopulator {
         int spawnerRuntimeId = -1;
         int uniqueJavaId = -1;
         int waterRuntimeId = -1;
+        int playerHeadRuntimeIdMin = -1;
+        int playerHeadRuntimeIdMax = -1;
         Iterator<Map.Entry<String, JsonNode>> blocksIterator = blocksJson.fields();
         while (blocksIterator.hasNext()) {
             javaRuntimeId++;
@@ -484,6 +486,19 @@ public final class BlockRegistryPopulator {
                 honeyBlockRuntimeId = javaRuntimeId;
             } else if (javaId.equals("minecraft:slime_block")) {
                 slimeBlockRuntimeId = javaRuntimeId;
+            } else if (javaId.contains("minecraft:player_head") || javaId.contains("minecraft:player_wall_head")) {
+                if (playerHeadRuntimeIdMin == -1) {
+                    playerHeadRuntimeIdMin = javaRuntimeId;
+                }
+                if (playerHeadRuntimeIdMax == -1) {
+                    playerHeadRuntimeIdMax = javaRuntimeId;
+                }
+                if (javaRuntimeId < playerHeadRuntimeIdMin) {
+                    playerHeadRuntimeIdMin = javaRuntimeId;
+                }
+                if (javaRuntimeId > playerHeadRuntimeIdMax) {
+                    playerHeadRuntimeIdMax = javaRuntimeId;
+                }
             }
         }
         if (bellBlockId == -1) {
@@ -525,6 +540,12 @@ public final class BlockRegistryPopulator {
             throw new AssertionError("Unable to find Java water in palette");
         }
         BlockStateValues.JAVA_WATER_ID = waterRuntimeId;
+
+        if (playerHeadRuntimeIdMin == -1) {
+            throw new AssertionError("Unable to find Java Player Head in palette");
+        }
+        BlockStateValues.JAVA_PLAYER_HEAD_ID_MIN = playerHeadRuntimeIdMin;
+        BlockStateValues.JAVA_PLAYER_HEAD_ID_MAX = playerHeadRuntimeIdMax;
 
         BlockRegistries.CLEAN_JAVA_IDENTIFIERS.set(cleanIdentifiers.toArray(new String[0]));
 
