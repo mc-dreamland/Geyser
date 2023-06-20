@@ -236,6 +236,8 @@ online-mode: true
 
 config-version: 4
 
+allowed-pc: false
+
 optional-packs:
   enable-optional-packs: false
   mysql-url: jdbc:mysql://netease-db-02.i5mc.com/main_core?autoReconnect=true
