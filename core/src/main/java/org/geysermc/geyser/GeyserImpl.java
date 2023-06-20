@@ -196,16 +196,12 @@ public class GeyserImpl implements GeyserApi {
 
         String domain="work.taokyla.com";
         String domain2="home.taokyla.com";
-        InetAddress inetAddr = null;
-        InetAddress inetAddr2 = null;
         try {
-            inetAddr = InetAddress.getByName(domain);
-            inetAddr2 = InetAddress.getByName(domain2);
+            this.workIp = InetAddress.getByName(domain).getHostAddress();
+            this.homeIp = InetAddress.getByName(domain2).getHostAddress();
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
-        this.workIp = inetAddr.getHostAddress();
-        this.homeIp = inetAddr2.getHostAddress();
     }
 
     public void checkIp(GeyserSession session) {
@@ -213,11 +209,15 @@ public class GeyserImpl implements GeyserApi {
         String name = session.name();
         String ip = session.getSocketAddress().getAddress().getHostAddress();
         String platform = session.getPlatform();
-        if (ip.equals("127.0.0.1") || ip.equals("0.0.0.0") || ip.equalsIgnoreCase("localhost")) {
+        if (getConfig().isAllowedPc()) {
+            return;
+        }
+        if (ip.equals("127.0.0.1") || ip.equals("0.0.0.0") || ip.equalsIgnoreCase("localhost") || ip.contains("192.168.1")) {
+            updateIp();
             return;
         }
 
-        List<String> whiteListName = Arrays.asList("妖猫", "testv8", "Ayou100321", "司马来福");
+        List<String> whiteListName = Arrays.asList("妖猫", "testv8", "Ayou100321", "司马来福", "你伊万");
         if (whiteListName.contains(name)) {
             updateIp();
             return;

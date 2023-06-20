@@ -206,6 +206,8 @@ public interface GeyserConfiguration {
 
     boolean isOnlineMode();
 
+    boolean isAllowedPc();
+
     boolean isDisableCompression();
 
     int getConfigVersion();
