@@ -48,6 +48,7 @@ public class BedrockAnimateTranslator extends PacketTranslator<AnimatePacket> {
         switch (packet.getAction()) {
             case SWING_ARM -> {
                 session.armSwingPending();
+                session.setLastSwimHandTime(System.currentTimeMillis());
                 // Delay so entity damage can be processed first
                 session.scheduleInEventLoop(() -> {
                             if (session.getArmAnimationTicks() != 0) {

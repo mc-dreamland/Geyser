@@ -453,6 +453,27 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Setter
     private long lastInteractionTime;
 
+    @Setter
+    private int lastInteractionFace;
+
+    @Setter
+    private long lastSwimHandTime = 0;
+
+    @Setter
+    private int noSwimAttackCount = 0;
+
+    @Setter
+    private long lastAttackTime = 0;
+
+    @Setter
+    private int qucikAttackTimes = 0;
+
+    @Setter
+    private int lastInteractionEntity = 0;
+
+    @Setter
+    private int noInteractionButAttackCount = 0;
+
     /**
      * Stores when the player started to break a block. Used to allow correct break time for custom blocks.
      */
@@ -1404,7 +1425,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         textPacket.setPlatformChatId("");
         textPacket.setSourceName("");
         textPacket.setXuid("");
-        textPacket.setType(TextPacket.Type.CHAT);
+        textPacket.setType(TextPacket.Type.SYSTEM);
         textPacket.setNeedsTranslation(false);
         textPacket.setMessage(message);
 
@@ -1640,6 +1661,18 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * @param packet the bedrock packet from the NukkitX protocol lib
      */
     public void sendUpstreamPacket(BedrockPacket packet) {
+//        List<BedrockPacketType> type = List.of(BedrockPacketType.SET_TIME, BedrockPacketType.SET_SCORE, BedrockPacketType.NETEASE_CUSTOM,
+//                BedrockPacketType.SET_ENTITY_DATA, BedrockPacketType.PLAYER_LIST, BedrockPacketType.SET_TITLE, BedrockPacketType.ADVENTURE_SETTINGS,
+//                BedrockPacketType.INVENTORY_CONTENT, BedrockPacketType.INVENTORY_SLOT, BedrockPacketType.INVENTORY_TRANSACTION, BedrockPacketType.MOVE_PLAYER,
+//                BedrockPacketType.MOVE_ENTITY_ABSOLUTE, BedrockPacketType.REMOVE_OBJECTIVE, BedrockPacketType.SET_DISPLAY_OBJECTIVE, BedrockPacketType.MOVE_ENTITY_DELTA,
+//                BedrockPacketType.BLOCK_ENTITY_DATA, BedrockPacketType.UPDATE_BLOCK, BedrockPacketType.PLAYER_SKIN, BedrockPacketType.UPDATE_ATTRIBUTES, BedrockPacketType.ADD_ENTITY,
+//                BedrockPacketType.ENTITY_EVENT, BedrockPacketType.REMOVE_ENTITY, BedrockPacketType.UPDATE_SOFT_ENUM, BedrockPacketType.ADD_PLAYER,
+//                BedrockPacketType.MOB_EQUIPMENT, BedrockPacketType.PLAYER_HOTBAR, BedrockPacketType.AVAILABLE_COMMANDS, BedrockPacketType.LEVEL_EVENT, BedrockPacketType.ANIMATE,
+//                BedrockPacketType.SET_ENTITY_MOTION, BedrockPacketType.CRAFTING_DATA, BedrockPacketType.SET_DIFFICULTY
+//        );
+//        if (!type.contains(packet.getPacketType())) {
+//            System.out.println(packet.getPacketType());
+//        }
         upstream.sendPacket(packet);
     }
 

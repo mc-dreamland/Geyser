@@ -88,20 +88,10 @@ import java.util.concurrent.TimeUnit;
 @Translator(packet = InventoryTransactionPacket.class)
 public class BedrockInventoryTransactionTranslator extends PacketTranslator<InventoryTransactionPacket> {
 
-
-
-//    private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 64f;
-//    private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 49;
-//    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 36;
-//    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 36f;
     private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 81f;
     private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 144;
-    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 64;
-    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 64f;
-//    private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 100f;
-//    private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 100;
-//    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 56;
-//    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 56f;
+    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 52;
+    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 52f;
 
     @Override
     public void translate(GeyserSession session, InventoryTransactionPacket packet) {
@@ -187,9 +177,14 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
 
                         // Check to make sure the client isn't spamming interaction
                         // Based on Nukkit 1.0, with changes to ensure holding down still works
-                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < 110.0 &&
-                                packetBlockPosition.distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001;
+                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < 80.0 &&
+                                packetBlockPosition.distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001 &&
+                                packet.getBlockFace() == session.getLastInteractionFace() &&
+                                Math.abs(session.getLastInteractionPlayerPosition().getY() - session.getPlayerEntity().getPosition().getY()) < 0.01
+                                ;
+
                         session.setLastInteractionBlockPosition(packetBlockPosition);
+                        session.setLastInteractionFace(packet.getBlockFace());
                         session.setLastInteractionPlayerPosition(session.getPlayerEntity().getPosition());
                         if (hasAlreadyClicked) {
                             break;
@@ -475,6 +470,40 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                 switch (packet.getActionType()) {
                     case 0 -> processEntityInteraction(session, packet, entity); // Interact
                     case 1 -> { // Attack
+                        long t = System.currentTimeMillis() - session.getLastSwimHandTime();
+                        long attackDelay = System.currentTimeMillis() - session.getLastAttackTime();
+                        if (t > 200) {
+                            session.setNoSwimAttackCount(session.getNoSwimAttackCount() + 1);
+                        } else {
+                            session.setNoSwimAttackCount(0);
+                        }
+                        if (attackDelay <= 85) {
+                            if (attackDelay < 30) {
+                                session.setQucikAttackTimes(session.getQucikAttackTimes() + 10);
+                            } else if (attackDelay < 50) {
+                                session.setQucikAttackTimes(session.getQucikAttackTimes() + 5);
+                            } else if (attackDelay < 60) {
+                                session.setQucikAttackTimes(session.getQucikAttackTimes() + 3);
+                            } else {
+                                session.setQucikAttackTimes(session.getQucikAttackTimes() + 1);
+                            }
+                        } else {
+                            if (attackDelay >= 1000) {
+                                session.setQucikAttackTimes(0);
+                            } else {
+                                session.setQucikAttackTimes(session.getQucikAttackTimes() - 5);
+                            }
+                        }
+
+                        if (session.getQucikAttackTimes() > 50) {
+                            return;
+                        }
+
+                        // 处理发包攻击的问题
+                        if (session.getNoSwimAttackCount() > 10) {
+//                            session.sendMessage("§c糟糕！您的行为与预期出现了偏差，请截图加群反馈！错误编号#IOOxd0300a1");
+                            return;
+                        }
                         int entityId;
                         if (entity.getDefinition() == EntityDefinitions.ENDER_DRAGON) {
                             // Redirects the attack to its body entity, this only happens when
@@ -482,6 +511,25 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                             entityId = entity.getEntityId() + 3;
                         } else {
                             entityId = entity.getEntityId();
+                        }
+                        Vector3f position = session.getMouseoverEntity().getPosition();
+                        Vector3f position1 = session.getEntityCache().getEntityByGeyserId(entityId).getPosition();
+                        if (session.getMouseoverEntity().getEntityId() != entityId) {
+                            if (position.distance(position1) > 1.2) {
+                                session.setNoInteractionButAttackCount(session.getNoInteractionButAttackCount() + 1);
+                            }
+                        } else {
+                            if (session.getNoInteractionButAttackCount() >= 4) {
+                                session.setNoInteractionButAttackCount(session.getNoInteractionButAttackCount() - 4);
+                            } else {
+                                session.setNoInteractionButAttackCount(0);
+                            }
+                        }
+
+                        // 处理无选中攻击的问题
+                        if (session.getNoInteractionButAttackCount() > 7) {
+//                            session.sendMessage("§c糟糕！您的行为与预期出现了偏差，请截图加群反馈！错误编号#IOOxd03002x");
+                            return;
                         }
                         ServerboundInteractPacket attackPacket = new ServerboundInteractPacket(entityId,
                                 InteractAction.ATTACK, session.isSneaking());
