@@ -342,6 +342,9 @@ public class PlayerEntity extends LivingEntity {
         }
 
         if (needsUpdate) {
+            if (this.nametag.contains("\\n")) {
+                this.nametag = this.nametag.replace("\\n", "\n");
+            }
             dirtyMetadata.put(EntityData.NAMETAG, this.nametag);
         }
     }

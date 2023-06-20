@@ -33,10 +33,7 @@ import com.github.steveice10.mc.protocol.data.game.entity.metadata.type.IntEntit
 import com.github.steveice10.mc.protocol.data.game.entity.player.Hand;
 import com.github.steveice10.mc.protocol.data.game.entity.type.EntityType;
 import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.protocol.bedrock.data.entity.EntityData;
-import com.nukkitx.protocol.bedrock.data.entity.EntityEventType;
-import com.nukkitx.protocol.bedrock.data.entity.EntityFlag;
-import com.nukkitx.protocol.bedrock.data.entity.EntityFlags;
+import com.nukkitx.protocol.bedrock.data.entity.*;
 import com.nukkitx.protocol.bedrock.packet.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -167,6 +164,11 @@ public class Entity {
         addEntityPacket.setMotion(motion);
         addEntityPacket.setRotation(getBedrockRotation());
         addEntityPacket.getMetadata().putFlags(flags);
+        // 修复投掷物看起来太大的问题
+        EntityType eType = definition.entityType();
+        if (eType.equals(EntityType.SNOWBALL) || eType.equals(EntityType.FIREBALL) || eType.equals(EntityType.ENDER_PEARL)) {
+            dirtyMetadata.put(EntityData.SCALE, 0.4F);
+        }
         dirtyMetadata.apply(addEntityPacket.getMetadata());
         addAdditionalSpawnData(addEntityPacket);
 
@@ -390,6 +392,9 @@ public class Entity {
         Optional<Component> name = entityMetadata.getValue();
         if (name.isPresent()) {
             nametag = MessageTranslator.convertMessage(name.get(), session.locale());
+            if (nametag.contains("\\n")) {
+                nametag = nametag.replace("\\n", "\n");
+            }
             dirtyMetadata.put(EntityData.NAMETAG, nametag);
         } else if (!nametag.isEmpty()) {
             // Clear nametag
