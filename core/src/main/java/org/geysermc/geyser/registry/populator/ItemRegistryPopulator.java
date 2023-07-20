@@ -289,6 +289,9 @@ public class ItemRegistryPopulator {
                     throw new RuntimeException("Unable to find matching Bedrock item for " + identifier);
                 }
 
+                int correctBlockRuntimeId =  blockRuntimeId;
+                blockRuntimeId += BlockRegistryPopulator.manageRuntimeId(customBlockRuntimeList, blockRuntimeId);
+
                 creativeItems.add(ItemData.builder()
                         .id(id)
                         .damage(damage)
@@ -304,7 +307,7 @@ public class ItemRegistryPopulator {
                         if (bedrockBlockIdOverrides.containsKey(identifier)) {
                             bedrockBlockIdOverrides.removeInt(identifier);
                             // Save this as a blacklist, but also as knowledge of what the block state name should be
-                            blacklistedIdentifiers.put(identifier, blockRuntimeId);
+                            blacklistedIdentifiers.put(identifier, correctBlockRuntimeId);
                         } else {
                             // Unless there's multiple possibilities for this one state, let this be
                             bedrockBlockIdOverrides.put(identifier, blockRuntimeId);
@@ -433,7 +436,6 @@ public class ItemRegistryPopulator {
                                 // in it's "preferred" block state - I.E. the first matching block state in the list
                                 for (NbtMap blockTag : blockMappings.getBedrockBlockStates()) {
                                     i++;
-                                    Object name = blockTag.get("name");
                                     if (blockTag.getString("name").equals(correctBedrockIdentifier)) {
                                         NbtMap states = blockTag.getCompound("states");
                                         boolean valid = true;
@@ -464,7 +466,13 @@ public class ItemRegistryPopulator {
                                     if (itemData.getDamage() != 0) {
                                         break;
                                     }
-                                    NbtMap states = blockMappings.getBedrockBlockStates().get(itemData.getBlockRuntimeId()).getCompound("states");
+                                    NbtMap states;
+                                    if (itemData.getBlockRuntimeId() > creativeItems.size()) {
+                                        //TODO 此处需后续修复
+                                        continue;
+                                    } else {
+                                        states = blockMappings.getBedrockBlockStates().get(itemData.getBlockRuntimeId()).getCompound("states");
+                                    }
                                     boolean valid = true;
                                     for (Map.Entry<String, Object> nbtEntry : requiredBlockStates.entrySet()) {
 
@@ -693,6 +701,13 @@ public class ItemRegistryPopulator {
                                 .count(1).build());
                     }
                 }
+
+                for (ComponentItemData componentItemDatum : componentItemData) {
+                    creativeItems.add(ItemData.builder()
+                            .id(componentItemDatum.getData().getInt("id"))
+                            .netId(netId++)
+                            .count(1).build());
+                }
             }
 
             // Register the item forms of custom blocks
@@ -706,6 +721,12 @@ public class ItemRegistryPopulator {
                     entries.put(identifier, new StartGamePacket.ItemEntry(identifier, (short) customProtocolId));
                     customBlockItemIds.put(customBlock, customProtocolId);
                     customIdMappings.put(customProtocolId, identifier);
+
+
+                    creativeItems.add(ItemData.builder()
+                            .id(customProtocolId)
+                            .netId(netId++)
+                            .count(1).build());
                 }
             }
 
