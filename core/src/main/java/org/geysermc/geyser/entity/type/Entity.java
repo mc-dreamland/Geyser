@@ -41,6 +41,7 @@ import lombok.Setter;
 import net.kyori.adventure.text.Component;
 import org.geysermc.geyser.entity.EntityDefinition;
 import org.geysermc.geyser.entity.GeyserDirtyMetadata;
+import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.util.EntityUtils;
@@ -78,6 +79,7 @@ public class Entity {
     protected boolean onGround;
 
     protected EntityDefinition<?> definition;
+    private String curIdentifier;
 
     /**
      * Indicates if the entity has been initialized and spawned
@@ -177,6 +179,33 @@ public class Entity {
 
         flagsDirty = false;
 
+        if (session.getGeyser().getConfig().isDebugMode()) {
+            EntityType type = definition.entityType();
+            String name = type != null ? type.name() : getClass().getSimpleName();
+            session.getGeyser().getLogger().debug("Spawned entity " + name + " at location " + position + " with id " + geyserId + " (java id " + entityId + ")");
+        }
+    }
+
+    /**
+     * 将当前生物生成为指定类型，注意identifier 必须为PE客户端已注册实体，否则可能导致闪退
+     * @param identifier PE已注册实体命名
+     */
+    public void spawnEntity(String identifier) {
+        AddEntityPacket addEntityPacket = new AddEntityPacket();
+        addEntityPacket.setIdentifier(identifier);
+        addEntityPacket.setRuntimeEntityId(geyserId);
+        addEntityPacket.setUniqueEntityId(geyserId);
+        addEntityPacket.setPosition(position);
+        addEntityPacket.setMotion(motion);
+        addEntityPacket.setRotation(getBedrockRotation());
+        addEntityPacket.getMetadata().putFlags(flags);
+        dirtyMetadata.apply(addEntityPacket.getMetadata());
+        addAdditionalSpawnData(addEntityPacket);
+
+        valid = true;
+        session.sendUpstreamPacket(addEntityPacket);
+
+        flagsDirty = false;
         if (session.getGeyser().getConfig().isDebugMode()) {
             EntityType type = definition.entityType();
             String name = type != null ? type.name() : getClass().getSimpleName();
@@ -392,10 +421,25 @@ public class Entity {
         Optional<Component> name = entityMetadata.getValue();
         if (name.isPresent()) {
             nametag = MessageTranslator.convertMessage(name.get(), session.locale());
-            if (nametag.contains("\\n")) {
-                nametag = nametag.replace("\\n", "\n");
+            if (nametag.contains("@")) {
+                int start = nametag.indexOf("@cet_");
+                int end = nametag.indexOf("@", start + 5);
+                if (start != -1 && end != -1) {
+                    String identifier = nametag.substring(start + 5, end);
+                    if (this.curIdentifier == null || this.curIdentifier.equals(identifier)) {
+
+                        if (Registries.CUSTOM_ENTITY_DEFINITIONS.containsKey(identifier)) {
+                            this.despawnEntity();
+                            this.definition = Registries.CUSTOM_ENTITY_DEFINITIONS.get(identifier);
+                            this.spawnEntity(this.definition.identifier());
+                        }
+                    } else {
+
+                    }
+                    nametag = nametag.replace("@cet_" + identifier + "@", "");
+                }
             }
-            dirtyMetadata.put(EntityData.NAMETAG, nametag);
+            dirtyMetadata.put(EntityData.NAMETAG, nametag.replace("\\n", "\n"));
         } else if (!nametag.isEmpty()) {
             // Clear nametag
             dirtyMetadata.put(EntityData.NAMETAG, "");

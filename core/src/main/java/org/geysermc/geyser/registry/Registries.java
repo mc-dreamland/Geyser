@@ -53,6 +53,7 @@ import org.geysermc.geyser.registry.loader.RegistryLoaders;
 import org.geysermc.geyser.registry.loader.SoundEventsRegistryLoader;
 import org.geysermc.geyser.registry.loader.SoundRegistryLoader;
 import org.geysermc.geyser.registry.loader.SoundTranslatorRegistryLoader;
+import org.geysermc.geyser.registry.populator.CustomEntityRegistryPopulator;
 import org.geysermc.geyser.registry.populator.ItemRegistryPopulator;
 import org.geysermc.geyser.registry.populator.PacketRegistryPopulator;
 import org.geysermc.geyser.registry.populator.RecipeRegistryPopulator;
@@ -66,11 +67,7 @@ import org.geysermc.geyser.translator.level.event.LevelEventTranslator;
 import org.geysermc.geyser.translator.sound.SoundInteractionTranslator;
 import org.geysermc.geyser.translator.sound.SoundTranslator;
 
-import java.util.EnumMap;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Holds all the common registries in Geyser.
@@ -121,6 +118,7 @@ public final class Registries {
      * A map containing all entity types and their respective Geyser definitions
      */
     public static final SimpleMappedRegistry<EntityType, EntityDefinition<?>> ENTITY_DEFINITIONS = SimpleMappedRegistry.create(RegistryLoaders.empty(() -> new EnumMap<>(EntityType.class)));
+    public static final HashMap<String, EntityDefinition> CUSTOM_ENTITY_DEFINITIONS = new HashMap<>();
 
     /**
      * A map containing all Java entity identifiers and their respective Geyser definitions
@@ -183,6 +181,7 @@ public final class Registries {
         PacketRegistryPopulator.populate();
         ItemRegistryPopulator.populate();
         RecipeRegistryPopulator.populate();
+        CustomEntityRegistryPopulator.populate();;
 
         // Create registries that require other registries to load first
         POTION_MIXES = SimpleRegistry.create(PotionMixRegistryLoader::new);

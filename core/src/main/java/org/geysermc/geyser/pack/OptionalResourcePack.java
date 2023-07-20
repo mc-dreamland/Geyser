@@ -135,6 +135,7 @@ public class OptionalResourcePack {
                                     PACKS.put(pack.getManifest().getHeader().getUuid().toString(), pack);
                                 }
                             } catch (Exception e) {
+                                System.out.println(zip.getName());
                                 e.printStackTrace();
                             }
                         }

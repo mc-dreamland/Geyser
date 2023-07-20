@@ -60,6 +60,7 @@ import java.util.*;
 public class UpstreamPacketHandler extends LoggingPacketHandler {
 
     private Deque<String> packsToSent = new ArrayDeque<>();
+    private boolean newProtocol = false; // TEMPORARY
 
     public UpstreamPacketHandler(GeyserImpl geyser, GeyserSession session) {
         super(geyser, session);
@@ -73,8 +74,6 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     boolean defaultHandler(BedrockPacket packet) {
         return translateAndDefault(packet);
     }
-
-    private boolean newProtocol = false; // TEMPORARY
 
     private boolean setCorrectCodec(int protocolVersion) {
         BedrockPacketCodec packetCodec = GameProtocol.getBedrockCodec(protocolVersion);
@@ -179,28 +178,31 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                 final ResultSet set = sql.executeQuery();
                 if (set.next()) {
                     String usedPacks = set.getString("used_pack");
-                    String[] split = usedPacks.replace(" ", "").split(",");
-                    ArrayList<String> packsUUID = new ArrayList<>();
-                    for (String splitPackId : split) {
-                        for (Map.Entry<String, OptionalResourcePack> packEntry : OptionalResourcePack.PACKS.entrySet()) {
-                            OptionalResourcePack optionalResourcePack = packEntry.getValue();
+                    if (usedPacks != null && !usedPacks.equals("")) {
+                        String[] split = usedPacks.replace(" ", "").split(",");
+                        if (split.length >= 1) {
+                            List<String> packsUUID = new ArrayList<>();
+                            for (String splitPackId : split) {
+                                for (Map.Entry<String, OptionalResourcePack> packEntry : OptionalResourcePack.PACKS.entrySet()) {
+                                    OptionalResourcePack optionalResourcePack = packEntry.getValue();
 
-                            String getPackUUID = geyser.getOptionalPacks().getOrDefault(Integer.parseInt(splitPackId), null);
-                            if (getPackUUID == null) {
-                                continue;
-                            }
-                            if (getPackUUID.equals( packEntry.getKey())) {
-                                packsUUID.add(getPackUUID);
+                                    String getPackUUID = geyser.getOptionalPacks().getOrDefault(Integer.parseInt(splitPackId), null);
+                                    if (getPackUUID == null) {
+                                        continue;
+                                    }
+                                    if (getPackUUID.equals(packEntry.getKey())) {
+                                        packsUUID.add(getPackUUID);
 
-                                ResourcePackManifest.Header header = optionalResourcePack.getManifest().getHeader();
-                                resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
-                                        header.getUuid().toString(), header.getVersionString(), optionalResourcePack.getFile().length(),
-                                        optionalResourcePack.getContentKey(), "", header.getUuid().toString(), false, false));
+                                        ResourcePackManifest.Header header = optionalResourcePack.getManifest().getHeader();
+                                        resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
+                                                header.getUuid().toString(), header.getVersionString(), optionalResourcePack.getFile().length(),
+                                                optionalResourcePack.getContentKey(), "", header.getUuid().toString(), false, false));
+                                    }
+                                }
                             }
+                            session.setOptionPacksUuid(packsUUID);
                         }
                     }
-
-                    session.setOptionPacksUuid(packsUUID);
                 }
                 sql.close();
                 set.close();
