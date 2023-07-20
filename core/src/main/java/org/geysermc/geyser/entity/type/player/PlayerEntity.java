@@ -122,6 +122,20 @@ public class PlayerEntity extends LivingEntity {
         // Update in case this entity has been despawned, then respawned
         this.nametag = this.username;
         this.nametag = this.nametag.replace("\\n", "\n");
+        if (this.nametag.contains("@size_")) {
+            int start = nametag.indexOf("@size_");
+            int end = nametag.indexOf("@", start + 6);
+            if (start != -1 && end != -1) {
+                String size = nametag.substring(start + 6, end);
+                try {
+                    float scale = Float.parseFloat(size);
+                    dirtyMetadata.put(EntityData.SCALE, scale);
+                } catch (NumberFormatException ignored) {
+                    System.out.println("");
+                }
+                this.nametag = nametag.replace("@size_" + size + "@", "");
+            }
+        }
         // The name can't be updated later (the entity metadata for it is ignored), so we need to check for this now
         updateDisplayName(session.getWorldCache().getScoreboard().getTeamFor(username));
 
@@ -343,9 +357,26 @@ public class PlayerEntity extends LivingEntity {
         }
         if (this.nametag.contains("\\n")) {
             dirtyMetadata.put(EntityData.NAMETAG, this.nametag.replace("\\n", "\n"));
+            this.nametag = this.nametag.replace("\\n", "\n");
+        }
+        if (nametag.contains("@size_")) {
+            int start = nametag.indexOf("@size_");
+            int end = nametag.indexOf("@", start + 6);
+            if (start != -1 && end != -1) {
+                String size = nametag.substring(start + 6, end);
+                try {
+                    float scale = Float.parseFloat(size);
+                    dirtyMetadata.put(EntityData.SCALE, scale);
+                    dirtyMetadata.put(EntityData.NAMETAG, nametag.replace("@size_" + size + "@", ""));
+                    this.nametag = nametag.replace("@size_" + size + "@", "");
+                } catch (NumberFormatException ignored) {
+                    System.out.println("");
+                }
+            }
         }
 
         if (needsUpdate) {
+            this.nametag = this.nametag.replace("\\n", "\n");
             dirtyMetadata.put(EntityData.NAMETAG, this.nametag.replace("\\n", "\n"));
         }
     }

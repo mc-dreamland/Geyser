@@ -421,7 +421,7 @@ public class Entity {
         Optional<Component> name = entityMetadata.getValue();
         if (name.isPresent()) {
             nametag = MessageTranslator.convertMessage(name.get(), session.locale());
-            if (nametag.contains("@")) {
+            if (nametag.contains("@cet")) {
                 int start = nametag.indexOf("@cet_");
                 int end = nametag.indexOf("@", start + 5);
                 if (start != -1 && end != -1) {
@@ -437,6 +437,22 @@ public class Entity {
 
                     }
                     nametag = nametag.replace("@cet_" + identifier + "@", "");
+                }
+            }
+
+            if (nametag.contains("@size_")) {
+                int start = nametag.indexOf("@size_");
+                int end = nametag.indexOf("@", start + 6);
+                if (start != -1 && end != -1) {
+                    String size = nametag.substring(start + 6, end);
+                    try {
+                        float scale = Float.parseFloat(size);
+                        dirtyMetadata.put(EntityData.SCALE, scale);
+                        dirtyMetadata.put(EntityData.NAMETAG, nametag.replace("@size_" + size + "@", ""));
+                        this.nametag = nametag.replace("@size_" + size + "@", "");
+                    } catch (NumberFormatException ignored) {
+                        System.out.println("");
+                    }
                 }
             }
             dirtyMetadata.put(EntityData.NAMETAG, nametag.replace("\\n", "\n"));
