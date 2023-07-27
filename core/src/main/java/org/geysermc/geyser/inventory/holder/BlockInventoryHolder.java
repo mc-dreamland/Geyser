@@ -77,18 +77,20 @@ public class BlockInventoryHolder extends InventoryHolder {
         // First, verify that the player's position has not changed, so we don't try to select a block wildly out of range.
         // (This could be a virtual inventory that the player is opening)
         if (checkInteractionPosition(session)) {
-            // Then, check to see if the interacted block is valid for this inventory by ensuring the block state identifier is valid
-            // and the bedrock block is vanilla
-            int javaBlockId = session.getGeyser().getWorldManager().getBlockAt(session, session.getLastInteractionBlockPosition());
-            if (!BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get().containsKey(javaBlockId)) {
-                String[] javaBlockString = BlockRegistries.JAVA_IDENTIFIERS.get().getOrDefault(javaBlockId, "minecraft:air").split("\\[");
-                if (isValidBlock(javaBlockString)) {
-                    // We can safely use this block
-                    inventory.setHolderPosition(session.getLastInteractionBlockPosition());
-                    ((Container) inventory).setUsingRealBlock(true, javaBlockString[0]);
-                    setCustomName(session, session.getLastInteractionBlockPosition(), inventory, javaBlockId);
+            if (!inventory.getContainerType().toString().startsWith("GENERIC")) {
+                // Then, check to see if the interacted block is valid for this inventory by ensuring the block state identifier is valid
+                // and the bedrock block is vanilla
+                int javaBlockId = session.getGeyser().getWorldManager().getBlockAt(session, session.getLastInteractionBlockPosition());
+                if (!BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get().containsKey(javaBlockId)) {
+                    String[] javaBlockString = BlockRegistries.JAVA_IDENTIFIERS.get().getOrDefault(javaBlockId, "minecraft:air").split("\\[");
+                    if (isValidBlock(javaBlockString)) {
+                        // We can safely use this block
+                        inventory.setHolderPosition(session.getLastInteractionBlockPosition());
+                        ((Container) inventory).setUsingRealBlock(true, javaBlockString[0]);
+                        setCustomName(session, session.getLastInteractionBlockPosition(), inventory, javaBlockId);
 
-                    return true;
+                        return true;
+                    }
                 }
             }
         }

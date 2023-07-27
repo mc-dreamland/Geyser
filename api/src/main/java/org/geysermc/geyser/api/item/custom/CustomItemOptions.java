@@ -56,6 +56,8 @@ public interface CustomItemOptions {
      */
     @NonNull OptionalInt damagePredicate();
 
+    @NonNull Boolean componentBased();
+
     /**
      * Checks if the item has at least one option set
      *
@@ -77,6 +79,8 @@ public interface CustomItemOptions {
         Builder customModelData(int customModelData);
 
         Builder damagePredicate(int damagePredicate);
+
+        Builder componentBased(boolean componentBased);
 
         CustomItemOptions build();
     }
