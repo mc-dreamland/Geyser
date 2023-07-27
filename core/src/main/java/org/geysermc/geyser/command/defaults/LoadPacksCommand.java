@@ -28,9 +28,14 @@ package org.geysermc.geyser.command.defaults;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.command.GeyserCommand;
 import org.geysermc.geyser.command.GeyserCommandSource;
+import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.pack.BehaviorPack;
 import org.geysermc.geyser.pack.ResourcePack;
+import org.geysermc.geyser.registry.BlockRegistries;
+import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.translator.inventory.item.ItemTranslator;
+import org.geysermc.geyser.translator.text.MessageTranslator;
 
 public class LoadPacksCommand extends GeyserCommand {
 
@@ -49,9 +54,20 @@ public class LoadPacksCommand extends GeyserCommand {
 
         String message = "正在重载材质包！";
 
-
+        ResourcePack.PACKS.clear();
+        BehaviorPack.PACKS.clear();
         ResourcePack.loadPacks();
         BehaviorPack.loadPacks();
+
+
+        /* Initialize registries */
+        Registries.init();
+        BlockRegistries.init();
+
+        /* Initialize translators */
+        EntityDefinitions.init();
+        ItemTranslator.init();
+        MessageTranslator.init();
 
         sender.sendMessage(message);
     }
