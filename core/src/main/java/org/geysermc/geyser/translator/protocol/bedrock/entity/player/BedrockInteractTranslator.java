@@ -103,6 +103,9 @@ public class BedrockInteractTranslator extends PacketTranslator<InteractPacket> 
                     if (interactEntity == null) {
                         return;
                     }
+                    if (interactEntity.getEntityId() == session.getLastInteractionEntity()) {
+                        session.setNoInteractionButAttackCount(0);
+                    }
 
                     interactEntity.updateInteractiveTag();
                 } else {

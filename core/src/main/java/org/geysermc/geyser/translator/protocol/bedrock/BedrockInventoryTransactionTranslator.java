@@ -477,7 +477,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         } else {
                             session.setNoSwimAttackCount(0);
                         }
-                        if (attackDelay <= 85) {
+                        if (attackDelay <= 75) {
                             if (attackDelay < 30) {
                                 session.setQucikAttackTimes(session.getQucikAttackTimes() + 10);
                             } else if (attackDelay < 50) {
@@ -490,12 +490,22 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         } else {
                             if (attackDelay >= 1000) {
                                 session.setQucikAttackTimes(0);
+                                if (attackDelay >= 3000) {
+                                    session.setNoInteractionButAttackCount(0);
+                                } else {
+                                    if (session.getNoInteractionButAttackCount() <= 5) {
+                                        session.setNoInteractionButAttackCount(0);
+                                    } else {
+                                        session.setNoInteractionButAttackCount(session.getNoInteractionButAttackCount() - 5);
+                                    }
+                                }
                             } else {
                                 session.setQucikAttackTimes(session.getQucikAttackTimes() - 5);
                             }
                         }
 
                         if (session.getQucikAttackTimes() > 50) {
+                            session.setQucikAttackTimes(session.getQucikAttackTimes() - 15);
                             return;
                         }
 
@@ -512,22 +522,24 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         } else {
                             entityId = entity.getEntityId();
                         }
-                        Vector3f position = session.getMouseoverEntity().getPosition();
-                        Vector3f position1 = session.getEntityCache().getEntityByGeyserId(entityId).getPosition();
-                        if (session.getMouseoverEntity().getEntityId() != entityId) {
-                            if (position.distance(position1) > 1.2) {
-                                session.setNoInteractionButAttackCount(session.getNoInteractionButAttackCount() + 1);
-                            }
-                        } else {
-                            if (session.getNoInteractionButAttackCount() >= 4) {
-                                session.setNoInteractionButAttackCount(session.getNoInteractionButAttackCount() - 4);
+                        if (session.getMouseoverEntity() != null) {
+                            Vector3f position = session.getMouseoverEntity().getPosition();
+                            Vector3f position1 = session.getEntityCache().getEntityByGeyserId(entityId).getPosition();
+                            if (session.getMouseoverEntity().getEntityId() != entityId) {
+                                if (position.distance(position1) > 1.2) {
+                                    session.setNoInteractionButAttackCount(session.getNoInteractionButAttackCount() + 1);
+                                }
                             } else {
-                                session.setNoInteractionButAttackCount(0);
+                                if (session.getNoInteractionButAttackCount() >= 4) {
+                                    session.setNoInteractionButAttackCount(session.getNoInteractionButAttackCount() - 4);
+                                } else {
+                                    session.setNoInteractionButAttackCount(0);
+                                }
                             }
                         }
 
                         // 处理无选中攻击的问题
-                        if (session.getNoInteractionButAttackCount() > 7) {
+                        if (session.getNoInteractionButAttackCount() > 10) {
 //                            session.sendMessage("§c糟糕！您的行为与预期出现了偏差，请截图加群反馈！错误编号#IOOxd03002x");
                             return;
                         }
