@@ -130,10 +130,11 @@ public class PlayerEntity extends LivingEntity {
                 try {
                     float scale = Float.parseFloat(size);
                     dirtyMetadata.put(EntityData.SCALE, scale);
+                    dirtyMetadata.put(EntityData.NAMETAG, nametag.replace("@size_" + size + "@", ""));
+                    this.nametag = nametag.replace("@size_" + size + "@", "");
                 } catch (NumberFormatException ignored) {
                     System.out.println("");
                 }
-                this.nametag = nametag.replace("@size_" + size + "@", "");
             }
         }
         // The name can't be updated later (the entity metadata for it is ignored), so we need to check for this now
@@ -141,7 +142,7 @@ public class PlayerEntity extends LivingEntity {
 
         AddPlayerPacket addPlayerPacket = new AddPlayerPacket();
         addPlayerPacket.setUuid(uuid);
-        addPlayerPacket.setUsername(username);
+        addPlayerPacket.setUsername(nametag);
         addPlayerPacket.setRuntimeEntityId(geyserId);
         addPlayerPacket.setUniqueEntityId(geyserId);
         addPlayerPacket.setPosition(position.sub(0, definition.offset(), 0));

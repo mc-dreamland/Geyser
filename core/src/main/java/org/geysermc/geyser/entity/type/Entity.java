@@ -168,6 +168,25 @@ public class Entity {
         addEntityPacket.getMetadata().putFlags(flags);
         // 修复投掷物看起来太大的问题
         EntityType eType = definition.entityType();
+
+
+        if (nametag.contains("@size_")) {
+            int start = nametag.indexOf("@size_");
+            int end = nametag.indexOf("@", start + 6);
+            if (start != -1 && end != -1) {
+                String size = nametag.substring(start + 6, end);
+                try {
+                    float scale = Float.parseFloat(size);
+                    dirtyMetadata.put(EntityData.SCALE, scale);
+                    dirtyMetadata.put(EntityData.NAMETAG, nametag.replace("@size_" + size + "@", ""));
+                    this.nametag = nametag.replace("@size_" + size + "@", "");
+                } catch (NumberFormatException ignored) {
+                    System.out.println("");
+                }
+            }
+        }
+
+
         if (eType.equals(EntityType.SNOWBALL) || eType.equals(EntityType.FIREBALL) || eType.equals(EntityType.ENDER_PEARL)) {
             dirtyMetadata.put(EntityData.SCALE, 0.4F);
         }
