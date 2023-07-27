@@ -245,7 +245,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 sections[bedrockSectionY] = new GeyserChunkSection(layers);
             }
 
-            session.getChunkCache().addToCache(packet.getX(), packet.getZ(), javaChunks);
+//            session.getChunkCache().addToCache(packet.getX(), packet.getZ(), javaChunks);
 
             final int chunkBlockX = packet.getX() << 4;
             final int chunkBlockZ = packet.getZ() << 4;
@@ -387,6 +387,11 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         levelChunkPacket.setChunkZ(packet.getZ());
         levelChunkPacket.setData(payload);
         session.sendUpstreamPacket(levelChunkPacket);
+//        if (sectionCount == 0 && !session.getChunkCache().hasChunk(packet.getX(), packet.getZ())) {
+//            System.out.println(packet.getX() + " | " + packet.getZ() + " | count -> " + sectionCount);
+//            return;
+//        }
+        session.getChunkCache().addToCache(packet.getX(), packet.getZ(), javaChunks);
 
 
         // 区块发送之后，依次将区块内的自定义实体

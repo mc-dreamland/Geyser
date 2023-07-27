@@ -25,11 +25,14 @@
 
 package org.geysermc.geyser.util;
 
+import com.github.steveice10.mc.protocol.data.game.level.block.BlockChangeEntry;
+import com.nukkitx.math.GenericMath;
 import com.nukkitx.math.vector.Vector2i;
 import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.protocol.bedrock.packet.LevelChunkPacket;
 import com.nukkitx.protocol.bedrock.packet.NetworkChunkPublisherUpdatePacket;
 import com.nukkitx.protocol.bedrock.packet.UpdateBlockPacket;
+import com.nukkitx.protocol.bedrock.packet.UpdateSubChunkBlocksPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -47,6 +50,9 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.geysermc.geyser.level.block.BlockStateValues.JAVA_AIR_ID;
 
@@ -92,7 +98,9 @@ public class ChunkUtils {
         if (chunkPos == null || !chunkPos.equals(newChunkPos)) {
             NetworkChunkPublisherUpdatePacket chunkPublisherUpdatePacket = new NetworkChunkPublisherUpdatePacket();
             chunkPublisherUpdatePacket.setPosition(position);
-            chunkPublisherUpdatePacket.setRadius(session.getServerRenderDistance() << 4);
+            // Mitigates chunks not loading on 1.17.1 Paper and 1.19.3 Fabric. As of Bedrock 1.19.60.
+            // https://github.com/GeyserMC/Geyser/issues/3490
+            chunkPublisherUpdatePacket.setRadius(GenericMath.ceil((session.getServerRenderDistance() + 1) * MathUtils.SQRT_OF_TWO) << 4);
             session.sendUpstreamPacket(chunkPublisherUpdatePacket);
 
             session.setLastChunkPosition(newChunkPos);
@@ -110,10 +118,96 @@ public class ChunkUtils {
         updateBlockClientSide(session, blockState, position);
         session.getChunkCache().updateBlock(position.getX(), position.getY(), position.getZ(), blockState);
     }
+    public static void updateBlock(GeyserSession session, Vector3i chunkPos, BlockChangeEntry[] blockChangeEntries) {
+        updateBlockClientSide(session, chunkPos, blockChangeEntries);
+        for (BlockChangeEntry blockChangeEntry : blockChangeEntries) {
+            Vector3i position = blockChangeEntry.getPosition();
+            session.getChunkCache().updateBlock(position.getX(), position.getY(), position.getZ(), blockChangeEntry.getBlock());
+        }
+    }
 
     /**
      * Updates a block, but client-side only.
      */
+    public static void updateBlockClientSide(GeyserSession session, Vector3i chunkPos, BlockChangeEntry[] blockChangeEntries) {
+        // Checks for item frames so they aren't tripped up and removed
+        List<com.nukkitx.protocol.bedrock.data.BlockChangeEntry> list = new ArrayList<>();
+        List<com.nukkitx.protocol.bedrock.data.BlockChangeEntry> list2 = new ArrayList<>();
+        for (BlockChangeEntry blockChangeEntry : blockChangeEntries) {
+            int blockState = blockChangeEntry.getBlock();
+            Vector3i position = blockChangeEntry.getPosition();
+            ItemFrameEntity itemFrameEntity = ItemFrameEntity.getItemFrameEntity(session, position);
+            if (itemFrameEntity != null) {
+                if (blockState == JAVA_AIR_ID) {
+                    itemFrameEntity.updateBlock(true);
+                    continue;
+                }
+            }
+
+            int blockId = session.getBlockMappings().getBedrockBlockId(blockState);
+            int skullVariant = BlockStateValues.getSkullVariant(blockState);
+            if (skullVariant == -1) {
+                // Skull is gone
+                session.getSkullCache().removeSkull(position);
+            } else if (skullVariant == 3) {
+                // The changed block was a player skull so check if a custom block was defined for this skull
+                SkullCache.Skull skull = session.getSkullCache().updateSkull(position, blockState);
+                if (skull != null && skull.getCustomRuntimeId() != -1) {
+                    blockId = skull.getCustomRuntimeId();
+                }
+            }
+
+            // Prevent moving_piston from being placed
+            // It's used for extending piston heads, but it isn't needed on Bedrock and causes pistons to flicker
+            if (!BlockStateValues.isMovingPiston(blockState)) {
+                com.nukkitx.protocol.bedrock.data.BlockChangeEntry blockChangeEntry1;
+                boolean sameBlock = session.getChunkCache().getBlockAt(position.getX(), position.getY(), position.getZ()) == blockId;
+                if (BlockRegistries.WATERLOGGED.get().contains(blockState)) {
+                    if (!sameBlock) {
+                        blockChangeEntry1 = new com.nukkitx.protocol.bedrock.data.BlockChangeEntry(position, session.getBlockMappings().getBedrockWaterId(), 2, -1, com.nukkitx.protocol.bedrock.data.BlockChangeEntry.MessageType.NONE);
+                    } else {
+                        blockChangeEntry1 = new com.nukkitx.protocol.bedrock.data.BlockChangeEntry(position, session.getBlockMappings().getBedrockWaterId(), 3, -1, com.nukkitx.protocol.bedrock.data.BlockChangeEntry.MessageType.NONE);
+                    }
+                } else {
+                    if (session.getBlockMappings().getBedrockAirId() == blockId) {
+                        if (sameBlock) {
+                            continue;
+                        } else {
+                            blockChangeEntry1 = new com.nukkitx.protocol.bedrock.data.BlockChangeEntry(position, session.getBlockMappings().getBedrockAirId(), 0, -1l, com.nukkitx.protocol.bedrock.data.BlockChangeEntry.MessageType.NONE);
+                        }
+                    } else {
+                        if (sameBlock) {
+                            continue;
+                        } else {
+                            blockChangeEntry1 = new com.nukkitx.protocol.bedrock.data.BlockChangeEntry(position, blockId, 3, -1, com.nukkitx.protocol.bedrock.data.BlockChangeEntry.MessageType.NONE);
+                        }
+                    }
+                }
+                list.add(blockChangeEntry1);
+            }
+
+
+            BlockStateValues.getLecternBookStates().handleBlockChange(session, blockState, position);
+
+            // Iterates through all Bedrock-only block entity translators and determines if a manual block entity packet
+            // needs to be sent
+            for (BedrockOnlyBlockEntity bedrockOnlyBlockEntity : BlockEntityUtils.BEDROCK_ONLY_BLOCK_ENTITIES) {
+                if (bedrockOnlyBlockEntity.isBlock(blockState)) {
+                    // Flower pots are block entities only in Bedrock and are not updated anywhere else like note blocks
+                    bedrockOnlyBlockEntity.updateBlock(session, blockState, position);
+                    break; //No block will be a part of two classes
+                }
+            }
+        }
+
+        UpdateSubChunkBlocksPacket updateSubChunkBlocksPacket = new UpdateSubChunkBlocksPacket();
+        updateSubChunkBlocksPacket.setChunkX(chunkPos.getX());
+        updateSubChunkBlocksPacket.setChunkX(chunkPos.getY());
+        updateSubChunkBlocksPacket.setChunkX(chunkPos.getZ());
+        updateSubChunkBlocksPacket.setStandardBlocks(list);
+        updateSubChunkBlocksPacket.setExtraBlocks(list2);
+        session.sendUpstreamPacket(updateSubChunkBlocksPacket);
+    }
     public static void updateBlockClientSide(GeyserSession session, int blockState, Vector3i position) {
         // Checks for item frames so they aren't tripped up and removed
         ItemFrameEntity itemFrameEntity = ItemFrameEntity.getItemFrameEntity(session, position);
@@ -192,17 +286,17 @@ public class ChunkUtils {
 
             payload = new byte[byteBuf.readableBytes()];
             byteBuf.readBytes(payload);
+
+            LevelChunkPacket data = new LevelChunkPacket();
+            data.setChunkX(chunkX);
+            data.setChunkZ(chunkZ);
+            data.setSubChunksLength(0);
+            data.setData(payload);
+            data.setCachingEnabled(false);
+            session.sendUpstreamPacket(data);
         } finally {
             byteBuf.release();
         }
-
-        LevelChunkPacket data = new LevelChunkPacket();
-        data.setChunkX(chunkX);
-        data.setChunkZ(chunkZ);
-        data.setSubChunksLength(0);
-        data.setData(payload);
-        data.setCachingEnabled(false);
-        session.sendUpstreamPacket(data);
 
         if (forceUpdate) {
             Vector3i pos = Vector3i.from(chunkX << 4, 80, chunkZ << 4);
@@ -217,12 +311,53 @@ public class ChunkUtils {
     public static void sendEmptyChunks(GeyserSession session, Vector3i position, int radius, boolean forceUpdate) {
         int chunkX = position.getX() >> 4;
         int chunkZ = position.getZ() >> 4;
-        for (int x = -radius; x <= radius; x++) {
-            for (int z = -radius; z <= radius; z++) {
-                if (x == 0 && z == 0) {
-                    continue;
+
+        List<Vector2i> range1 = List.of(Vector2i.from(0, 0), Vector2i.from(0, 1), Vector2i.from(0, -1), Vector2i.from(1, 0), Vector2i.from(-1, 0));
+        List<Vector2i> range2 = List.of(Vector2i.from(0, 0), Vector2i.from(0, 1), Vector2i.from(-1, 0), Vector2i.from(0, -1), Vector2i.from(1, 0), Vector2i.from(-1, 1), Vector2i.from(-1, -1), Vector2i.from(1, 1), Vector2i.from(1, -1), Vector2i.from(2, 0), Vector2i.from(0, -2), Vector2i.from(0, 2), Vector2i.from(-2, 0));
+//        List<Vector2i> range3 = List.of(Vector2i.from(0, 0), Vector2i.from(-1, 0), Vector2i.from(1, 0), Vector2i.from(0, 1), Vector2i.from(0, -1), Vector2i.from(1, -1), Vector2i.from(1, 1), Vector2i.from(-1, -1), Vector2i.from(-1, 1), Vector2i.from(-2, 0), Vector2i.from(0, -2), Vector2i.from(2, 0), Vector2i.from(0, 2), Vector2i.from(2, -1), Vector2i.from(2, 1), Vector2i.from(1, -2), Vector2i.from(1, 2), Vector2i.from(-2, 1), Vector2i.from(-1, -2), Vector2i.from(-1, 2), Vector2i.from(-2, -1), Vector2i.from(2, -2), Vector2i.from(-2, 2), Vector2i.from(2, 2), Vector2i.from(-2, -2), Vector2i.from(3, 0), Vector2i.from(0, 3), Vector2i.from(0, -3), Vector2i.from(-3, 0));
+        List<Vector2i> range3 = List.of(
+                Vector2i.from(0, 0), Vector2i.from(-1, 0), Vector2i.from(1, 0), Vector2i.from(0, 1), Vector2i.from(0, -1), Vector2i.from(1, -1)
+                , Vector2i.from(1, 1), Vector2i.from(-1, -1), Vector2i.from(-1, 1), Vector2i.from(-2, 0), Vector2i.from(0, -2), Vector2i.from(2, 0)
+                , Vector2i.from(0, 2), Vector2i.from(2, -1), Vector2i.from(2, 1), Vector2i.from(1, -2), Vector2i.from(1, 2), Vector2i.from(-2, 1)
+                , Vector2i.from(-1, -2), Vector2i.from(-1, 2), Vector2i.from(-2, -1), Vector2i.from(2, -2), Vector2i.from(-2, 2), Vector2i.from(2, 2)
+                , Vector2i.from(-2, -2), Vector2i.from(3, 0), Vector2i.from(0, 3), Vector2i.from(0, -3), Vector2i.from(-3, 0)
+
+//                , Vector2i.from(3, -2), Vector2i.from(-3, 2)
+//                , Vector2i.from(3, 2), Vector2i.from(2, 3), Vector2i.from(-2, -3), Vector2i.from(-2, 3), Vector2i.from(4, 0), Vector2i.from(0, -4), Vector2i.from(-4, 0)
+//                , Vector2i.from(0, 4)
+        );
+        List<Vector2i> range4 = List.of(Vector2i.from(0, 0), Vector2i.from(-1, 0), Vector2i.from(1, 0), Vector2i.from(0, 1), Vector2i.from(0, -1), Vector2i.from(1, -1)
+                , Vector2i.from(1, 1), Vector2i.from(-1, 1), Vector2i.from(-1, -1), Vector2i.from(-2, 0), Vector2i.from(2, 0), Vector2i.from(0, -2), Vector2i.from(0, 2)
+                , Vector2i.from(2, -1), Vector2i.from(1, -2), Vector2i.from(1, 2), Vector2i.from(-2, 1), Vector2i.from(-1, -2), Vector2i.from(-1, 2), Vector2i.from(-2, -1)
+                , Vector2i.from(2, 1), Vector2i.from(2, -2), Vector2i.from(2, 2), Vector2i.from(-2, 2), Vector2i.from(-2, -2), Vector2i.from(0, 3), Vector2i.from(3, 0)
+                , Vector2i.from(0, -3), Vector2i.from(-3, 0), Vector2i.from(1, 3), Vector2i.from(-1, -3), Vector2i.from(3, 1), Vector2i.from(-3, -1), Vector2i.from(1, -3)
+                , Vector2i.from(3, -1), Vector2i.from(-3, 1), Vector2i.from(-1, 3), Vector2i.from(-3, -2), Vector2i.from(2, -3), Vector2i.from(3, -2), Vector2i.from(-3, 2)
+                , Vector2i.from(3, 2), Vector2i.from(2, 3), Vector2i.from(-2, -3), Vector2i.from(-2, 3), Vector2i.from(4, 0), Vector2i.from(0, -4), Vector2i.from(-4, 0)
+                , Vector2i.from(0, 4)
+        );
+
+        if (radius == 1) {
+            for (Vector2i vector2i : range1) {
+                sendEmptyChunk(session, chunkX + vector2i.getX(), chunkZ + vector2i.getY(), forceUpdate);
+            }
+        } else if (radius == 2) {
+            for (Vector2i vector2i : range2) {
+                sendEmptyChunk(session, chunkX + vector2i.getX(), chunkZ + vector2i.getY(), forceUpdate);
+            }
+        } else if (radius == 3) {
+            for (Vector2i vector2i : range3) {
+                sendEmptyChunk(session, chunkX + vector2i.getX(), chunkZ + vector2i.getY(), forceUpdate);
+            }
+        } else if (radius == 4) {
+            for (Vector2i vector2i : range4) {
+                sendEmptyChunk(session, chunkX + vector2i.getX(), chunkZ + vector2i.getY(), forceUpdate);
+            }
+        } else
+        {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    sendEmptyChunk(session, chunkX + x, chunkZ + z, forceUpdate);
                 }
-                sendEmptyChunk(session, chunkX + x, chunkZ + z, forceUpdate);
             }
         }
     }
@@ -244,20 +379,14 @@ public class ChunkUtils {
             throw new RuntimeException("Maximum Y must be a multiple of 16!");
         }
 
-        BedrockDimension bedrockDimension2 = switch (session.getDimension()) {
-            case DimensionUtils.THE_END -> BedrockDimension.THE_END;
-            case DimensionUtils.NETHER -> DimensionUtils.isCustomBedrockNetherId() ? BedrockDimension.THE_END : BedrockDimension.THE_NETHER;
-            default -> BedrockDimension.OVERWORLD;
-        };
         BedrockDimension bedrockDimension = session.getChunkCache().getBedrockDimension();
-        session.getChunkCache().setBedrockDimension(bedrockDimension2);
         // Yell in the console if the world height is too height in the current scenario
         // The constraints change depending on if the player is in the overworld or not, and if experimental height is enabled
         // (Ignore this for the Nether. We can't change that at the moment without the workaround. :/ )
-        if (minY < bedrockDimension2.minY() || (bedrockDimension2.doUpperHeightWarn() && maxY > bedrockDimension2.height())) {
+        if (minY < bedrockDimension.minY() || (bedrockDimension.doUpperHeightWarn() && maxY > bedrockDimension.height())) {
             session.getGeyser().getLogger().warning(GeyserLocale.getLocaleStringLog("geyser.network.translator.chunk.out_of_bounds",
-                    String.valueOf(bedrockDimension2.minY()),
-                    String.valueOf(bedrockDimension2.height()),
+                    String.valueOf(bedrockDimension.minY()),
+                    String.valueOf(bedrockDimension.height()),
                     session.getDimension()));
         }
 

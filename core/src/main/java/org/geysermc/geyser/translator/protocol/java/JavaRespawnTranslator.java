@@ -82,23 +82,25 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
         }
 
         String newDimension = packet.getDimension();
-        boolean changeWorld = !session.getDimension().equals(newDimension)
-                && !packet.getWorldName().equals("minecraft:the_nether") && !session.getWorldName().equals("minecraft:the_nether")
-                && !packet.getWorldName().equals("minecraft:the_end") && !session.getWorldName().equals("minecraft:the_end");
+
+
         if (!session.isQuickSwitch()) {
             if (!session.getDimension().equals(newDimension) || !packet.getWorldName().equals(session.getWorldName())) {
-                // Switching to a new world (based off the world name changeor new dimension); send a fake dimension change
+                // Switching to a new world (based off the world name change or new dimension); send a fake dimension change
                 if (DimensionUtils.javaToBedrock(session.getDimension()) == DimensionUtils.javaToBedrock(newDimension)) {
                     String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), newDimension);
-                    DimensionUtils.switchDimension(session, fakeDim, changeWorld);
+                    DimensionUtils.switchDimension(session, fakeDim, true, true);
                 }
                 session.setWorldName(packet.getWorldName());
-                DimensionUtils.switchDimension(session, newDimension, changeWorld);
+                DimensionUtils.switchDimension(session, newDimension, true, false);
+
+                ChunkUtils.loadDimension(session);
             }
         } else {
+            boolean changeDimension = !session.getDimension().equals(newDimension);
             session.setWorldName(packet.getWorldName());
-            DimensionUtils.switchDimension(session, newDimension, changeWorld);
+            DimensionUtils.switchDimension(session, newDimension, changeDimension, false);
+            ChunkUtils.loadDimension(session);
         }
-        ChunkUtils.loadDimension(session);
     }
 }

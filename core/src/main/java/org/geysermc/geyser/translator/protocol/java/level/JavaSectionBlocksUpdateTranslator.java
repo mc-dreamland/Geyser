@@ -27,6 +27,8 @@ package org.geysermc.geyser.translator.protocol.java.level;
 
 import com.github.steveice10.mc.protocol.data.game.level.block.BlockChangeEntry;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.level.ClientboundSectionBlocksUpdatePacket;
+import com.nukkitx.math.vector.Vector3i;
+import com.nukkitx.protocol.bedrock.packet.UpdateSubChunkBlocksPacket;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
@@ -36,8 +38,14 @@ public class JavaSectionBlocksUpdateTranslator extends PacketTranslator<Clientbo
 
     @Override
     public void translate(GeyserSession session, ClientboundSectionBlocksUpdatePacket packet) {
-        for (BlockChangeEntry entry : packet.getEntries()) {
-            session.getWorldCache().updateServerCorrectBlockState(entry.getPosition(), entry.getBlock());
+
+        if (packet.getEntries().length >= 10) {
+            Vector3i chunkPos = Vector3i.from(packet.getChunkX(), packet.getChunkY(), packet.getChunkZ());
+            session.getWorldCache().updateServerCorrectBlockState(chunkPos, packet.getEntries());
+        } else {
+            for (BlockChangeEntry entry : packet.getEntries()) {
+                session.getWorldCache().updateServerCorrectBlockState(entry.getPosition(), entry.getBlock());
+            }
         }
     }
 }

@@ -73,12 +73,12 @@ public class DimensionUtils {
 //        chunkCache.unloadChunks(session);
     }
 
-    public static void switchDimension(GeyserSession session, String javaDimension, boolean changeWorld) {
+    public static void switchDimension(GeyserSession session, String javaDimension, boolean changeDimension, boolean fake) {
         int bedrockDimension = javaToBedrock(javaDimension);
         int previousDimension = javaToBedrock(session.getDimension());
 
 
-        if (session.isQuickSwitch() || changeWorld) {
+        if (session.isQuickSwitch() || changeDimension) {
             clearLoadedChunks(session);
         }
         Entity player = session.getPlayerEntity();
@@ -93,7 +93,7 @@ public class DimensionUtils {
         session.getPistonCache().clear();
         session.getSkullCache().clear();
 
-        if (session.getServerRenderDistance() > 32 && !session.isEmulatePost1_13Logic()) {
+        if (session.getServerRenderDistance() > 24 && !session.isEmulatePost1_13Logic()) {
             // The server-sided view distance wasn't a thing until Minecraft Java 1.14
             // So ViaVersion compensates by sending a "view distance" of 64
             // That's fine, except when the actual view distance sent from the server is five chunks
@@ -103,15 +103,13 @@ public class DimensionUtils {
             session.getGeyser().getLogger().debug("Applying dimension switching workaround for Bedrock render distance of "
                     + session.getServerRenderDistance());
             ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
-            chunkRadiusUpdatedPacket.setRadius(32);
+            chunkRadiusUpdatedPacket.setRadius(5);
             session.sendUpstreamPacket(chunkRadiusUpdatedPacket);
             // Will be re-adjusted on spawn
         }
-        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 2, true);
 
         Vector3f pos = Vector3f.from(0, Short.MAX_VALUE, 0);
-
-        if (!session.isQuickSwitch() || changeWorld) {
+        if (!session.isQuickSwitch() || changeDimension) {
             ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
             changeDimensionPacket.setDimension(bedrockDimension);
             changeDimensionPacket.setRespawn(true);
@@ -136,7 +134,7 @@ public class DimensionUtils {
         // Effects are re-sent from server
         entityEffects.clear();
 
-        if (!session.isQuickSwitch() || changeWorld) {
+        if (!session.isQuickSwitch() || changeDimension) {
             //let java server handle portal travel sound
             StopSoundPacket stopSoundPacket = new StopSoundPacket();
             stopSoundPacket.setStoppingAllSound(true);
@@ -146,8 +144,8 @@ public class DimensionUtils {
 
         // Kind of silly but Bedrock 1.19.50 requires an acknowledgement after the
         // initial chunks are sent, prior to the client acknowledgement
-        if (GameProtocol.supports1_19_50(session)) {
             // Note: send this before chunks are sent. Fixed https://github.com/GeyserMC/Geyser/issues/3421
+        if (!session.isQuickSwitch() || changeDimension) {
             PlayerActionPacket ackPacket = new PlayerActionPacket();
             ackPacket.setRuntimeEntityId(player.getGeyserId());
             ackPacket.setAction(PlayerActionType.DIMENSION_CHANGE_SUCCESS);
@@ -159,16 +157,17 @@ public class DimensionUtils {
 
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
-//        if (!session.isQuickSwitch() || changeWorld) {
-//            System.out.println("sendEmptyChunks");
-//            ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
-//        }
+        if (changeDimension || !session.isQuickSwitch()) {
+            if (fake) {
+                ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+            }
+        }
 //        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
         // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
         // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
         // thinks they are in the end dimension.
-        if (!session.isQuickSwitch() || changeWorld) {
+        if (!session.isQuickSwitch() || changeDimension) {
             if (BEDROCK_NETHER_ID == 2) {
                 if (NETHER.equals(javaDimension)) {
                     session.sendFog("minecraft:fog_hell");
