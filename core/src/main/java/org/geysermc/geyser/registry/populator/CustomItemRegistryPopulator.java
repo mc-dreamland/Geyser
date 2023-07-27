@@ -50,7 +50,12 @@ import java.util.OptionalInt;
 
 public class CustomItemRegistryPopulator {
     public static GeyserCustomMappingData registerCustomItem(String customItemName, GeyserMappingItem javaItem, CustomItemData customItemData, int bedrockId) {
-        StartGamePacket.ItemEntry startGamePacketItemEntry = new StartGamePacket.ItemEntry(customItemName, (short) bedrockId, true);
+        StartGamePacket.ItemEntry startGamePacketItemEntry;
+        if (customItemName.contains("furnace")) {
+            startGamePacketItemEntry = new StartGamePacket.ItemEntry(customItemName, (short) bedrockId, true);
+        } else {
+            startGamePacketItemEntry = new StartGamePacket.ItemEntry(customItemName, (short) bedrockId, customItemData.customItemOptions().componentBased());
+        }
 
         NbtMapBuilder builder = createComponentNbt(customItemData, javaItem, customItemName, bedrockId);
         ComponentItemData componentItemData = new ComponentItemData(customItemName, builder.build());
@@ -203,7 +208,7 @@ public class CustomItemRegistryPopulator {
         itemProperties.putCompound("minecraft:icon", NbtMap.builder()
                 .putString("texture", customItemData.icon())
                 .build());
-        componentBuilder.putCompound("minecraft:display_name", NbtMap.builder().putString("value", customItemData.displayName()).build());
+//        componentBuilder.putCompound("minecraft:display_name", NbtMap.builder().putString("value", customItemData.displayName()).build());
 
         itemProperties.putBoolean("allow_off_hand", customItemData.allowOffhand());
         itemProperties.putBoolean("hand_equipped", isTool);
@@ -340,23 +345,23 @@ public class CustomItemRegistryPopulator {
             componentBuilder.putCompound("minecraft:wearable", WearableSlot.HEAD.getSlotNbt());
         }
 
-        CustomRenderOffsets renderOffsets = customItemData.renderOffsets();
-        if (renderOffsets != null) {
-            componentBuilder.remove("minecraft:render_offsets");
-            componentBuilder.putCompound("minecraft:render_offsets", toNbtMap(renderOffsets));
-        } else if (customItemData.textureSize() != 16 && !componentBuilder.containsKey("minecraft:render_offsets")) {
-            float scale1 = (float) (0.075 / (customItemData.textureSize() / 16f));
-            float scale2 = (float) (0.125 / (customItemData.textureSize() / 16f));
-            float scale3 = (float) (0.075 / (customItemData.textureSize() / 16f * 2.4f));
-
-            componentBuilder.putCompound("minecraft:render_offsets",
-                    NbtMap.builder().putCompound("main_hand", NbtMap.builder()
-                                    .putCompound("first_person", xyzToScaleList(scale3, scale3, scale3))
-                                    .putCompound("third_person", xyzToScaleList(scale1, scale2, scale1)).build())
-                            .putCompound("off_hand", NbtMap.builder()
-                                    .putCompound("first_person", xyzToScaleList(scale1, scale2, scale1))
-                                    .putCompound("third_person", xyzToScaleList(scale1, scale2, scale1)).build()).build());
-        }
+//        CustomRenderOffsets renderOffsets = customItemData.renderOffsets();
+//        if (renderOffsets != null) {
+//            componentBuilder.remove("minecraft:render_offsets");
+//            componentBuilder.putCompound("minecraft:render_offsets", toNbtMap(renderOffsets));
+//        } else if (customItemData.textureSize() != 16 && !componentBuilder.containsKey("minecraft:render_offsets")) {
+//            float scale1 = (float) (0.075 / (customItemData.textureSize() / 16f));
+//            float scale2 = (float) (0.125 / (customItemData.textureSize() / 16f));
+//            float scale3 = (float) (0.075 / (customItemData.textureSize() / 16f * 2.4f));
+//
+//            componentBuilder.putCompound("minecraft:render_offsets",
+//                    NbtMap.builder().putCompound("main_hand", NbtMap.builder()
+//                                    .putCompound("first_person", xyzToScaleList(scale3, scale3, scale3))
+//                                    .putCompound("third_person", xyzToScaleList(scale1, scale2, scale1)).build())
+//                            .putCompound("off_hand", NbtMap.builder()
+//                                    .putCompound("first_person", xyzToScaleList(scale1, scale2, scale1))
+//                                    .putCompound("third_person", xyzToScaleList(scale1, scale2, scale1)).build()).build());
+//        }
     }
 
     private static NbtMap toNbtMap(CustomRenderOffsets renderOffsets) {

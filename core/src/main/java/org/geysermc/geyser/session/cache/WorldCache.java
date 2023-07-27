@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.session.cache;
 
+import com.github.steveice10.mc.protocol.data.game.level.block.BlockChangeEntry;
 import com.github.steveice10.mc.protocol.data.game.setting.Difficulty;
 import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.protocol.bedrock.packet.SetTitlePacket;
@@ -175,6 +176,16 @@ public final class WorldCache {
         }
 
         ChunkUtils.updateBlock(session, blockState, position);
+    }
+
+    public void updateServerCorrectBlockState(Vector3i chunkPos, BlockChangeEntry[] blockChangeEntries) {
+        for (BlockChangeEntry blockChangeEntry : blockChangeEntries) {
+            if (!this.unverifiedPredictions.isEmpty()) {
+                this.unverifiedPredictions.removeInt(blockChangeEntry.getPosition());
+            }
+        }
+
+        ChunkUtils.updateBlock(session, chunkPos, blockChangeEntries);
     }
 
     public void endPredictionsUpTo(int sequence) {

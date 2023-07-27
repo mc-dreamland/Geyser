@@ -71,6 +71,7 @@ import com.nukkitx.protocol.bedrock.data.command.CommandEnumData;
 import com.nukkitx.protocol.bedrock.data.command.CommandPermission;
 import com.nukkitx.protocol.bedrock.data.command.SoftEnumUpdateType;
 import com.nukkitx.protocol.bedrock.data.entity.EntityFlag;
+import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
 import com.nukkitx.protocol.bedrock.packet.*;
 import com.nukkitx.protocol.bedrock.v291.serializer.BlockEntityDataSerializer_v291;
 import com.nukkitx.protocol.bedrock.v503.Bedrock_v503;
@@ -189,8 +190,9 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     private final AdvancementsCache advancementsCache;
     private final BookEditCache bookEditCache;
-    private @org.checkerframework.checker.nullness.qual.NonNull final ChunkCache chunkCache;
+    private final ChunkCache chunkCache;
     private final EntityCache entityCache;
+    private final HashMap<UUID, String> cachedPlayerList;
     private final EntityEffectCache effectCache;
     private final FormCache formCache;
     private final LodestoneCache lodestoneCache;
@@ -199,6 +201,10 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private final SkullCache skullCache;
     private final TagCache tagCache;
     private final WorldCache worldCache;
+    @Setter
+    private boolean haveSendSkin = false;
+    @Setter
+    private int sendSkinTimes = 0;
 
     @Setter
     private TeleportCache unconfirmedTeleport;
@@ -598,6 +604,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         this.bookEditCache = new BookEditCache(this);
         this.chunkCache = new ChunkCache(this);
         this.entityCache = new EntityCache(this);
+        this.cachedPlayerList = new HashMap<>();
         this.effectCache = new EntityEffectCache();
         this.formCache = new FormCache(this);
         this.lodestoneCache = new LodestoneCache();
@@ -2071,9 +2078,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     }
 
     private void softEnumPacket(String name, SoftEnumUpdateType type, String... enums) {
+        //TODO
+        //暂时，先不发送这个包。似乎会卡？
+
         UpdateSoftEnumPacket packet = new UpdateSoftEnumPacket();
         packet.setType(type);
         packet.setSoftEnum(new CommandEnumData(name, enums, true));
-        sendUpstreamPacket(packet);
+//        sendUpstreamPacket(packet);
     }
 }
