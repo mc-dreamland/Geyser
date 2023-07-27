@@ -178,10 +178,15 @@ public class LoginEncryptionUtils {
             String platform = extraData.get("platform") == null ? "" : extraData.get("platform").asText();
 
             session.setPlatform(platform);
+            long uid = 0L;
+            if (extraData.has("uid")) {
+                uid = extraData.get("uid").asLong();
+            }
             session.setAuthenticationData(new AuthData(
                     extraData.get("displayName").asText(),
                     UUID.fromString(extraData.get("identity").asText()),
-                    extraData.get("XUID").asText()
+                    extraData.get("XUID").asText(),
+                    uid
             ));
 
             session.setCertChainData(certChainData);

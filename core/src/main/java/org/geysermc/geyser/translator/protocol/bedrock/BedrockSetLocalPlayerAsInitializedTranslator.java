@@ -37,6 +37,8 @@ import org.geysermc.geyser.api.network.AuthType;
 import lombok.SneakyThrows;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.skin.SkinManager;
+import org.geysermc.geyser.skin.SkinProvider;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.InventoryUtils;
@@ -117,6 +119,14 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
                     // What am I to expect - as of Bedrock 1.18
                     session.getFormCache().resendAllForms();
                 }
+
+
+                SkinProvider.requestSkinData(session.getPlayerEntity()).whenCompleteAsync((skinData, throwable) -> {
+
+                    if (skinData.geometry() != null) {
+                        SkinManager.sendWhenLoginDone(session, session.getPlayerEntity(), skinData);
+                    }
+                });
             }
         }
     }

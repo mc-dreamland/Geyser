@@ -81,8 +81,10 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         // If the player is already initialized and a join game packet is sent, they
         // are swapping servers
         if (session.isSpawned()) {
-            String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), packet.getDimension());
-            DimensionUtils.switchDimension(session, fakeDim, false);
+            if (!session.isQuickSwitch()) {
+                String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), packet.getDimension());
+                DimensionUtils.switchDimension(session, fakeDim, true, true);
+            }
 
             session.getWorldCache().removeScoreboard();
         }
@@ -129,12 +131,7 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
 
         session.setReducedDebugInfo(packet.isReducedDebugInfo());
 
-        int distance = 4;
-        if (packet.getViewDistance() > 16) {
-            distance = 10;
-        } else {
-            distance = packet.getViewDistance();
-        }
+        int distance = Math.min(packet.getViewDistance(), 10);
         session.setServerRenderDistance(distance);
 //        session.setServerRenderDistance(packet.getViewDistance());
 
@@ -148,8 +145,8 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
             session.sendDownstreamPacket(new ServerboundCustomPayloadPacket("minecraft:register", PluginMessageChannels.getFloodgateRegisterData()));
         }
 
-        if (!newDimension.equals(session.getDimension())) {
-            DimensionUtils.switchDimension(session, newDimension, false);
+        if (!newDimension.equals(session.getDimension()) && !session.isQuickSwitch()) {
+            DimensionUtils.switchDimension(session, newDimension, false, false);
         } else if (DimensionUtils.isCustomBedrockNetherId() && newDimension.equalsIgnoreCase(DimensionUtils.NETHER)) {
             // If the player is spawning into the "fake" nether, send them some fog
             if (!session.isQuickSwitch()) {

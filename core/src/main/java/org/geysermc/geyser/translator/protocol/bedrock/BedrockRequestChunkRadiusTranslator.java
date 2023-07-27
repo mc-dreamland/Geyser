@@ -38,7 +38,11 @@ public class BedrockRequestChunkRadiusTranslator extends PacketTranslator<Reques
 
     @Override
     public void translate(GeyserSession session, RequestChunkRadiusPacket packet) {
-        session.setClientRenderDistance(packet.getRadius());
+        if (packet.getRadius() > 10) {
+            session.setClientRenderDistance(8);
+        } else {
+            session.setClientRenderDistance(packet.getRadius());
+        }
 
         if (session.isLoggedIn()) {
             session.sendJavaClientSettings();
