@@ -31,6 +31,7 @@ import com.github.steveice10.opennbt.tag.builtin.ListTag;
 import com.github.steveice10.opennbt.tag.builtin.StringTag;
 import com.nukkitx.protocol.bedrock.data.skin.ImageData;
 import com.nukkitx.protocol.bedrock.data.skin.SerializedSkin;
+import com.nukkitx.protocol.bedrock.packet.ConfirmSkinPacket;
 import com.nukkitx.protocol.bedrock.packet.PlayerListPacket;
 import com.nukkitx.protocol.bedrock.packet.PlayerSkinPacket;
 import org.geysermc.geyser.GeyserImpl;
@@ -131,7 +132,7 @@ public class SkinManager {
         return entry;
     }
 
-    public static void sendSkinPacket(GeyserSession session, PlayerEntity entity, SkinProvider.SkinData skinData) {
+    public static void sendWhenLoginDone(GeyserSession session, PlayerEntity entity, SkinProvider.SkinData skinData) {
         SkinProvider.Skin skin = skinData.skin();
         SkinProvider.Cape cape = skinData.cape();
         SkinProvider.SkinGeometry geometry = skinData.geometry();
@@ -152,14 +153,46 @@ public class SkinManager {
             playerAddPacket.setAction(PlayerListPacket.Action.ADD);
             playerAddPacket.getEntries().add(updatedEntry);
             session.sendUpstreamPacket(playerAddPacket);
+            session.setSendSkinTimes(session.getSendSkinTimes() + 1);
+        }
+    }
+
+    public static void sendSkinPacket(GeyserSession session, PlayerEntity entity, SkinProvider.SkinData skinData) {
+        SkinProvider.Skin skin = skinData.skin();
+        SkinProvider.Cape cape = skinData.cape();
+        SkinProvider.SkinGeometry geometry = skinData.geometry();
+
+        if (entity.getUuid().equals(session.getPlayerEntity().getUuid())) {
+            if (!session.isHaveSendSkin()) {
+                // TODO is this special behavior needed?
+                PlayerListPacket.Entry updatedEntry = buildEntryManually(
+                        session,
+                        entity.getUuid(),
+                        entity.getUsername(),
+                        entity.getGeyserId(),
+                        skin,
+                        cape,
+                        geometry
+                );
+
+                PlayerListPacket playerAddPacket = new PlayerListPacket();
+                playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+                playerAddPacket.getEntries().add(updatedEntry);
+                session.sendUpstreamPacket(playerAddPacket);
+                session.setHaveSendSkin(true);
+                session.setSendSkinTimes(session.getSendSkinTimes() + 1);
+            }
         } else {
-            PlayerSkinPacket packet = new PlayerSkinPacket();
-            packet.setUuid(entity.getUuid());
-            packet.setOldSkinName("");
-            packet.setNewSkinName(skin.getTextureUrl());
-            packet.setSkin(getSkin(skin.getTextureUrl(), skin, cape, geometry));
-            packet.setTrustedSkin(true);
-            session.sendUpstreamPacket(packet);
+            if (!session.getCachedPlayerList().containsKey(entity.getUuid()) || !session.getCachedPlayerList().get(entity.getUuid()).equals(skin.getTextureUrl())) {
+                session.getCachedPlayerList().put(entity.getUuid(), skin.getTextureUrl());
+                PlayerSkinPacket packet = new PlayerSkinPacket();
+                packet.setUuid(entity.getUuid());
+                packet.setOldSkinName("");
+                packet.setNewSkinName(skin.getTextureUrl());
+                packet.setSkin(getSkin(skin.getTextureUrl(), skin, cape, geometry));
+                packet.setTrustedSkin(true);
+                session.sendUpstreamPacket(packet);
+            }
         }
     }
 

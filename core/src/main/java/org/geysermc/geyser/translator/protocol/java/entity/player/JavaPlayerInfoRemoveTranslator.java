@@ -33,6 +33,7 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 
+import java.util.IllegalFormatCodePointException;
 import java.util.UUID;
 
 @Translator(packet = ClientboundPlayerInfoRemovePacket.class)
@@ -43,6 +44,9 @@ public class JavaPlayerInfoRemoveTranslator extends PacketTranslator<Clientbound
         translate.setAction(PlayerListPacket.Action.REMOVE);
 
         for (UUID id : packet.getProfileIds()) {
+            if (id.equals(session.getPlayerEntity().getUuid())) {
+                continue;
+            }
             // As the player entity is no longer present, we can remove the entry
             PlayerEntity entity = session.getEntityCache().removePlayerEntity(id);
             UUID removeId;
@@ -53,6 +57,10 @@ public class JavaPlayerInfoRemoveTranslator extends PacketTranslator<Clientbound
             } else {
                 removeId = id;
             }
+            if (!session.getCachedPlayerList().containsKey(removeId)) {
+                continue;
+            }
+            session.getCachedPlayerList().remove(removeId);
             translate.getEntries().add(new PlayerListPacket.Entry(removeId));
         }
 

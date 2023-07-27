@@ -30,11 +30,13 @@ import com.github.steveice10.mc.protocol.data.game.PlayerListEntry;
 import com.github.steveice10.mc.protocol.data.game.PlayerListEntryAction;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
 import com.nukkitx.math.vector.Vector3f;
+import com.nukkitx.protocol.bedrock.packet.ConfirmSkinPacket;
 import com.nukkitx.protocol.bedrock.packet.PlayerListPacket;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.skin.SkinManager;
+import org.geysermc.geyser.skin.SkinProvider;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 
@@ -100,9 +102,13 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (entry.isListed()) {
-                    PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
-                    toAdd.add(playerListEntry);
+                    if (!session.getCachedPlayerList().containsKey(entity.getUuid())) {
+                        PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
+                        toAdd.add(playerListEntry);
+                        session.getCachedPlayerList().put(entity.getTabListUuid(), playerListEntry.getSkin().getFullSkinId());
+                    }
                 } else {
+                    session.getCachedPlayerList().remove(entity.getUuid());
                     toRemove.add(new PlayerListPacket.Entry(entity.getTabListUuid()));
                 }
             }
@@ -120,5 +126,46 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 session.sendUpstreamPacket(tabListPacket);
             }
         }
+    }
+
+    private void sendAddPlayerList(GeyserSession session, PlayerEntity entity) {
+        System.out.println("sendAddPlayerList -> " + entity.getUsername());
+        if (!session.getPlayerEntity().getUuid().equals(entity.getUuid())) {
+            SkinProvider.requestSkinData(entity).whenCompleteAsync((skinData, throwable) -> {
+                if (!session.getCachedPlayerList().containsKey(entity.getUuid())) {
+                    PlayerListPacket.Entry updatedEntry = SkinManager.buildEntryManually(
+                            session,
+                            entity.getUuid(),
+                            entity.getUsername(),
+                            entity.getGeyserId(),
+                            skinData.skin(),
+                            skinData.cape(),
+                            skinData.geometry()
+                    );
+
+                    PlayerListPacket playerAddPacket = new PlayerListPacket();
+                    playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+//                    updatedEntry.setSkin(null);
+                    playerAddPacket.getEntries().add(updatedEntry);
+                    session.sendUpstreamPacket(playerAddPacket);
+                    session.setHaveSendSkin(true);
+                    session.getCachedPlayerList().put(entity.getUuid(), updatedEntry.getSkin().getFullSkinId());
+                    System.out.println("AddPlayer -> " + entity.getUsername());
+
+
+                    ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+                    confirmSkinPacket.setSkinData(updatedEntry.getSkin().getSkinData().getImage());
+                    confirmSkinPacket.setGeometry(updatedEntry.getSkin().getGeometryData());
+                    confirmSkinPacket.setUuid(entity.getUuid());
+                    try {
+                        confirmSkinPacket.setUid(GeyserImpl.getInstance().getSessionManager().getSessions().get(entity.getUuid()).getAuthData().uid());
+                    } catch (Exception e) {
+                        confirmSkinPacket.setUid(2147525894L);
+                    }
+                    session.sendUpstreamPacket(confirmSkinPacket);
+                }
+            });
+        }
+
     }
 }
