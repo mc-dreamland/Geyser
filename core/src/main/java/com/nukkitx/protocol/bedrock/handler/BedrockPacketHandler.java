@@ -736,6 +736,9 @@ public interface BedrockPacketHandler extends PacketHandler {
     default boolean handle(NeteaseCustomPacket packet) {
         return false;
     }
+    default boolean handle(ConfirmSkinPacket packet) {
+        return false;
+    }
 
     default boolean handle(FeatureRegistryPacket packet) {
         return false;

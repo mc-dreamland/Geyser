@@ -195,5 +195,6 @@ public enum BedrockPacketType {
     UPDATE_SUB_CHUNK_BLOCKS,
     UPDATE_TRADE,
     VIDEO_STREAM_CONNECT,
-    NETEASE_CUSTOM
+    NETEASE_CUSTOM,
+    ConfirmSkin
 }

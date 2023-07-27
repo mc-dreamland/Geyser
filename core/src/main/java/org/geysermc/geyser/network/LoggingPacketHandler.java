@@ -878,6 +878,13 @@ public class LoggingPacketHandler implements BedrockPacketHandler {
         return defaultHandler(packet);
     }
 
+    // NetEase new packet
+
+    @Override
+    public boolean handle(ConfirmSkinPacket packet) {
+        return defaultHandler(packet);
+    }
+
     @Override
     public boolean handle(FeatureRegistryPacket packet) {
         return defaultHandler(packet);

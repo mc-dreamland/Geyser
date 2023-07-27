@@ -211,5 +211,6 @@ public class Bedrock_v475 {
             .registerPacket(SubChunkPacket.class, SubChunkSerializer_v475.INSTANCE, 174)
             .registerPacket(SubChunkRequestPacket.class, SubChunkRequestSerializer_v471.INSTANCE, 175)
             .registerPacket(NeteaseCustomPacket.class, NeteaseCustomSerializer_v475.INSTANCE, 200)
+            .registerPacket(ConfirmSkinPacket.class, ConfirmSkinSerializer_v475.INSTANCE, 228)
             .build();
 }

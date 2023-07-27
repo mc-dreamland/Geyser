@@ -26,6 +26,7 @@ import com.nukkitx.protocol.bedrock.v448.serializer.*;
 import com.nukkitx.protocol.bedrock.v465.serializer.*;
 import com.nukkitx.protocol.bedrock.v471.serializer.EventSerializer_v471;
 import com.nukkitx.protocol.bedrock.v471.serializer.PhotoInfoRequestSerializer_v471;
+import com.nukkitx.protocol.bedrock.v475.serializer.ConfirmSkinSerializer_v475;
 import com.nukkitx.protocol.bedrock.v475.serializer.NeteaseCustomSerializer_v475;
 import com.nukkitx.protocol.bedrock.v486.serializer.*;
 import com.nukkitx.protocol.bedrock.v503.serializer.*;
@@ -218,5 +219,6 @@ public class Bedrock_v503 {
             .registerPacket(ChangeMobPropertyPacket.class, ChangeMobPropertySerializer_v503.INSTANCE, 182)
             .registerPacket(FeatureRegistryPacket.class, FeatureRegistrySerializer_v503.INSTANCE, 191)
             .registerPacket(NeteaseCustomPacket.class, NeteaseCustomSerializer_v475.INSTANCE, 200)
+            .registerPacket(ConfirmSkinPacket.class, ConfirmSkinSerializer_v475.INSTANCE, 228)
             .build();
 }

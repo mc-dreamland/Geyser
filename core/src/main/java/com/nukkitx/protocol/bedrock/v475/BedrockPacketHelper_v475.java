@@ -73,8 +73,8 @@ public class BedrockPacketHelper_v475 extends BedrockPacketHelper_v471 {
         }
 
         // TODO 不知道为什么，这个地方需要这样写，皮肤才能正常显示。。。待后续处理。
-//        System.out.println(skin.isPremium());
-//        System.out.println(skin.isPersona());
+//        System.out.println("skin.isPremium() -> " + skin.isPremium());
+//        System.out.println("skin.isPersona() -> " + skin.isPersona());
 //        buffer.writeBoolean(skin.isPremium());
 //        buffer.writeBoolean(skin.isPersona());
         buffer.writeBoolean(false);
