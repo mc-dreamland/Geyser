@@ -63,6 +63,7 @@ public class GeyserCommandManager {
         registerBuiltInCommand(new HelpCommand(geyser, "help", "geyser.commands.help.desc", "geyser.command.help", "geyser", this.commands));
         registerBuiltInCommand(new ListCommand(geyser, "list", "geyser.commands.list.desc", "geyser.command.list"));
         registerBuiltInCommand(new ReloadCommand(geyser, "reload", "geyser.commands.reload.desc", "geyser.command.reload"));
+        registerBuiltInCommand(new ReloadSkinCommand("loadskin", "重载自定义皮肤", "geyser.command.loadskin"));
         registerBuiltInCommand(new LoadPacksCommand(geyser, "loadpacks", "重载材质包", "geyser.command.loadPacks"));
         registerBuiltInCommand(new OffhandCommand(geyser, "offhand", "geyser.commands.offhand.desc", "geyser.command.offhand"));
         registerBuiltInCommand(new DumpCommand(geyser, "dump", "geyser.commands.dump.desc", "geyser.command.dump"));
@@ -157,7 +158,7 @@ public class GeyserCommandManager {
         } else {
             label = command.substring(0, command.indexOf(" ")).toLowerCase(Locale.ROOT);
             String argLine = command.substring(command.indexOf(" ") + 1);
-            args = argLine.contains(" ") ? argLine.split(" ") : new String[] { argLine };
+            args = argLine.contains(" ") ? argLine.split(" ") : new String[]{argLine};
         }
 
         Command cmd = (extension != null ? this.extensionCommands.getOrDefault(extension, Collections.emptyMap()) : this.commands).get(label);

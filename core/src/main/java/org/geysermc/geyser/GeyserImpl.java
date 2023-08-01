@@ -322,8 +322,8 @@ public class GeyserImpl implements GeyserApi {
             VersionCheckUtils.checkForOutdatedFloodgate(logger);
         }
 
-        System.out.println("#Debug load mysql");
-        System.out.println(config.getOptionalPacks().isEnableOptionalPacks());
+//        System.out.println("#Debug load mysql");
+//        System.out.println(config.getOptionalPacks().isEnableOptionalPacks());
 
         if (config.getOptionalPacks().isEnableOptionalPacks()) {
             dataSource = new HikariDataSource();
@@ -349,6 +349,7 @@ public class GeyserImpl implements GeyserApi {
                 logger.info("数据库加载异常，若未本地无数据库，请关闭OptionalPacks");
                 throwables.printStackTrace();
             }
+            SkinProvider.loadCustomSkins();
         }
     }
 

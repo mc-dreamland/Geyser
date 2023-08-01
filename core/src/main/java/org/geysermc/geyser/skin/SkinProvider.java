@@ -28,6 +28,7 @@ package org.geysermc.geyser.skin;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.zaxxer.hikari.HikariDataSource;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -53,6 +54,9 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Predicate;
@@ -811,6 +815,47 @@ public class SkinProvider {
             return future.get(timeoutInSeconds, TimeUnit.SECONDS);
         } catch (Exception ignored) {}
         return defaultValue;
+    }
+
+    public static void loadCustomSkins() {
+        CompletableFuture.runAsync(() -> {
+            HikariDataSource dataSource = GeyserImpl.getInstance().getDataSource();
+            try {
+                Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement("SELECT * FROM custom_skins");
+                ResultSet resultSet = statement.executeQuery();
+                while (resultSet.next()) {
+                    UUID uuid = UUID.fromString(resultSet.getString("uuid"));
+                    String textures = resultSet.getString("textures");
+                    storeCustomSkin(uuid, uuid.toString(), MathUtils.unGZipBytes(Base64.getDecoder().decode(textures)));
+                }
+                resultSet.close();
+                connection.close();
+                GeyserImpl.getInstance().getLogger().info("成功加载 " + CUSTOM_SKINS.size() + " 个自定义皮肤！");
+            } catch (Exception e) {
+                GeyserImpl.getInstance().getLogger().warning("数据库异常！加载自定义皮肤失败");
+                e.printStackTrace();
+            }
+        });
+    }
+
+    public static void saveCustomSkin(UUID uuid, String texutres) {
+        CompletableFuture.runAsync(() -> {
+            HikariDataSource dataSource = GeyserImpl.getInstance().getDataSource();
+            try {
+                Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement("INSERT INTO custom_skins (uuid, textures) VALUES (?, ?) ON DUPLICATE KEY UPDATE textures = ?");
+                statement.setString(1, uuid.toString());
+                statement.setString(2, texutres);
+                statement.setString(3, texutres);
+                int i = statement.executeUpdate();
+                if (i > 0) {
+                    GeyserImpl.getInstance().getLogger().info("成功保存自定义皮肤！" + uuid);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     public record SkinAndCape(Skin skin, Cape cape) {

@@ -149,12 +149,14 @@ public final class FloodgateSkinUploader {
                         // 根据后端传过来的WebSocket 更新玩家皮肤
                         case SKIN_UPDATE:
                             UUID uuid = UUID.fromString(node.get("uuid").asText());
-                            byte[] skin_data = MathUtils.unGZipBytes(Base64.getDecoder().decode(node.get("skin_data").asText()));
+                            String textures = node.get("skin_data").asText();
+                            byte[] skin_data = MathUtils.unGZipBytes(Base64.getDecoder().decode(textures));
                             String skinHash = node.get("skin_hash").asText();
                             String skinUrl = String.format(GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/%s?%s?pe", uuid, skinHash);
                             SkinProvider.Skin skin = new SkinProvider.Skin(uuid, skinUrl, skin_data, System.currentTimeMillis(), true, false);
                             SkinProvider.storeEarSkin(skin);
                             SkinProvider.storeCustomSkin(uuid, uuid.toString(), skin_data);
+                            SkinProvider.saveCustomSkin(uuid, textures);
                             logger.debug("update skin for " + uuid + " success");
                             break;
                     }
