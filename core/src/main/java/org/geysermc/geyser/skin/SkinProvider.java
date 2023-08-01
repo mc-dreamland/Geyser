@@ -64,6 +64,10 @@ public class SkinProvider {
     static final Skin EMPTY_SKIN;
     static final Cape EMPTY_CAPE = new Cape("", "no-cape", ByteArrays.EMPTY_ARRAY, -1, true);
 
+    public static final Cache<String, Skin> CUSTOM_SKINS = CacheBuilder.newBuilder()
+//            .expireAfterAccess(1, TimeUnit.DAYS)
+            .build();
+
     private static final Cache<String, Cape> CACHED_JAVA_CAPES = CacheBuilder.newBuilder()
             .expireAfterAccess(1, TimeUnit.HOURS)
             .build();
@@ -163,8 +167,12 @@ public class SkinProvider {
     /**
      * Search our cached database for an already existing, translated skin of this Java URL.
      */
-    static Skin getCachedSkin(String skinUrl) {
+    public static Skin getCachedSkin(String skinUrl) {
         return CACHED_JAVA_SKINS.getIfPresent(skinUrl);
+    }
+
+    public static Cache<String, Skin> getCachedBedrockSkins() {
+        return CACHED_BEDROCK_SKINS;
     }
 
     /**
@@ -422,9 +430,9 @@ public class SkinProvider {
      * Try and find an ear texture for a Java player
      *
      * @param officialSkin The current players skin
-     * @param playerId The players UUID
-     * @param username The players username
-     * @param newThread Should we start in a new thread
+     * @param playerId     The players UUID
+     * @param username     The players username
+     * @param newThread    Should we start in a new thread
      * @return The updated skin with ears
      */
     public static CompletableFuture<Skin> requestUnofficialEars(Skin officialSkin, UUID playerId, String username, boolean newThread) {
@@ -446,8 +454,19 @@ public class SkinProvider {
     }
 
     static void storeBedrockSkin(UUID playerID, String skinId, byte[] skinData) {
+        // 自定义皮肤支持
+        SkinProvider.Skin customSkin = SkinProvider.CUSTOM_SKINS.getIfPresent(playerID.toString());
+        if (customSkin != null) {
+            CACHED_BEDROCK_SKINS.put(skinId, customSkin);
+            return;
+        }
         Skin skin = new Skin(playerID, skinId, skinData, System.currentTimeMillis(), true, false);
         CACHED_BEDROCK_SKINS.put(skin.getTextureUrl(), skin);
+    }
+
+    static void storeCustomSkin(UUID playerID, String skinId, byte[] skinData) {
+        Skin skin = new Skin(playerID, skinId, skinData, System.currentTimeMillis(), true, false);
+        CUSTOM_SKINS.put(skin.getTextureUrl(), skin);
     }
 
     static void storeBedrockCape(String capeId, byte[] capeData) {
@@ -467,6 +486,10 @@ public class SkinProvider {
      */
     public static void storeEarSkin(Skin skin) {
         CACHED_JAVA_SKINS.put(skin.getTextureUrl(), skin);
+    }
+
+    public static Cache<String, Skin> getCachedJavaSkins() {
+        return CACHED_JAVA_SKINS;
     }
 
     /**

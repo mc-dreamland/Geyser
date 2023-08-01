@@ -215,6 +215,7 @@ public class SkinManager {
             }
 
             if (skinData.geometry() != null) {
+                // 这个 SkinPacket 是给自己发送皮肤包
                 sendSkinPacket(session, entity, skinData);
             }
 

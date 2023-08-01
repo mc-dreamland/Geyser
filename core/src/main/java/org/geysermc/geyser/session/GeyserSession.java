@@ -1423,7 +1423,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     @Override
     public String name() {
-        return null;
+        return clientData.getUsername();
     }
 
     @Override

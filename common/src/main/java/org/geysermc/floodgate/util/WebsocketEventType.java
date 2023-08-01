@@ -53,7 +53,7 @@ public enum WebsocketEventType {
     /**
      * Sent every time a news item was added
      */
-    NEWS_ADDED(6),
+    SKIN_UPDATE(6),
 
     /**
      * Sent when the server wants you to know something. Currently used for violations that aren't
