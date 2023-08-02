@@ -58,9 +58,12 @@ public final class FloodgateSkinUploader {
     private final WebSocketClient client;
     private volatile boolean closed;
 
-    @Getter private int id;
-    @Getter private String verifyCode;
-    @Getter private int subscribersCount = 2;
+    @Getter
+    private int id;
+    @Getter
+    private String verifyCode;
+    @Getter
+    private int subscribersCount = 2;
 
     public FloodgateSkinUploader(GeyserImpl geyser) {
         this.logger = geyser.getLogger();
@@ -214,8 +217,13 @@ public final class FloodgateSkinUploader {
 
         ObjectNode node = JACKSON.createObjectNode();
 //        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
+        byte[] skinData = clientData.getSkinData().getBytes(StandardCharsets.UTF_8);
+        SkinProvider.Skin skin = SkinProvider.CUSTOM_SKINS.getIfPresent(session.javaUuid().toString());
+        if (skin != null) {
+            skinData = skin.getSkinData();
+        }
         node.put("hash", MathUtils.hash(clientData.getSkinData()));
-        node.put("skin_data", Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(clientData.getSkinData().getBytes(StandardCharsets.UTF_8)))));
+        node.put("skin_data", Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(skinData))));
         node.put("geometry_data", clientData.getGeometryData());
         node.put("geometry_name", clientData.getGeometryName());
         node.put("skin_id", clientData.getSkinId());
