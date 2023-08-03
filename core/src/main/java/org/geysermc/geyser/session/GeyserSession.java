@@ -953,7 +953,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                             encryptedData = cipher.encryptFromString(BedrockData.of(
                                     clientData.getGameVersion(),
                                     authData.name(),
-                                    authData.xuid(),
+                                    authData.uuid().toString(),
                                     clientData.getDeviceOs().ordinal(),
                                     clientData.getLanguageCode(),
                                     clientData.getUiProfile().ordinal(),
