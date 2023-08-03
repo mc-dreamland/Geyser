@@ -220,10 +220,13 @@ public final class FloodgateSkinUploader {
         byte[] skinData = clientData.getSkinData().getBytes(StandardCharsets.UTF_8);
         SkinProvider.Skin skin = SkinProvider.CUSTOM_SKINS.getIfPresent(session.javaUuid().toString());
         if (skin != null) {
-            skinData = skin.getSkinData();
+            // skin data byte[]
+            node.put("skin_data", Base64.getEncoder().encodeToString(MathUtils.gZipBytes(skin.getSkinData())));
+        }else{
+            // client data base64 String
+            node.put("skin_data", Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(skinData))));
         }
         node.put("hash", MathUtils.hash(clientData.getSkinData()));
-        node.put("skin_data", Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(skinData))));
         node.put("geometry_data", clientData.getGeometryData());
         node.put("geometry_name", clientData.getGeometryName());
         node.put("skin_id", clientData.getSkinId());
