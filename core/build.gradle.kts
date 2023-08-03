@@ -23,6 +23,11 @@ dependencies {
     api(libs.bundles.protocol)
 
     api(libs.mcauthlib)
+
+    api("com.netease.mc.pe:authlib-test:1.2")
+    api("org.msgpack:msgpack:0.6.12")
+    api("com.zaxxer", "HikariCP", "4.0.3")
+
     api(libs.mcprotocollib) {
         exclude("io.netty", "netty-all")
         exclude("com.github.GeyserMC", "packetlib")

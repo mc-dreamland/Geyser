@@ -158,8 +158,16 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         }
 
         if (!networkSettingsRequested) {
-            session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.outdated.client", GameProtocol.getAllSupportedBedrockVersions()));
-            return PacketSignal.HANDLED;
+            if (loginPacket.getProtocolVersion() >= 554) {
+                session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.outdated.client", GameProtocol.getAllSupportedBedrockVersions()));
+                return PacketSignal.HANDLED;
+            } else {
+                if (!setCorrectCodec(loginPacket.getProtocolVersion())) {
+                    return PacketSignal.HANDLED;
+                }
+                session.getUpstream().getSession().setCompressionLevel(this.geyser.getConfig().getBedrock().getCompressionLevel());
+                networkSettingsRequested = true;
+            }
         }
 
         // Set the block translation based off of version

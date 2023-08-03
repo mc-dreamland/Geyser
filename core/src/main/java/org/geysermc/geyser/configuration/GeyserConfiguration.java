@@ -193,6 +193,8 @@ public interface GeyserConfiguration {
     boolean isUseDirectConnection();
 
     boolean isDisableCompression();
+    boolean isOnlineMode();
+    boolean isAllowedPc();
 
     int getConfigVersion();
 
