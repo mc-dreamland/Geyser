@@ -182,7 +182,7 @@ public class AnvilInventoryUpdater extends InventoryUpdater {
             newRepairCost = calcLevelCost(session, anvilContainer, false);
         }
 
-        int bedrockLevelCost = calcLevelCost(session, anvilContainer, true);
+        int bedrockLevelCost = calcLevelCost(session, anvilContainer, true) - 1;
         if (bedrockLevelCost == -1) {
             // Bedrock is unable to combine/repair the items
             return itemData;
@@ -196,7 +196,8 @@ public class AnvilInventoryUpdater extends InventoryUpdater {
 
         NbtMapBuilder tagBuilder = NbtMap.builder();
         if (itemData.getTag() != null) {
-            newRepairCost += itemData.getTag().getInt("RepairCost", 0);
+            int repairCost = itemData.getTag().getInt("RepairCost", 0);
+            newRepairCost += repairCost;
             tagBuilder.putAll(itemData.getTag());
         }
         tagBuilder.put("RepairCost", newRepairCost);
