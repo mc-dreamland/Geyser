@@ -41,7 +41,7 @@ public class JavaAddExperienceOrbTranslator extends PacketTranslator<Clientbound
         Vector3f position = Vector3f.from(packet.getX(), packet.getY(), packet.getZ());
 
         Entity entity = new ExpOrbEntity(
-                session, packet.getExp(), packet.getEntityId(), session.getEntityCache().getNextEntityId().incrementAndGet(), position
+                session, packet.getExp(), packet.getEntityId(), packet.getEntityId(), position
         );
 
         session.getEntityCache().spawnEntity(entity);

@@ -117,14 +117,14 @@ public class EnderDragonEntity extends MobEntity implements Tickable {
         super.spawnEntity();
 
         AtomicLong nextEntityId = session.getEntityCache().getNextEntityId();
-        head = new EnderDragonPartEntity(session, entityId + 1, nextEntityId.incrementAndGet(), 1, 1);
-        neck = new EnderDragonPartEntity(session, entityId + 2, nextEntityId.incrementAndGet(), 3, 3);
-        body = new EnderDragonPartEntity(session, entityId + 3, nextEntityId.incrementAndGet(), 5, 3);
-        leftWing = new EnderDragonPartEntity(session, entityId + 4, nextEntityId.incrementAndGet(), 4, 2);
-        rightWing = new EnderDragonPartEntity(session, entityId + 5, nextEntityId.incrementAndGet(), 4, 2);
+        head = new EnderDragonPartEntity(session, entityId + 1, entityId + 1, 1, 1);
+        neck = new EnderDragonPartEntity(session, entityId + 2, entityId + 2, 3, 3);
+        body = new EnderDragonPartEntity(session, entityId + 3, entityId + 3, 5, 3);
+        leftWing = new EnderDragonPartEntity(session, entityId + 4, entityId + 4, 4, 2);
+        rightWing = new EnderDragonPartEntity(session, entityId + 5, entityId + 5, 4, 2);
         tail = new EnderDragonPartEntity[3];
         for (int i = 0; i < 3; i++) {
-            tail[i] = new EnderDragonPartEntity(session, entityId + 6 + i, nextEntityId.incrementAndGet(), 2, 2);
+            tail[i] = new EnderDragonPartEntity(session, entityId + 6 + i, entityId + 6 + i, 2, 2);
         }
 
         allParts = new EnderDragonPartEntity[]{head, neck, body, leftWing, rightWing, tail[0], tail[1], tail[2]};

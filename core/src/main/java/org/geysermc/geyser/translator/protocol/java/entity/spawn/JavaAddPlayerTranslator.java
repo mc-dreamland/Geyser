@@ -48,7 +48,7 @@ public class JavaAddPlayerTranslator extends PacketTranslator<ClientboundAddPlay
         PlayerEntity entity;
         if (packet.getUuid().equals(session.getPlayerEntity().getUuid())) {
             // Server is sending a fake version of the current player
-            entity = new PlayerEntity(session, packet.getEntityId(), session.getEntityCache().getNextEntityId().incrementAndGet(),
+            entity = new PlayerEntity(session, packet.getEntityId(), -10,
                     session.getPlayerEntity().getUuid(), position, Vector3f.ZERO, yaw, pitch, headYaw, session.getPlayerEntity().getUsername(),
                     session.getPlayerEntity().getTexturesProperty());
         } else {
@@ -59,6 +59,7 @@ public class JavaAddPlayerTranslator extends PacketTranslator<ClientboundAddPlay
             }
 
             entity.setEntityId(packet.getEntityId());
+            entity.setGeyserId(packet.getEntityId());
             entity.setPosition(position);
             entity.setYaw(yaw);
             entity.setPitch(pitch);
