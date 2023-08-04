@@ -26,7 +26,7 @@
 package org.geysermc.geyser.registry.loader;
 
 import org.geysermc.geyser.GeyserImpl;
-import org.geysermc.geyser.api.event.lifecycle.GeyserLoadResourcePacksEvent;
+import org.geysermc.geyser.api.event.lifecycle.GeyserLoadOptionalResourcePacksEvent;
 import org.geysermc.geyser.api.pack.ResourcePack;
 import org.geysermc.geyser.pack.GeyserResourcePack;
 import org.geysermc.geyser.pack.GeyserResourcePackManifest;
@@ -52,9 +52,9 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
- * Loads {@link ResourcePack}s within a {@link Path} directory, firing the {@link GeyserLoadResourcePacksEvent}.
+ * Loads {@link ResourcePack}s within a {@link Path} directory, firing the {@link GeyserLoadOptionalResourcePacksEvent}.
  */
-public class ResourcePackLoader implements RegistryLoader<Path, Map<String, ResourcePack>> {
+public class OptionalResourcePackLoader implements RegistryLoader<Path, Map<String, ResourcePack>> {
 
     static final PathMatcher PACK_MATCHER = FileSystems.getDefault().getPathMatcher("glob:**.{zip,mcpack}");
 
@@ -89,13 +89,7 @@ public class ResourcePackLoader implements RegistryLoader<Path, Map<String, Reso
             resourcePacks = new ArrayList<>();
         }
 
-        // Add custom skull pack
-        Path skullResourcePack = SkullResourcePackManager.createResourcePack();
-        if (skullResourcePack != null) {
-            resourcePacks.add(skullResourcePack);
-        }
-
-        GeyserLoadResourcePacksEvent event = new GeyserLoadResourcePacksEvent(resourcePacks);
+        GeyserLoadOptionalResourcePacksEvent event = new GeyserLoadOptionalResourcePacksEvent(resourcePacks);
         GeyserImpl.getInstance().eventBus().fire(event);
 
         for (Path path : event.resourcePacks()) {

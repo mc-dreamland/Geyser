@@ -28,6 +28,7 @@ package org.geysermc.geyser.skin;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.zaxxer.hikari.HikariDataSource;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -38,6 +39,7 @@ import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.FileUtils;
+import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.geyser.util.WebUtils;
 
 import javax.annotation.Nonnull;
@@ -52,6 +54,9 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Predicate;
@@ -62,6 +67,9 @@ public class SkinProvider {
 
     static final Skin EMPTY_SKIN;
     static final Cape EMPTY_CAPE = new Cape("", "no-cape", ByteArrays.EMPTY_ARRAY, -1, true);
+
+    public static final Cache<String, Skin> CUSTOM_SKINS = CacheBuilder.newBuilder()
+            .build();
 
     private static final Cache<String, Cape> CACHED_JAVA_CAPES = CacheBuilder.newBuilder()
             .expireAfterAccess(1, TimeUnit.HOURS)
@@ -425,8 +433,19 @@ public class SkinProvider {
     }
 
     static void storeBedrockSkin(UUID playerID, String skinId, byte[] skinData) {
+        // 自定义皮肤支持
+        SkinProvider.Skin customSkin = SkinProvider.CUSTOM_SKINS.getIfPresent(playerID.toString());
+        if (customSkin != null) {
+            CACHED_BEDROCK_SKINS.put(skinId, customSkin);
+            return;
+        }
         Skin skin = new Skin(playerID, skinId, skinData, System.currentTimeMillis(), true, false);
         CACHED_BEDROCK_SKINS.put(skin.getTextureUrl(), skin);
+    }
+
+    static void storeCustomSkin(UUID playerID, String skinId, byte[] skinData) {
+        Skin skin = new Skin(playerID, skinId, skinData, System.currentTimeMillis(), true, false);
+        CUSTOM_SKINS.put(skin.getTextureUrl(), skin);
     }
 
     static void storeBedrockCape(String capeId, byte[] capeData) {
@@ -870,5 +889,46 @@ public class SkinProvider {
                 default -> username;
             };
         }
+    }
+
+    public static void loadCustomSkins() {
+        CompletableFuture.runAsync(() -> {
+            HikariDataSource dataSource = GeyserImpl.getInstance().getDataSource();
+            try {
+                Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement("SELECT * FROM custom_skins");
+                ResultSet resultSet = statement.executeQuery();
+                while (resultSet.next()) {
+                    UUID uuid = UUID.fromString(resultSet.getString("uuid"));
+                    String textures = resultSet.getString("textures");
+                    storeCustomSkin(uuid, uuid.toString(), MathUtils.unGZipBytes(Base64.getDecoder().decode(textures)));
+                }
+                resultSet.close();
+                connection.close();
+                GeyserImpl.getInstance().getLogger().info("成功加载 " + CUSTOM_SKINS.size() + " 个自定义皮肤！");
+            } catch (Exception e) {
+                GeyserImpl.getInstance().getLogger().warning("数据库异常！加载自定义皮肤失败");
+                e.printStackTrace();
+            }
+        });
+    }
+
+    public static void saveCustomSkin(UUID uuid, String texutres) {
+        CompletableFuture.runAsync(() -> {
+            HikariDataSource dataSource = GeyserImpl.getInstance().getDataSource();
+            try {
+                Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement("INSERT INTO custom_skins (uuid, textures) VALUES (?, ?) ON DUPLICATE KEY UPDATE textures = ?");
+                statement.setString(1, uuid.toString());
+                statement.setString(2, texutres);
+                statement.setString(3, texutres);
+                int i = statement.executeUpdate();
+                if (i > 0) {
+                    GeyserImpl.getInstance().getLogger().info("成功保存自定义皮肤！" + uuid);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 }
