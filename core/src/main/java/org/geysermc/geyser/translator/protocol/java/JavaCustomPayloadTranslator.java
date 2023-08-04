@@ -28,6 +28,7 @@ package org.geysermc.geyser.translator.protocol.java;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundCustomPayloadPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
+import org.cloudburstmc.protocol.bedrock.packet.NeteaseCustomPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TransferPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UnknownPacket;
 import io.netty.buffer.ByteBuf;
@@ -46,7 +47,10 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.zip.GZIPInputStream;
 
 @Translator(packet = ClientboundCustomPayloadPacket.class)
 public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCustomPayloadPacket> {
@@ -138,7 +142,36 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
 
                 session.sendUpstreamPacket(toSend);
             });
+        } else if (channel.equals(PluginMessageChannels.MOD_SDK)) {
+            byte[] data = packet.getData();
+            byte[] msgPackData = unGZipBytes(data);
+            NeteaseCustomPacket neteaseCustomPacket = new NeteaseCustomPacket(msgPackData);
+
+            session.sendUpstreamPacket(neteaseCustomPacket);
         }
+    }
+
+
+    public static byte[] unGZipBytes(byte[] data) {
+        byte[] b = null;
+        try {
+            ByteArrayInputStream bis = new ByteArrayInputStream(data);
+            GZIPInputStream gzip = new GZIPInputStream(bis);
+            byte[] buf = new byte[1024];
+            int num = -1;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            while ((num = gzip.read(buf, 0, buf.length)) != -1) {
+                baos.write(buf, 0, num);
+            }
+            b = baos.toByteArray();
+            baos.flush();
+            baos.close();
+            gzip.close();
+            bis.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return b;
     }
 
     @Override

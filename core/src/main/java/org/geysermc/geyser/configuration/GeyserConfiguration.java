@@ -118,9 +118,27 @@ public interface GeyserConfiguration {
 
     IMetricsInfo getMetrics();
 
+    IServiceConfiguration getService();
+    IOptionalPacks getOptionalPacks();
+
     int getPendingAuthenticationTimeout();
 
     boolean isAutoconfiguredRemote();
+
+
+    interface IServiceConfiguration {
+        String getUrl();
+        String getSkinurl();
+        String getToken();
+        double getMultiple();
+    }
+
+    interface IOptionalPacks {
+        boolean isEnableOptionalPacks();
+        String getMysqlUrl();
+        String getMysqlUser();
+        String getMysqlPass();
+    }
 
     interface IBedrockConfiguration extends BedrockListener {
         void setAddress(String address);

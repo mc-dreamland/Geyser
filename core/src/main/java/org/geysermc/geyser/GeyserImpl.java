@@ -30,6 +30,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.steveice10.packetlib.tcp.TcpSession;
+import com.zaxxer.hikari.HikariDataSource;
 import io.netty.channel.epoll.Epoll;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -71,7 +72,6 @@ import org.geysermc.geyser.level.WorldManager;
 import org.geysermc.geyser.network.netty.GeyserServer;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
-import org.geysermc.geyser.registry.loader.RegistryLoaders;
 import org.geysermc.geyser.scoreboard.ScoreboardUpdater;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.PendingMicrosoftAuthentication;
@@ -92,6 +92,10 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.security.Key;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -158,6 +162,8 @@ public class GeyserImpl implements GeyserApi {
     private Map<String, String> savedRefreshTokens;
 
     private static GeyserImpl instance;
+    private static HikariDataSource dataSource;
+    private static HashMap<Integer, String> optionalPacks = new HashMap<>();
 
     private GeyserImpl(PlatformType platformType, GeyserBootstrap bootstrap) {
         instance = this;
@@ -231,6 +237,33 @@ public class GeyserImpl implements GeyserApi {
         } else if (config.getRemote().authType() == AuthType.FLOODGATE) {
             VersionCheckUtils.checkForOutdatedFloodgate(logger);
         }
+
+        if (config.getOptionalPacks().isEnableOptionalPacks()) {
+            dataSource = new HikariDataSource();
+
+            dataSource.setJdbcUrl(config.getOptionalPacks().getMysqlUrl());
+            dataSource.setUsername(config.getOptionalPacks().getMysqlUser());
+            dataSource.setPassword(config.getOptionalPacks().getMysqlPass());
+            dataSource.setMaximumPoolSize(60);
+            try {
+                Connection connection = dataSource.getConnection();
+                final PreparedStatement sql = connection.prepareStatement("select * from hey_packs");
+                final ResultSet set = sql.executeQuery();
+                while (set.next()) {
+                    int packId = set.getInt("id");
+                    String packUUID = set.getString("pack_uuid");
+                    this.getOptionalPacks().put(packId, packUUID);
+                    logger.info("资源包已加载 -> " + packId + " : " + packUUID);
+                }
+
+                connection.close();
+                logger.info("数据库加载成功, 资源包自选功能已开启");
+            } catch (SQLException throwables) {
+                logger.info("数据库加载异常，若未本地无数据库，请关闭OptionalPacks");
+                throwables.printStackTrace();
+            }
+            SkinProvider.loadCustomSkins();
+        }
     }
 
     private void startInstance() {
@@ -244,6 +277,8 @@ public class GeyserImpl implements GeyserApi {
         SkinProvider.registerCacheImageTask(this);
 
         Registries.RESOURCE_PACKS.load();
+        Registries.OPTIONAL_RESOURCE_PACKS.load();
+        Registries.BEHAVIOR_PACKS.load();
 
         String geyserUdpPort = System.getProperty("geyserUdpPort", "");
         String pluginUdpPort = geyserUdpPort.isEmpty() ? System.getProperty("pluginUdpPort", "") : geyserUdpPort;
@@ -608,6 +643,8 @@ public class GeyserImpl implements GeyserApi {
         }
 
         Registries.RESOURCE_PACKS.get().clear();
+        Registries.OPTIONAL_RESOURCE_PACKS.get().clear();
+        Registries.BEHAVIOR_PACKS.get().clear();
 
         this.eventBus.fire(new GeyserShutdownEvent(this.extensionManager, this.eventBus));
         this.extensionManager.disableExtensions();
@@ -674,8 +711,20 @@ public class GeyserImpl implements GeyserApi {
 
     @Override
     @NonNull
-    public Path packDirectory() {
-        return bootstrap.getConfigFolder().resolve("packs");
+    public Path resourcePackDirectory() {
+        return bootstrap.getConfigFolder().resolve("packs/ResourcePacks");
+    }
+
+    @Override
+    @NonNull
+    public Path optionalResourcePackDirectory() {
+        return bootstrap.getConfigFolder().resolve("packs/OptionalResourcePacks");
+    }
+
+    @Override
+    @NonNull
+    public Path behaviorPackDirectory() {
+        return bootstrap.getConfigFolder().resolve("packs/BehaviorPacks");
     }
 
     @Override
@@ -720,6 +769,14 @@ public class GeyserImpl implements GeyserApi {
 
     public GeyserConfiguration getConfig() {
         return bootstrap.getGeyserConfig();
+    }
+
+    public HashMap<Integer, String> getOptionalPacks() {
+        return optionalPacks;
+    }
+
+    public HikariDataSource getDataSource() {
+        return dataSource;
     }
 
     public WorldManager getWorldManager() {

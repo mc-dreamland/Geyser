@@ -869,4 +869,9 @@ public class LoggingPacketHandler implements BedrockPacketHandler {
     public PacketSignal handle(RequestNetworkSettingsPacket packet) {
         return defaultHandler(packet);
     }
+
+    @Override
+    public PacketSignal handle(NeteaseCustomPacket packet) {
+        return defaultHandler(packet);
+    }
 }

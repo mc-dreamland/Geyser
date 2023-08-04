@@ -226,5 +226,18 @@ disable-compression: true
 
 config-version: 4
 
+# Netease Optional
 online-mode: false
 allowed-pc: true
+
+optional-packs:
+  enable-optional-packs: false
+  mysql-url: jdbc:mysql://netease-db-02.i5mc.com/main_core?autoReconnect=true
+  mysql-user: root
+  mysql-pass: msj
+
+service:
+  url: http://localhost:8080/api/
+  skinurl: http://localhost:8081
+  token: 114514
+  multiple: 1.0

@@ -34,6 +34,12 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.*;
 import org.cloudburstmc.nbt.*;
+import org.cloudburstmc.protocol.bedrock.codec.v503.Bedrock_v503;
+import org.cloudburstmc.protocol.bedrock.codec.v504.Bedrock_v504;
+import org.cloudburstmc.protocol.bedrock.codec.v527.Bedrock_v527;
+import org.cloudburstmc.protocol.bedrock.codec.v544.Bedrock_v544;
+import org.cloudburstmc.protocol.bedrock.codec.v560.Bedrock_v560;
+import org.cloudburstmc.protocol.bedrock.codec.v567.Bedrock_v567;
 import org.cloudburstmc.protocol.bedrock.codec.v582.Bedrock_v582;
 import org.cloudburstmc.protocol.bedrock.data.BlockPropertyData;
 import org.cloudburstmc.protocol.bedrock.codec.v589.Bedrock_v589;
@@ -96,6 +102,90 @@ public final class BlockRegistryPopulator {
 
     private static void registerBedrockBlocks() {
         BiFunction<String, NbtMapBuilder, String> emptyMapper = (bedrockIdentifier, statesBuilder) -> null;
+
+
+        BiFunction<String, NbtMapBuilder, String> V503_MAPPER = (bedrockIdentifier, statesBuilder) -> {
+            if (bedrockIdentifier.contains("stone_block_slab")) {
+                return bedrockIdentifier.replace("stone_block_slab", "stone_slab");
+            }
+            switch (bedrockIdentifier) {
+                case "minecraft:mangrove_planks" -> {
+                    statesBuilder.putString("wood_type", "jungle");
+                    return "minecraft:planks";
+                }
+                case "minecraft:mangrove_log" -> {
+                    statesBuilder.putString("old_log_type", "jungle");
+                    return "minecraft:log";
+                }
+                case "minecraft:stripped_mangrove_log" -> {
+                    return "minecraft:stripped_jungle_log";
+                }
+                case "minecraft:mangrove_roots", "minecraft:muddy_mangrove_roots", "minecraft:mangrove_wood" -> {
+                    statesBuilder.putString("wood_type", "jungle");
+                    statesBuilder.putBoolean("stripped_bit", false);
+                    statesBuilder.putString("pillar_axis", "x");
+                    return "minecraft:wood";
+                }
+                case "minecraft:stripped_mangrove_wood" -> {
+                    statesBuilder.putString("wood_type", "jungle");
+                    statesBuilder.putBoolean("stripped_bit", true);
+                    return "minecraft:wood";
+                }
+                case "minecraft:mangrove_standing_sign" -> {
+                    return "minecraft:jungle_standing_sign";
+                }
+                case "minecraft:mangrove_wall_sign" -> {
+                    return "minecraft:jungle_wall_sign";
+                }
+                case "minecraft:mangrove_pressure_plate" -> {
+                    return "minecraft:jungle_pressure_plate";
+                }
+                case "minecraft:mangrove_trapdoor" -> {
+                    return "minecraft:jungle_trapdoor";
+                }
+                case "minecraft:mangrove_button" -> {
+                    return "minecraft:jungle_button";
+                }
+                case "minecraft:mangrove_stairs" -> {
+                    return "minecraft:jungle_stairs";
+                }
+                case "minecraft:mangrove_slab" -> {
+                    statesBuilder.putString("wood_type", "jungle");
+                    return "minecraft:wooden_slab";
+                }
+                case "minecraft:mangrove_double_slab" -> {
+                    statesBuilder.putString("wood_type", "jungle");
+                    return "minecraft:double_wooden_slab";
+                }
+                case "minecraft:mangrove_fence_gate" -> {
+                    return "minecraft:jungle_fence_gate";
+                }
+                case "minecraft:mangrove_fence" -> {
+                    statesBuilder.putString("wood_type", "jungle");
+                    return "minecraft:fence";
+                }
+                case "minecraft:mangrove_door" -> {
+                    return "minecraft:jungle_door";
+                }
+                case "minecraft:mangrove_propagule" -> {
+                    statesBuilder.put("growth", statesBuilder.get("propagule_stage"));
+                    statesBuilder.remove("propagule_stage");
+
+                    statesBuilder.putInt("facing_direction", 0);
+
+                    if ((Byte) statesBuilder.remove("hanging") == 1) {
+                        return "minecraft:mangrove_propagule_hanging";
+                    } else {
+                        return "minecraft:mangrove_propagule";
+                    }
+                }
+                case "minecraft:sculk_shrieker" -> {
+                    statesBuilder.remove("can_summon");
+                    return bedrockIdentifier;
+                }
+            }
+            return null;
+        };
 
         // adapt 1.20 mappings to 1.20.10+
         BiFunction<String, NbtMapBuilder, String> concreteAndShulkerBoxMapper = (bedrockIdentifier, statesBuilder) -> {
@@ -171,9 +261,14 @@ public final class BlockRegistryPopulator {
         };
 
         ImmutableMap<ObjectIntPair<String>, BiFunction<String, NbtMapBuilder, String>> blockMappers = ImmutableMap.<ObjectIntPair<String>, BiFunction<String, NbtMapBuilder, String>>builder()
-                .put(ObjectIntPair.of("1_19_80", Bedrock_v582.CODEC.getProtocolVersion()), legacyMapper)
-                .put(ObjectIntPair.of("1_20_0", Bedrock_v589.CODEC.getProtocolVersion()), emptyMapper)
-                .put(ObjectIntPair.of("1_20_10", Bedrock_v594.CODEC.getProtocolVersion()), concreteAndShulkerBoxMapper)
+                .put(ObjectIntPair.of("1_18_30", Bedrock_v504.CODEC.getProtocolVersion()), V503_MAPPER)
+//                .put(ObjectIntPair.of("1_19_0", Bedrock_v527.CODEC.getProtocolVersion()), legacyMapper)
+//                .put(ObjectIntPair.of("1_19_20", Bedrock_v544.CODEC.getProtocolVersion()), legacyMapper)
+//                .put(ObjectIntPair.of("1_19_50", Bedrock_v560.CODEC.getProtocolVersion()), legacyMapper)
+//                .put(ObjectIntPair.of("1_19_60", Bedrock_v567.CODEC.getProtocolVersion()), legacyMapper)
+//                .put(ObjectIntPair.of("1_19_80", Bedrock_v582.CODEC.getProtocolVersion()), legacyMapper)
+//                .put(ObjectIntPair.of("1_20_0", Bedrock_v589.CODEC.getProtocolVersion()), emptyMapper)
+//                .put(ObjectIntPair.of("1_20_10", Bedrock_v594.CODEC.getProtocolVersion()), concreteAndShulkerBoxMapper)
                 .build();
 
         // We can keep this strong as nothing should be garbage collected
@@ -185,7 +280,7 @@ public final class BlockRegistryPopulator {
             List<NbtMap> vanillaBlockStates;
             List<NbtMap> blockStates;
             try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResource(String.format("bedrock/block_palette.%s.nbt", palette.getKey().key()));
-                NBTInputStream nbtInputStream = new NBTInputStream(new DataInputStream(new GZIPInputStream(stream)), true, true)) {
+                 NBTInputStream nbtInputStream = new NBTInputStream(new DataInputStream(new GZIPInputStream(stream)), true, true)) {
                 NbtMap blockPalette = (NbtMap) nbtInputStream.readTag();
 
                 vanillaBlockStates = new ArrayList<>(blockPalette.getList("blocks", NbtType.COMPOUND));
@@ -288,14 +383,16 @@ public final class BlockRegistryPopulator {
                 if (blockStateOverride == null) {
                     bedrockDefinition = vanillaBedrockDefinition;
                     if (bedrockDefinition == null) {
-                        throw new RuntimeException("Unable to find " + javaId + " Bedrock runtime ID! Built NBT tag: \n" +
-                                palette.getKey().key() + buildBedrockState(entry.getValue(), stateVersion, stateMapper));
+                        bedrockDefinition = new GeyserBedrockBlock(0, null);
+//                        throw new RuntimeException("Unable to find " + javaId + " Bedrock runtime ID! Built NBT tag: \n" +
+//                                palette.getKey().key() + buildBedrockState(entry.getValue(), stateVersion, stateMapper));
                     }
                 } else {
                     bedrockDefinition = customBlockStateDefinitions.get(blockStateOverride);
                     if (bedrockDefinition == null) {
-                        throw new RuntimeException("Unable to find " + javaId + " Bedrock runtime ID! Custom block override: \n" +
-                            blockStateOverride);
+                        bedrockDefinition = new GeyserBedrockBlock(0, null);
+//                        throw new RuntimeException("Unable to find " + javaId + " Bedrock runtime ID! Custom block override: \n" +
+//                            blockStateOverride);
                     }
                 }
 
@@ -575,13 +672,13 @@ public final class BlockRegistryPopulator {
                 String javaId = javaBlockState.identifier();
                 int stateRuntimeId = javaBlockState.javaId();
                 BlockMapping blockMapping = BlockMapping.builder()
-                    .isNonVanilla(true)
-                    .javaIdentifier(javaId)
-                    .javaBlockId(javaBlockState.stateGroupId())
-                    .hardness(javaBlockState.blockHardness())
-                    .pistonBehavior(javaBlockState.pistonBehavior() == null ? PistonBehavior.NORMAL : PistonBehavior.getByName(javaBlockState.pistonBehavior()))
-                    .isBlockEntity(javaBlockState.hasBlockEntity())
-                    .build();
+                        .isNonVanilla(true)
+                        .javaIdentifier(javaId)
+                        .javaBlockId(javaBlockState.stateGroupId())
+                        .hardness(javaBlockState.blockHardness())
+                        .pistonBehavior(javaBlockState.pistonBehavior() == null ? PistonBehavior.NORMAL : PistonBehavior.getByName(javaBlockState.pistonBehavior()))
+                        .isBlockEntity(javaBlockState.hasBlockEntity())
+                        .build();
 
                 String cleanJavaIdentifier = BlockUtils.getCleanIdentifier(javaBlockState.identifier());
                 String bedrockIdentifier = customBlockState.block().identifier();

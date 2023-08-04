@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2022 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,50 +23,18 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.api.pack;
+package org.geysermc.geyser.api.event.lifecycle;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.geysermc.event.Event;
+
+import java.nio.file.Path;
+import java.util.List;
 
 /**
- * Represents a resource pack sent to Bedrock clients
- * <p>
- * This representation of a resource pack only contains what
- * Geyser requires to send it to the client.
+ * Called when resource packs are loaded within Geyser.
+ *
+ * @param resourcePacks a mutable list of the currently listed resource packs
  */
-public interface ResourcePack {
-
-    /**
-     * The {@link PackCodec codec} for this pack.
-     *
-     * @return the codec for this pack
-     */
-    @NonNull
-    PackCodec codec();
-
-    /**
-     * Gets the resource pack manifest.
-     *
-     * @return the resource pack manifest
-     */
-    @NonNull
-    ResourcePackManifest manifest();
-
-    /**
-     * Gets the content key of the resource pack. Lack of a content key is represented by an empty String.
-     *
-     * @return the content key of the resource pack
-     */
-    @NonNull
-    String contentKey();
-
-    /**
-     * Creates a resource pack with the given {@link PackCodec}.
-     *
-     * @param codec the pack codec
-     * @return the resource pack
-     */
-    @NonNull
-    static ResourcePack create(@NonNull PackCodec codec) {
-        return codec.createResourcePack();
-    }
+public record GeyserLoadBehaviorPacksEvent(@NonNull List<Path> resourcePacks) implements Event {
 }
