@@ -89,10 +89,10 @@ import java.util.concurrent.TimeUnit;
 @Translator(packet = InventoryTransactionPacket.class)
 public class BedrockInventoryTransactionTranslator extends PacketTranslator<InventoryTransactionPacket> {
 
-    private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 64f;
-    private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 49;
-    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 36;
-    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 36f;
+    private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 144f;
+    private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 144;
+    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 49;
+    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 49f;
 
     @Override
     public void translate(GeyserSession session, InventoryTransactionPacket packet) {
