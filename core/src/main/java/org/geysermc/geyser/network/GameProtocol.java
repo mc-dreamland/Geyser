@@ -29,6 +29,7 @@ import com.github.steveice10.mc.protocol.codec.MinecraftCodec;
 import com.github.steveice10.mc.protocol.codec.PacketCodec;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.v503.Bedrock_v503;
+import org.cloudburstmc.protocol.bedrock.codec.v504.Bedrock_v504;
 import org.cloudburstmc.protocol.bedrock.codec.v527.Bedrock_v527;
 import org.cloudburstmc.protocol.bedrock.codec.v534.Bedrock_v534;
 import org.cloudburstmc.protocol.bedrock.codec.v545.Bedrock_v545;
@@ -69,6 +70,9 @@ public final class GameProtocol {
     static {
         SUPPORTED_BEDROCK_CODECS.add(Bedrock_v503.CODEC.toBuilder()
                 .minecraftVersion("1.18.30/1.18.31")
+                .build());
+        SUPPORTED_BEDROCK_CODECS.add(Bedrock_v504.CODEC.toBuilder()
+                .minecraftVersion("1.18.32")
                 .build());
         SUPPORTED_BEDROCK_CODECS.add(Bedrock_v527.CODEC.toBuilder()
                 .minecraftVersion("1.19.0/1.19.2")

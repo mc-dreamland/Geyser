@@ -25,11 +25,16 @@
 
 package org.geysermc.geyser.item;
 
+import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.geysermc.geyser.item.components.ToolTier;
 import org.geysermc.geyser.item.type.*;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.registry.Registries;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.geysermc.geyser.item.type.Item.builder;
 
@@ -38,6 +43,12 @@ import static org.geysermc.geyser.item.type.Item.builder;
  */
 @SuppressWarnings("unused")
 public final class Items {
+
+    public static List<String> items_1_20str;
+
+    static {
+        items_1_20str = Arrays.asList("minecraft:cherry_planks", "minecraft:cherry_sapling", "minecraft:suspicious_sand", "minecraft:suspicious_gravel", "minecraft:cherry_log", "minecraft:stripped_cherry_log", "minecraft:stripped_cherry_wood", "minecraft:cherry_wood", "minecraft:cherry_leaves", "minecraft:torchflower", "minecraft:pitcher_plant", "minecraft:pink_petals", "minecraft:cherry_slab", "minecraft:decorated_pot", "minecraft:cherry_fence", "minecraft:cherry_stairs", "minecraft:sniffer_egg", "minecraft:calibrated_sculk_sensor", "minecraft:cherry_button", "minecraft:cherry_pressure_plate", "minecraft:cherry_door", "minecraft:cherry_trapdoor", "minecraft:cherry_fence_gate", "minecraft:cherry_boat", "minecraft:cherry_chest_boat", "minecraft:cherry_sign", "minecraft:cherry_hanging_sign", "minecraft:sniffer_spawn_egg", "minecraft:torchflower_seeds", "minecraft:pitcher_pod", "minecraft:music_disc_relic", "minecraft:brush", "minecraft:netherite_upgrade_smithing_template", "minecraft:sentry_armor_trim_smithing_template", "minecraft:dune_armor_trim_smithing_template", "minecraft:coast_armor_trim_smithing_template", "minecraft:wild_armor_trim_smithing_template", "minecraft:ward_armor_trim_smithing_template", "minecraft:eye_armor_trim_smithing_template", "minecraft:vex_armor_trim_smithing_template", "minecraft:tide_armor_trim_smithing_template", "minecraft:snout_armor_trim_smithing_template", "minecraft:rib_armor_trim_smithing_template", "minecraft:spire_armor_trim_smithing_template", "minecraft:wayfinder_armor_trim_smithing_template", "minecraft:shaper_armor_trim_smithing_template", "minecraft:silence_armor_trim_smithing_template", "minecraft:raiser_armor_trim_smithing_template", "minecraft:host_armor_trim_smithing_template", "minecraft:angler_pottery_sherd", "minecraft:archer_pottery_sherd", "minecraft:arms_up_pottery_sherd", "minecraft:blade_pottery_sherd", "minecraft:brewer_pottery_sherd", "minecraft:burn_pottery_sherd", "minecraft:danger_pottery_sherd", "minecraft:explorer_pottery_sherd", "minecraft:friend_pottery_sherd", "minecraft:heart_pottery_sherd", "minecraft:heartbreak_pottery_sherd", "minecraft:howl_pottery_sherd", "minecraft:miner_pottery_sherd", "minecraft:mourner_pottery_sherd", "minecraft:plenty_pottery_sherd", "minecraft:prize_pottery_sherd", "minecraft:sheaf_pottery_sherd", "minecraft:shelter_pottery_sherd", "minecraft:skull_pottery_sherd", "minecraft:snort_pottery_sherd");
+    }
     public static final Item AIR = register(new Item("air", builder()));
     public static final Item STONE = register(new BlockItem("stone", builder()));
     public static final Item GRANITE = register(new BlockItem("granite", builder()));
@@ -1301,11 +1312,13 @@ public final class Items {
     public static <T extends Item> T register(T item, int id) {
         item.setJavaId(id);
         // This makes sure that the array is large enough to put the java item at the correct location
-        if (Registries.JAVA_ITEMS.get().size() <= id) {
-            Registries.JAVA_ITEMS.get().addAll(Collections.nCopies(id - Registries.JAVA_ITEMS.get().size() + 1, AIR));
-        }
-        Registries.JAVA_ITEMS.get().set(id, item);
-        Registries.JAVA_ITEM_IDENTIFIERS.register(item.javaIdentifier(), item);
+//        if (!items_1_20str.contains(item.javaIdentifier())) {
+            if (Registries.JAVA_ITEMS.get().size() <= id) {
+                Registries.JAVA_ITEMS.get().addAll(Collections.nCopies(id - Registries.JAVA_ITEMS.get().size() + 1, AIR));
+            }
+            Registries.JAVA_ITEMS.get().set(id, item);
+            Registries.JAVA_ITEM_IDENTIFIERS.register(item.javaIdentifier(), item);
+//        }
         return item;
     }
 

@@ -64,7 +64,7 @@ public class RecipeRegistryPopulator {
 
     public static void populate() {
         JsonNode items;
-        try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResource("mappings/recipes.json")) {
+        try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResource("mappings/recipes_1_18.json")) {
             items = GeyserImpl.JSON_MAPPER.readTree(stream);
         } catch (Exception e) {
             throw new AssertionError(GeyserLocale.getLocaleStringLog("geyser.toolbox.fail.runtime_java"), e);
@@ -131,6 +131,10 @@ public class RecipeRegistryPopulator {
         int type = node.get("bedrockRecipeType").asInt();
         JsonNode outputNode = node.get("output");
         ItemMapping outputEntry = mappings.getMapping(outputNode.get("identifier").asText());
+        if (outputEntry == null) {
+            System.out.println(node);
+            return null;
+        }
         ItemData output = getBedrockItemFromIdentifierJson(outputEntry, outputNode);
         UUID uuid = UUID.randomUUID();
         if (type == 1) {
@@ -178,6 +182,9 @@ public class RecipeRegistryPopulator {
         List<ItemData> inputs = new ObjectArrayList<>();
         for (JsonNode entry : node.get("inputs")) {
             ItemMapping inputEntry = mappings.getMapping(entry.get("identifier").asText());
+            if (inputEntry == null) {
+                continue;
+            }
             inputs.add(getBedrockItemFromIdentifierJson(inputEntry, entry));
         }
 

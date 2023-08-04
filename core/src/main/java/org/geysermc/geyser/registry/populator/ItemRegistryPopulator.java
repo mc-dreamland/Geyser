@@ -34,6 +34,11 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.*;
+import org.cloudburstmc.protocol.bedrock.codec.v504.Bedrock_v504;
+import org.cloudburstmc.protocol.bedrock.codec.v527.Bedrock_v527;
+import org.cloudburstmc.protocol.bedrock.codec.v544.Bedrock_v544;
+import org.cloudburstmc.protocol.bedrock.codec.v560.Bedrock_v560;
+import org.cloudburstmc.protocol.bedrock.codec.v567.Bedrock_v567;
 import org.geysermc.geyser.Constants;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.cloudburstmc.nbt.NbtMap;
@@ -100,32 +105,49 @@ public class ItemRegistryPopulator {
         legacyJavaOnly.put(Items.PITCHER_POD, "minecraft:beetroot");
         legacyJavaOnly.put(Items.SNIFFER_EGG, "minecraft:sniffer_spawn_egg"); // the BlockItem of the sniffer egg block
 
-        List<PaletteVersion> paletteVersions = new ArrayList<>(2);
-        paletteVersions.add(new PaletteVersion("1_19_80", Bedrock_v582.CODEC.getProtocolVersion(), legacyJavaOnly, (item, mapping) -> {
-            // Backward-map 1.20 mappings to 1.19.80
-            String id = item.javaIdentifier();
-            if (id.endsWith("pottery_sherd")) {
-                return mapping.withBedrockIdentifier(id.replace("sherd", "shard"));
-            } else if (id.endsWith("carpet") && !id.startsWith("minecraft:moss")) {
-                return mapping.withBedrockIdentifier("minecraft:carpet");
-            } else if (id.endsWith("coral")) {
-                return mapping.withBedrockIdentifier("minecraft:coral");
-            }
+        Map<Item, String> manualFallback = new HashMap<>();
+        manualFallback.put(Items.ENDER_DRAGON_SPAWN_EGG, "minecraft:enderman_spawn_egg");
+        manualFallback.put(Items.WITHER_SPAWN_EGG, "minecraft:wither_skeleton_spawn_egg");
+        manualFallback.put(Items.SNOW_GOLEM_SPAWN_EGG, "minecraft:polar_bear_spawn_egg");
+        manualFallback.put(Items.IRON_GOLEM_SPAWN_EGG, "minecraft:villager_spawn_egg");
 
-            return mapping;
-        }));
-        paletteVersions.add(new PaletteVersion("1_20_0", Bedrock_v589.CODEC.getProtocolVersion()));
-        paletteVersions.add(new PaletteVersion("1_20_10", Bedrock_v594.CODEC.getProtocolVersion(), Collections.emptyMap(), (item, mapping) -> {
-            // Forward-map 1.20 mappings to 1.20.10
-            // 1.20.10+ received parity for concrete and shulker boxes
-            String id = item.javaIdentifier();
-            if (id.endsWith("_concrete") || id.endsWith("_shulker_box")) {
-                // the first underscore in "_shulker_box" accounts for ignoring "minecraft:shulker_box"
-                // which is mapped to "minecraft:undyed_shulker_box"
-                return mapping.withBedrockIdentifier(id);
-            }
-            return mapping;
-        }));
+
+        List<PaletteVersion> paletteVersions = new ArrayList<>(2);
+        paletteVersions.add(new PaletteVersion("1_18_30", Bedrock_v504.CODEC.getProtocolVersion()));
+//        paletteVersions.add(new PaletteVersion("1_19_0", Bedrock_v527.CODEC.getProtocolVersion()));
+////        paletteVersions.add(new PaletteVersion("1_19_10", Bedrock_v534.CODEC.getProtocolVersion()));
+//        paletteVersions.add(new PaletteVersion("1_19_20", Bedrock_v544.CODEC.getProtocolVersion(), manualFallback, (item, mapping) -> {
+//            return mapping;
+//        }));
+//        paletteVersions.add(new PaletteVersion("1_19_50", Bedrock_v560.CODEC.getProtocolVersion(), manualFallback, (item, mapping) -> {
+//            return mapping;
+//        }));
+//        paletteVersions.add(new PaletteVersion("1_19_60", Bedrock_v567.CODEC.getProtocolVersion()));
+//        paletteVersions.add(new PaletteVersion("1_19_80", Bedrock_v582.CODEC.getProtocolVersion(), legacyJavaOnly, (item, mapping) -> {
+//            // Backward-map 1.20 mappings to 1.19.80
+//            String id = item.javaIdentifier();
+//            if (id.endsWith("pottery_sherd")) {
+//                return mapping.withBedrockIdentifier(id.replace("sherd", "shard"));
+//            } else if (id.endsWith("carpet") && !id.startsWith("minecraft:moss")) {
+//                return mapping.withBedrockIdentifier("minecraft:carpet");
+//            } else if (id.endsWith("coral")) {
+//                return mapping.withBedrockIdentifier("minecraft:coral");
+//            }
+//
+//            return mapping;
+//        }));
+//        paletteVersions.add(new PaletteVersion("1_20_0", Bedrock_v589.CODEC.getProtocolVersion()));
+//        paletteVersions.add(new PaletteVersion("1_20_10", Bedrock_v594.CODEC.getProtocolVersion(), Collections.emptyMap(), (item, mapping) -> {
+//            // Forward-map 1.20 mappings to 1.20.10
+//            // 1.20.10+ received parity for concrete and shulker boxes
+//            String id = item.javaIdentifier();
+//            if (id.endsWith("_concrete") || id.endsWith("_shulker_box")) {
+//                // the first underscore in "_shulker_box" accounts for ignoring "minecraft:shulker_box"
+//                // which is mapped to "minecraft:undyed_shulker_box"
+//                return mapping.withBedrockIdentifier(id);
+//            }
+//            return mapping;
+//        }));
 
         GeyserBootstrap bootstrap = GeyserImpl.getInstance().getBootstrap();
 
@@ -256,7 +278,8 @@ public class ItemRegistryPopulator {
                 String bedrockIdentifier = mappingItem.getBedrockIdentifier();
                 ItemDefinition definition = definitions.get(bedrockIdentifier);
                 if (definition == null) {
-                    throw new RuntimeException("Missing Bedrock ItemDefinition in version " + palette.version() + " for mapping: " + mappingItem);
+                    definition = definitions.get("minecraft:air");
+//                    throw new RuntimeException("Missing Bedrock ItemDefinition in version " + palette.version() + " for mapping: " + mappingItem);
                 }
 
                 BlockDefinition bedrockBlock = null;
@@ -398,13 +421,13 @@ public class ItemRegistryPopulator {
                                             registry.put(customProtocolId, definition);
                                             customBlockItemDefinitions.put(customBlockData, definition);
                                             customIdMappings.put(customProtocolId, bedrockIdentifier);
-                                            
+
                                             creativeItems.set(j, itemData.toBuilder()
-                                                .definition(definition)
-                                                .blockDefinition(bedrockBlock)
-                                                .netId(itemData.getNetId())
-                                                .count(1)
-                                                .build());
+                                                    .definition(definition)
+                                                    .blockDefinition(bedrockBlock)
+                                                    .netId(itemData.getNetId())
+                                                    .count(1)
+                                                    .build());
                                         } else {
                                             creativeItems.set(j, itemData.toBuilder().blockDefinition(bedrockBlock).build());
                                         }
