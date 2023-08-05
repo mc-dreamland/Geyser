@@ -44,10 +44,7 @@ import org.geysermc.geyser.level.block.GeyserCustomBlockComponents.CustomBlockCo
 import org.geysermc.geyser.level.block.GeyserCustomBlockData.CustomBlockDataBuilder;
 import org.geysermc.geyser.level.physics.BoundingBox;
 import org.geysermc.geyser.registry.BlockRegistries;
-import org.geysermc.geyser.registry.mappings.util.CustomBlockComponentsMapping;
-import org.geysermc.geyser.registry.mappings.util.CustomBlockMapping;
-import org.geysermc.geyser.registry.mappings.util.CustomBlockStateBuilderMapping;
-import org.geysermc.geyser.registry.mappings.util.CustomBlockStateMapping;
+import org.geysermc.geyser.registry.mappings.util.*;
 import org.geysermc.geyser.translator.collision.BlockCollision;
 import org.geysermc.geyser.util.BlockUtils;
 import org.geysermc.geyser.util.MathUtils;
@@ -68,6 +65,11 @@ public class MappingsReader_v1 extends MappingsReader {
     @Override
     public void readBlockMappings(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomBlockMapping> consumer) {
         this.readBlockMappingsV1(file, mappingsRoot, consumer);
+    }
+
+    @Override
+    public void readEntityMappings(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomEntityMapping> consumer) {
+        this.readEntityMappingsV1(file, mappingsRoot, consumer);
     }
 
     public void readItemMappingsV1(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomItemData> consumer) {
@@ -99,6 +101,26 @@ public class MappingsReader_v1 extends MappingsReader {
                         String identifier = Identifier.formalize(entry.getKey());
                         CustomBlockMapping customBlockMapping = this.readBlockMappingEntry(identifier, entry.getValue());
                         consumer.accept(identifier, customBlockMapping);
+                    } catch (Exception e) {
+                        GeyserImpl.getInstance().getLogger().error("Error in registering blocks for custom mapping file: " + file.toString());
+                        GeyserImpl.getInstance().getLogger().error("due to entry: " + entry, e);
+                    }
+                }
+            });
+        }
+    }
+
+    public void readEntityMappingsV1(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomEntityMapping> consumer) {
+        JsonNode entityNode = mappingsRoot.get("entities");
+
+        if (entityNode != null && entityNode.isObject()) {
+            entityNode.fields().forEachRemaining(entry -> {
+                if (entry.getValue().isObject()) {
+                    try {
+                        String identifier = Identifier.formalize(entry.getKey());
+                        CustomEntityMapping customEntityMapping = this.readEntityMappingEntry(identifier, entry.getValue());
+                        System.out.println(customEntityMapping);
+                        consumer.accept(identifier, customEntityMapping);
                     } catch (Exception e) {
                         GeyserImpl.getInstance().getLogger().error("Error in registering blocks for custom mapping file: " + file.toString());
                         GeyserImpl.getInstance().getLogger().error("due to entry: " + entry, e);
@@ -460,6 +482,36 @@ public class MappingsReader_v1 extends MappingsReader {
 
         return new CustomBlockComponentsMapping(builder.build(), extendedBoxComponent);
     }
+
+    /**
+     * Read a entity mapping entry from a JSON
+     * @param identifier The identifier of the entity
+     * @param node The {@link JsonNode} containing the block mapping entry
+     * @return The {@link CustomEntityMapping} record to be read by {@link org.geysermc.geyser.registry.populator.CustomEntityRegistryPopulator}
+     * @throws InvalidCustomMappingsFileException If the JSON node is invalid
+     */
+    @Override
+    public CustomEntityMapping readEntityMappingEntry(String identifier, JsonNode node) throws InvalidCustomMappingsFileException {
+        if (node == null || !node.isObject()) {
+            throw new InvalidCustomMappingsFileException("Invalid item mappings entry");
+        }
+        float width = 1.0f;
+        float height = 1.0f;
+
+
+        if (node.has("collision_box")) {
+            JsonNode jsonNode = node.get("collision_box");
+            if (jsonNode.has("width")) {
+                width = jsonNode.get("width").floatValue();
+            }
+            if (jsonNode.has("height")) {
+                height = jsonNode.get("height").floatValue();
+            }
+        }
+
+        return new CustomEntityMapping(identifier, width, height);
+    }
+
 
     /**
      * Creates a {@link BoxComponent} based on a Java block's collision with provided bounds and offsets

@@ -112,6 +112,8 @@ public final class Registries {
      */
     public static final SimpleMappedRegistry<EntityType, EntityDefinition<?>> ENTITY_DEFINITIONS = SimpleMappedRegistry.create(RegistryLoaders.empty(() -> new EnumMap<>(EntityType.class)));
 
+    public static final HashMap<String, EntityDefinition<?>> CUSTOM_ENTITY_DEFINITIONS = new HashMap<>();
+
     /**
      * A map containing all Java entity identifiers and their respective Geyser definitions
      */

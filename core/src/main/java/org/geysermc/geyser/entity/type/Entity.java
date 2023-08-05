@@ -50,6 +50,7 @@ import org.cloudburstmc.protocol.bedrock.packet.SetEntityDataPacket;
 import org.geysermc.geyser.api.entity.type.GeyserEntity;
 import org.geysermc.geyser.entity.EntityDefinition;
 import org.geysermc.geyser.entity.GeyserDirtyMetadata;
+import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.util.EntityUtils;
@@ -88,6 +89,7 @@ public class Entity implements GeyserEntity {
     protected boolean onGround;
 
     protected EntityDefinition<?> definition;
+    private String curIdentifier;
 
     /**
      * Indicates if the entity has been initialized and spawned
@@ -176,6 +178,70 @@ public class Entity implements GeyserEntity {
         addEntityPacket.setHeadRotation(headYaw);
         addEntityPacket.setBodyRotation(yaw); // TODO: This should be bodyYaw
         addEntityPacket.getMetadata().putFlags(flags);
+        // 修复投掷物看起来太大的问题
+        EntityType eType = definition.entityType();
+        if (eType.equals(EntityType.SNOWBALL) || eType.equals(EntityType.FIREBALL) || eType.equals(EntityType.ENDER_PEARL)) {
+            dirtyMetadata.put(EntityDataTypes.SCALE, 0.4F);
+        }
+        if (nametag.contains("@size_")) {
+            int start = nametag.indexOf("@size_");
+            int end = nametag.indexOf("@", start + 6);
+            if (start != -1 && end != -1) {
+                String size = nametag.substring(start + 6, end);
+                try {
+                    float scale = Float.parseFloat(size);
+                    dirtyMetadata.put(EntityDataTypes.SCALE, scale);
+                    dirtyMetadata.put(EntityDataTypes.NAME, nametag.replace("@size_" + size + "@", ""));
+                    this.nametag = nametag.replace("@size_" + size + "@", "");
+                } catch (NumberFormatException ignored) {
+                    System.out.println("");
+                }
+            }
+        }
+
+
+        dirtyMetadata.apply(addEntityPacket.getMetadata());
+        addAdditionalSpawnData(addEntityPacket);
+
+        valid = true;
+        session.sendUpstreamPacket(addEntityPacket);
+
+        flagsDirty = false;
+
+        if (session.getGeyser().getConfig().isDebugMode()) {
+            EntityType type = definition.entityType();
+            String name = type != null ? type.name() : getClass().getSimpleName();
+            session.getGeyser().getLogger().debug("Spawned entity " + name + " at location " + position + " with id " + geyserId + " (java id " + entityId + ")");
+        }
+    }
+
+    public void spawnEntity(String identifier) {
+        AddEntityPacket addEntityPacket = new AddEntityPacket();
+        addEntityPacket.setIdentifier(identifier);
+        addEntityPacket.setRuntimeEntityId(geyserId);
+        addEntityPacket.setUniqueEntityId(geyserId);
+        addEntityPacket.setPosition(position);
+        addEntityPacket.setMotion(motion);
+        addEntityPacket.setRotation(Vector2f.from(pitch, yaw));
+        addEntityPacket.setHeadRotation(headYaw);
+        addEntityPacket.setBodyRotation(yaw); // TODO: This should be bodyYaw
+        addEntityPacket.getMetadata().putFlags(flags);
+
+        if (nametag.contains("@size_")) {
+            int start = nametag.indexOf("@size_");
+            int end = nametag.indexOf("@", start + 6);
+            if (start != -1 && end != -1) {
+                String size = nametag.substring(start + 6, end);
+                try {
+                    float scale = Float.parseFloat(size);
+                    dirtyMetadata.put(EntityDataTypes.SCALE, scale);
+                    dirtyMetadata.put(EntityDataTypes.NAME, nametag.replace("@size_" + size + "@", ""));
+                    this.nametag = nametag.replace("@size_" + size + "@", "");
+                } catch (NumberFormatException ignored) {
+                    System.out.println("");
+                }
+            }
+        }
         dirtyMetadata.apply(addEntityPacket.getMetadata());
         addAdditionalSpawnData(addEntityPacket);
 
@@ -399,6 +465,40 @@ public class Entity implements GeyserEntity {
         Optional<Component> name = entityMetadata.getValue();
         if (name.isPresent()) {
             nametag = MessageTranslator.convertMessage(name.get(), session.locale());
+            nametag = nametag.replace("\\n", "\n");
+
+            if (nametag.contains("@cet")) {
+                int start = nametag.indexOf("@cet_");
+                int end = nametag.indexOf("@", start + 5);
+                if (start != -1 && end != -1) {
+                    String identifier = nametag.substring(start + 5, end);
+                    if (this.curIdentifier == null || this.curIdentifier.equals(identifier)) {
+
+                        if (Registries.CUSTOM_ENTITY_DEFINITIONS.containsKey(identifier)) {
+                            this.despawnEntity();
+                            this.definition = Registries.CUSTOM_ENTITY_DEFINITIONS.get(identifier);
+                            this.spawnEntity(this.definition.identifier());
+                        }
+                    }
+                    nametag = nametag.replace("@cet_" + identifier + "@", "");
+                }
+            }
+
+            if (nametag.contains("@size_")) {
+                int start = nametag.indexOf("@size_");
+                int end = nametag.indexOf("@", start + 6);
+                if (start != -1 && end != -1) {
+                    String size = nametag.substring(start + 6, end);
+                    try {
+                        float scale = Float.parseFloat(size);
+                        dirtyMetadata.put(EntityDataTypes.SCALE, scale);
+                        nametag = nametag.replace("@size_" + size + "@", "");
+                    } catch (NumberFormatException ignored) {
+                        System.out.println("");
+                    }
+                }
+            }
+
             dirtyMetadata.put(EntityDataTypes.NAME, nametag);
         } else if (!nametag.isEmpty()) {
             // Clear nametag
