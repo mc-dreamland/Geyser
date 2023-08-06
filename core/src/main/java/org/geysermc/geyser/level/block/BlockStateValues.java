@@ -76,6 +76,8 @@ public final class BlockStateValues {
     public static int JAVA_SLIME_BLOCK_ID;
     public static int JAVA_SPAWNER_ID;
     public static int JAVA_WATER_ID;
+    public static int JAVA_PLAYER_HEAD_ID_MIN;
+    public static int JAVA_PLAYER_HEAD_ID_MAX;
 
     public static final int NUM_WATER_LEVELS = 9;
 

@@ -39,6 +39,7 @@ import org.cloudburstmc.protocol.bedrock.codec.v527.Bedrock_v527;
 import org.cloudburstmc.protocol.bedrock.codec.v544.Bedrock_v544;
 import org.cloudburstmc.protocol.bedrock.codec.v560.Bedrock_v560;
 import org.cloudburstmc.protocol.bedrock.codec.v567.Bedrock_v567;
+import org.cloudburstmc.protocol.common.Definition;
 import org.geysermc.geyser.Constants;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.cloudburstmc.nbt.NbtMap;
@@ -201,6 +202,9 @@ public class ItemRegistryPopulator {
                 }
 
                 ItemDefinition definition = new SimpleItemDefinition(entry.getName().intern(), id, false);
+                if (definition == null) {
+                    System.out.println("definition -> " + "??????");
+                }
                 definitions.put(entry.getName(), definition);
                 registry.put(definition.getRuntimeId(), definition);
             }
@@ -219,6 +223,7 @@ public class ItemRegistryPopulator {
 
             List<ItemData> creativeItems = new ArrayList<>();
 
+            List<NeteaseBedrockBlock> customBlockRuntimeList = BlockRegistries.customBlockRuntimeList.get(palette.protocolVersion());
             AtomicInteger creativeNetId = new AtomicInteger();
             CreativeItemRegistryPopulator.populate(palette, definitions, itemBuilder -> {
                 ItemData item = itemBuilder.netId(creativeNetId.incrementAndGet()).build();
@@ -235,7 +240,10 @@ public class ItemRegistryPopulator {
                             blacklistedIdentifiers.put(identifier, item.getBlockDefinition().getRuntimeId());
                         } else {
                             // Unless there's multiple possibilities for this one state, let this be
-                            bedrockBlockIdOverrides.put(identifier, item.getBlockDefinition());
+                            BlockDefinition blockDefinition = item.getBlockDefinition();
+                            int runtimeId = blockDefinition.getRuntimeId();
+                            BlockDefinition geyserBedrockBlock = new GeyserBedrockBlock(runtimeId + BlockRegistryPopulator.manageRuntimeId(customBlockRuntimeList, runtimeId), null);
+                            bedrockBlockIdOverrides.put(identifier, geyserBedrockBlock);
                         }
                     }
                 }
@@ -376,7 +384,9 @@ public class ItemRegistryPopulator {
                                             }
                                         }
                                         if (valid) {
-                                            bedrockBlock = block;
+                                            int runtimeId = block.getRuntimeId() + BlockRegistryPopulator.manageRuntimeId(customBlockRuntimeList, block);
+                                            GeyserBedrockBlock geyserBedrockBlock = new GeyserBedrockBlock(runtimeId, block.getState());
+                                            bedrockBlock = geyserBedrockBlock;
                                             break;
                                         }
                                     }

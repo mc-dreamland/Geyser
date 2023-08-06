@@ -14,10 +14,7 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockPermutation;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
-import org.geysermc.geyser.api.block.custom.component.BoxComponent;
-import org.geysermc.geyser.api.block.custom.component.CustomBlockComponents;
-import org.geysermc.geyser.api.block.custom.component.MaterialInstance;
-import org.geysermc.geyser.api.block.custom.component.PlacementConditions;
+import org.geysermc.geyser.api.block.custom.component.*;
 import org.geysermc.geyser.api.block.custom.component.PlacementConditions.Face;
 import org.geysermc.geyser.api.block.custom.nonvanilla.JavaBlockItem;
 import org.geysermc.geyser.api.block.custom.nonvanilla.JavaBlockState;
@@ -53,6 +50,7 @@ public class CustomBlockRegistryPopulator {
         Int2ObjectMap<CustomBlockState> blockStateOverrides = new Int2ObjectOpenHashMap<>();
         Map<JavaBlockState, CustomBlockState> nonVanillaBlockStateOverrides = new HashMap<>();
         Map<String, CustomBlockData> customBlockItemOverrides = new HashMap<>();
+        Map<String, CustomBlockData> customBlockHeadOverrides = new HashMap<>();
         Map<JavaBlockItem, CustomBlockData> nonVanillaCustomItemOverrides = new HashMap<>();
 
         GeyserImpl.getInstance().getEventBus().fire(new GeyserDefineCustomBlocksEvent() {
@@ -109,6 +107,14 @@ public class CustomBlockRegistryPopulator {
                 }
                 nonVanillaCustomItemOverrides.put(javaBlockItem, customBlockData);
             }
+
+            @Override
+            public void registerBlockHeadOverride(@NonNull String headOwnerName, @NonNull CustomBlockData customBlockData) {
+                if (!customBlocks.contains(customBlockData)) {
+                    throw new IllegalArgumentException("Custom block is unregistered. Name: " + customBlockData.name());
+                }
+                customBlockHeadOverrides.put(headOwnerName, customBlockData);
+            }
         });
     
         for (CustomSkull customSkull : BlockRegistries.CUSTOM_SKULLS.get().values()) {
@@ -120,8 +126,11 @@ public class CustomBlockRegistryPopulator {
         MappingsConfigReader mappingsConfigReader = new MappingsConfigReader();
         mappingsConfigReader.loadBlockMappingsFromJson((key, block) -> {
             customBlocks.add(block.data());
-            if (block.overrideItem()) {
+            if (block.overrideItem() && !block.replaceSkull()) {
                 customBlockItemOverrides.put(block.javaIdentifier(), block.data());
+            }
+            if (block.replaceSkull()) {
+                customBlockHeadOverrides.put(block.javaIdentifier(), block.data());
             }
             block.states().forEach((javaIdentifier, customBlockState) -> {
                 int id = BlockRegistries.JAVA_IDENTIFIER_TO_ID.getOrDefault(javaIdentifier, -1);
@@ -156,6 +165,9 @@ public class CustomBlockRegistryPopulator {
 
         BlockRegistries.EXTENDED_COLLISION_BOXES.set(extendedCollisionBoxes);
         GeyserImpl.getInstance().getLogger().info("Registered " + extendedCollisionBoxes.size() + " custom block extended collision boxes.");
+
+        BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.set(customBlockHeadOverrides);
+        GeyserImpl.getInstance().getLogger().info("Registered " + customBlockHeadOverrides.size() + " custom block head overrides.");
     }
 
     /**
@@ -310,9 +322,15 @@ public class CustomBlockRegistryPopulator {
             builder.putCompound("minecraft:light_emission", NbtMap.builder()
                     .putByte("emission", components.lightEmission().byteValue())
                     .build());
+            builder.putCompound("minecraft:block_light_emission", NbtMap.builder()
+                    .putFloat("emission", components.lightEmission().floatValue())
+                    .build());
         }
         if (components.lightDampening() != null) {
             builder.putCompound("minecraft:light_dampening", NbtMap.builder()
+                    .putByte("lightLevel", (components.lightDampening()).byteValue())
+                    .build());
+            builder.putCompound("minecraft:block_light_filter", NbtMap.builder()
                     .putByte("lightLevel", components.lightDampening().byteValue())
                     .build());
         }
@@ -341,6 +359,82 @@ public class CustomBlockRegistryPopulator {
                     .putString("triggerType", "geyser:place_event")
                     .build());
         }
+
+        if (components.destoryTime() != null) {
+            builder.putCompound("minecraft:destroy_time", NbtMap.builder()
+                    .putFloat("value", components.destoryTime())
+                    .build());
+        }
+
+        if (components.neteaseFaceDirectional() != null) {
+            builder.putCompound("netease:face_directional", NbtMap.builder()
+                    .putByte("direction", components.neteaseFaceDirectional().byteValue())
+                    .build());
+        }
+        if (components.neteaseAabbCollision() != null || components.neteaseAabbClip() != null) {
+            NbtMapBuilder endMap = NbtMap.builder();
+            List<NeteaseBoxComponent> collision = components.neteaseAabbCollision();
+            List<NeteaseBoxComponent> clip = components.neteaseAabbClip();
+
+            List<NbtMap> collisionNbtList = new ArrayList<>();
+            List<NbtMap> clipNbtList = new ArrayList<>();
+
+
+            for (NeteaseBoxComponent boxComponent : collision) {
+                NbtMap build = NbtMap.builder()
+                        .putString("enable", boxComponent.molang())
+                        .putList("aabb", NbtType.FLOAT, boxComponent.originX(), boxComponent.originY(), boxComponent.originZ(), boxComponent.sizeX(), boxComponent.sizeY(), boxComponent.sizeZ())
+                        .build();
+
+                collisionNbtList.add(build);
+            }
+            for (NeteaseBoxComponent boxComponent : clip) {
+                clipNbtList.add(NbtMap.builder()
+                        .putString("enable", boxComponent.molang())
+                        .putList("aabb", NbtType.FLOAT, boxComponent.originX(), boxComponent.originY(), boxComponent.originZ(), boxComponent.sizeX(), boxComponent.sizeY(), boxComponent.sizeZ())
+                        .build());
+            }
+            endMap.putList("clip", NbtType.COMPOUND, clipNbtList).putList("collision", NbtType.COMPOUND, collisionNbtList);
+            builder.putCompound("netease:aabb", endMap.build());
+        }
+
+        if (components.neteaseBlockEntity()) {
+            builder.putCompound("netease:block_entity", NbtMap.builder()
+                    .putBoolean("movable", false)
+                    .putBoolean("tick", false)
+                    .build()
+            );
+        }
+
+        builder.putCompound("netease:solid", NbtMap.builder()
+                .putBoolean("value", components.neteaseSolid())
+                .build()
+        );
+
+        if (components.neteaseTier() != null) {
+            builder.putCompound("netease:tier", NbtMap.builder()
+                    .putString("digger", components.neteaseTier())
+                    .build()
+            );
+        }
+
+        if (components.neteaseRenderLayer() != null) {
+            builder.putCompound("netease:render_layer", NbtMap.builder()
+                    .putString("value", components.neteaseRenderLayer())
+                    .build()
+            );
+        }
+        if (components.neteaseLightEmission() != null) {
+            builder.putCompound("minecraft:block_light_emission", NbtMap.builder()
+                    .putFloat("emission", components.neteaseLightEmission())
+                    .build());
+        }
+        if (components.neteaseLightDampening() != null) {
+            builder.putCompound("minecraft:block_light_filter", NbtMap.builder()
+                    .putFloat("lightLevel", components.neteaseLightDampening())
+                    .build());
+        }
+
         if (!components.tags().isEmpty()) {
             components.tags().forEach(tag -> builder.putCompound("tag:" + tag, NbtMap.EMPTY));
         }

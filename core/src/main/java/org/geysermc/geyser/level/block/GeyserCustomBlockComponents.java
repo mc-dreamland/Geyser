@@ -31,11 +31,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectMaps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Value;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.geysermc.geyser.api.block.custom.component.BoxComponent;
-import org.geysermc.geyser.api.block.custom.component.CustomBlockComponents;
-import org.geysermc.geyser.api.block.custom.component.MaterialInstance;
-import org.geysermc.geyser.api.block.custom.component.PlacementConditions;
-import org.geysermc.geyser.api.block.custom.component.TransformationComponent;
+import org.geysermc.geyser.api.block.custom.component.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
@@ -59,6 +55,16 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
     boolean unitCube;
     boolean placeAir;
     Set<String> tags;
+    Float destroyTime;
+    Integer neteaseFaceDirectional;
+    List<NeteaseBoxComponent> neteaseAabbCollision;
+    List<NeteaseBoxComponent> neteaseAabbClip;
+    boolean neteaseBlockEntity;
+    String neteaseTier;
+    boolean neteaseSolid;
+    String neteaseRenderLayer;
+    Float neteaseLightEmission;
+    Float neteaseLightDampening;
 
     private GeyserCustomBlockComponents(CustomBlockComponentsBuilder builder) {
         this.selectionBox = builder.selectionBox;
@@ -83,6 +89,16 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         } else {
             this.tags = Set.copyOf(builder.tags);
         }
+        this.destroyTime = builder.destroy_time;
+        this.neteaseFaceDirectional = builder.neteaseFaceDirectional;
+        this.neteaseAabbCollision = builder.neteaseAabbCollision;
+        this.neteaseAabbClip = builder.neteaseAabbClip;
+        this.neteaseBlockEntity = builder.neteaseBlockEntity;
+        this.neteaseSolid = builder.neteaseSolid;
+        this.neteaseTier = builder.neteaseTier;
+        this.neteaseRenderLayer = builder.neteaseRenderLayer;
+        this.neteaseLightEmission = builder.neteaseLightEmission;
+        this.neteaseLightDampening = builder.neteaseLightDampening;
     }
 
     @Override
@@ -155,6 +171,58 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         return tags;
     }
 
+    @Override
+    public Float destoryTime() {
+        return destroyTime;
+    }
+
+    @Override
+    public Integer neteaseFaceDirectional() {
+        return neteaseFaceDirectional;
+    }
+
+    @Override
+    public List<NeteaseBoxComponent> neteaseAabbCollision() {
+        return neteaseAabbCollision;
+    }
+
+    @Override
+    public List<NeteaseBoxComponent> neteaseAabbClip() {
+        return neteaseAabbClip;
+    }
+
+    @Override
+    public boolean neteaseBlockEntity() {
+        return neteaseBlockEntity;
+    }
+
+    @Override
+    public String neteaseTier() {
+        return neteaseTier;
+    }
+
+    @Override
+    public boolean neteaseSolid() {
+        return neteaseSolid;
+    }
+
+    @Override
+    public String neteaseRenderLayer() {
+        return neteaseRenderLayer;
+    }
+
+    @Override
+    public Float neteaseLightEmission() {
+        return neteaseLightEmission;
+    }
+
+    @Override
+    public Float neteaseLightDampening() {
+        return neteaseLightDampening;
+    }
+
+
+
     public static class CustomBlockComponentsBuilder implements Builder {
         protected BoxComponent selectionBox;
         protected BoxComponent collisionBox;
@@ -170,6 +238,16 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         protected boolean unitCube = false;
         protected boolean placeAir = false;
         protected final Set<String> tags = new HashSet<>();
+        protected float destroy_time;
+        protected Integer neteaseFaceDirectional;
+        protected List<NeteaseBoxComponent> neteaseAabbCollision;
+        protected List<NeteaseBoxComponent> neteaseAabbClip;
+        public boolean neteaseBlockEntity;
+        public boolean neteaseSolid = true;
+        public String neteaseTier;
+        public String neteaseRenderLayer;
+        public Float neteaseLightEmission;
+        public Float neteaseLightDampening;
 
         private void validateBox(BoxComponent box) {
             if (box == null) {
@@ -187,6 +265,22 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
             if (minX < 0 || minY < 0 || minZ < 0 || maxX > 16 || maxY > 16 || maxZ > 16) {
                 throw new IllegalArgumentException("Box bounds must be within (0, 0, 0) and (16, 16, 16). Recieved: (" + minX + ", " + minY + ", " + minZ + ") to (" + maxX + ", " + maxY + ", " + maxZ + ")");
             }
+        }
+
+        private void validateNetEaseBox(List<NeteaseBoxComponent> boxComponent) {
+            if (boxComponent == null) return;
+            for (NeteaseBoxComponent box : boxComponent) {
+                if (box == null) {
+                    continue;
+                }
+                if (box.originX() > box.sizeX() || box.originY() > box.sizeY() || box.originZ() > box.sizeZ()) {
+                    throw new IllegalArgumentException("Box size must be non-negative.");
+                }
+                if (box.originX() < -1 || box.originY() < -1 || box.originZ() < -1 || box.sizeX() > 2 || box.sizeY() > 2 || box.sizeZ() > 2) {
+                    throw new IllegalArgumentException("Box bounds must be within (-1, -1, -1) and (2, 2, 2)");
+                }
+            }
+            return;
         }
 
         @Override
@@ -295,6 +389,78 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
             this.tags.addAll(tags);
             return this;
         }
+        @Override
+        public Builder destroy_time(float destroy_time) {
+            this.destroy_time = destroy_time;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseFaceDirectional(int netease_face_directional) {
+            this.neteaseFaceDirectional = netease_face_directional;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseAabbCollision(List<NeteaseBoxComponent> netease_aabb_collision) {
+            validateNetEaseBox(netease_aabb_collision);
+            this.neteaseAabbCollision = netease_aabb_collision;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseAabbClip(List<NeteaseBoxComponent> netease_aabb_clip) {
+            validateNetEaseBox(netease_aabb_clip);
+            this.neteaseAabbClip = netease_aabb_clip;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseBlockEntity(boolean netease_block_entity) {
+            this.neteaseBlockEntity = netease_block_entity;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseTier(String netease_tier) {
+            this.neteaseTier = netease_tier;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseSolid(boolean netease_solid) {
+            this.neteaseSolid = netease_solid;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseRenderLayer(String netease_render_layer) {
+            this.neteaseRenderLayer = netease_render_layer;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseLightEmission(Float lightEmission) {
+            if (lightEmission != null) {
+                if (lightEmission < 0 || lightEmission > 15) {
+                    throw new IllegalArgumentException("Light emission must be in the range 0-15");
+                }
+            }
+            this.neteaseLightEmission = lightEmission;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseLightDampening(Float lightDampening) {
+            if (lightDampening != null) {
+                if (lightDampening < 0 || lightDampening > 15) {
+                    throw new IllegalArgumentException("Light dampening must be in the range 0-15");
+                }
+            }
+            this.neteaseLightDampening = lightDampening;
+            return this;
+        }
+
 
         @Override
         public CustomBlockComponents build() {

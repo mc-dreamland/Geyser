@@ -40,5 +40,5 @@ import org.geysermc.geyser.api.block.custom.CustomBlockData;
  * @param javaIdentifier The java identifier of the block
  * @param overrideItem Whether or not the custom block should override the java item
  */
-public record CustomBlockMapping(@NonNull CustomBlockData data, @NonNull Map<String, CustomBlockStateMapping> states, @NonNull String javaIdentifier, boolean overrideItem) {
+public record CustomBlockMapping(@NonNull CustomBlockData data, @NonNull Map<String, CustomBlockStateMapping> states, @NonNull String javaIdentifier, boolean overrideItem, boolean replaceSkull) {
 }

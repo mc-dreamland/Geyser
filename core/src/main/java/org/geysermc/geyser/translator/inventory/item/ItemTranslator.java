@@ -62,6 +62,7 @@ import org.geysermc.geyser.registry.type.CustomSkull;
 import org.geysermc.geyser.registry.type.ItemMapping;
 import org.geysermc.geyser.registry.type.ItemMappings;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.skin.SkinManager;
 import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.text.ChatColor;
@@ -402,6 +403,17 @@ public final class ItemTranslator {
             CustomSkull customSkull = getCustomSkull(session, itemStack.getNbt());
             if (customSkull != null) {
                 itemDefinition = session.getItemMappings().getCustomBlockItemDefinitions().get(customSkull.getCustomBlockData());
+            } else {
+                CompoundTag nbt = itemStack.getNbt();
+
+                String customSkullBlockName = SkullCache.getCustomSkullBlockName(nbt);
+                if (customSkullBlockName != null) {
+                    CustomBlockData cd = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.getOrDefault(customSkullBlockName, null);
+                    if (cd != null) {
+                        itemDefinition = session.getItemMappings().getCustomBlockItemDefinitions().get(cd);
+                        return itemDefinition;
+                    }
+                }
             }
         }
 
@@ -616,6 +628,11 @@ public final class ItemTranslator {
                 // It's a username give up d:
                 return null;
             }
+            if (skullOwner.get("Name") instanceof StringTag name) {
+                if (name.getValue().contains(":") || name.getValue().startsWith("heypixel:")) {
+                    return null;
+                }
+            }
             SkinManager.GameProfileData data = SkinManager.GameProfileData.from(skullOwner);
             if (data == null) {
                 session.getGeyser().getLogger().debug("Not sure how to handle skull head item display. " + nbt);
@@ -629,6 +646,20 @@ public final class ItemTranslator {
     }
 
     private static void translatePlayerHead(GeyserSession session, CompoundTag nbt, ItemData.Builder builder) {
+        if (nbt != null) {
+            String customSkullBlockName = SkullCache.getCustomSkullBlockName(nbt);
+            if (customSkullBlockName != null) {
+                CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.getOrDefault(customSkullBlockName, null);
+                if (customBlockData != null) {
+                    ItemDefinition itemDefinition = session.getItemMappings().getCustomBlockItemDefinitions().get(customBlockData);
+                    BlockDefinition blockDefinition = session.getBlockMappings().getCustomBlockStateDefinitions().get(customBlockData.defaultBlockState());
+
+                    builder.definition(itemDefinition);
+                    builder.blockDefinition(blockDefinition);
+                    return;
+                }
+            }
+        }
         CustomSkull customSkull = getCustomSkull(session, nbt);
         if (customSkull != null) {
             CustomBlockData customBlockData = customSkull.getCustomBlockData();

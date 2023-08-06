@@ -39,14 +39,18 @@ import org.geysermc.geyser.registry.loader.CollisionRegistryLoader;
 import org.geysermc.geyser.registry.loader.RegistryLoaders;
 import org.geysermc.geyser.registry.populator.BlockRegistryPopulator;
 import org.geysermc.geyser.registry.populator.CustomBlockRegistryPopulator;
+import org.geysermc.geyser.registry.populator.CustomEntityRegistryPopulator;
 import org.geysermc.geyser.registry.populator.CustomSkullRegistryPopulator;
 import org.geysermc.geyser.registry.type.BlockMapping;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.CustomSkull;
+import org.geysermc.geyser.registry.type.NeteaseBedrockBlock;
 import org.geysermc.geyser.translator.collision.BlockCollision;
 
 import java.util.BitSet;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -58,6 +62,8 @@ public class BlockRegistries {
      * primarily Bedrock version-specific data.
      */
     public static final VersionedRegistry<BlockMappings> BLOCKS = VersionedRegistry.create(RegistryLoaders.empty(Int2ObjectOpenHashMap::new));
+
+    public static final HashMap<Integer, List<NeteaseBedrockBlock>> customBlockRuntimeList = new HashMap<Integer, List<NeteaseBedrockBlock>>();
 
     /**
      * A mapped registry which stores Java to Bedrock block identifiers.
@@ -120,6 +126,7 @@ public class BlockRegistries {
      * A registry which stores clean Java Ids and the custom block it should be replaced with in the context of items.
      */
     public static final SimpleMappedRegistry<String, CustomBlockData> CUSTOM_BLOCK_ITEM_OVERRIDES = SimpleMappedRegistry.create(RegistryLoaders.empty(Object2ObjectOpenHashMap::new));
+    public static final SimpleMappedRegistry<String, CustomBlockData> CUSTOM_BLOCK_HEAD_OVERRIDES = SimpleMappedRegistry.create(RegistryLoaders.empty(Object2ObjectOpenHashMap::new));
 
     /**
      * A registry which stores non vanilla java block items and the custom block it should be replaced with in the context of items.
@@ -144,6 +151,7 @@ public class BlockRegistries {
         BlockRegistryPopulator.populate(BlockRegistryPopulator.Stage.INIT_JAVA);
         COLLISIONS = IntMappedRegistry.create(Pair.of("org.geysermc.geyser.translator.collision.CollisionRemapper", "mappings/collision.json"), CollisionRegistryLoader::new);
         CustomBlockRegistryPopulator.populate();
+        CustomEntityRegistryPopulator.populate();
         BlockRegistryPopulator.populate(BlockRegistryPopulator.Stage.INIT_BEDROCK);
         BlockRegistryPopulator.populate(BlockRegistryPopulator.Stage.POST_INIT);
     }

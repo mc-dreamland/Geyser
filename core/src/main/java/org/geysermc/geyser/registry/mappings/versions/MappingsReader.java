@@ -41,6 +41,7 @@ public abstract class MappingsReader {
     public abstract void readEntityMappings(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomEntityMapping> consumer);
     public abstract CustomItemData readItemMappingEntry(JsonNode node) throws InvalidCustomMappingsFileException;
     public abstract CustomBlockMapping readBlockMappingEntry(String identifier, JsonNode node) throws InvalidCustomMappingsFileException;
+    public abstract CustomBlockMapping readSkullBlockMappingEntry(String identifier, JsonNode node) throws InvalidCustomMappingsFileException;
     public abstract CustomEntityMapping readEntityMappingEntry(String identifier, JsonNode node) throws InvalidCustomMappingsFileException;
 
     protected CustomRenderOffsets fromJsonNode(JsonNode node) {

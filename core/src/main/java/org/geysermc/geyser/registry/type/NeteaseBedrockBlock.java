@@ -23,35 +23,25 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser;
+package org.geysermc.geyser.registry.type;
 
-import java.net.URI;
-import java.net.URISyntaxException;
+import org.cloudburstmc.nbt.NbtMap;
+import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 
-public final class Constants {
-    public static final URI GLOBAL_API_WS_URI;
+public class NeteaseBedrockBlock extends GeyserBedrockBlock {
+    private final boolean neteaseFaceDirectional;
 
-    public static final String NEWS_OVERVIEW_URL = "https://api.geysermc.org/v2/news/";
-    public static final String NEWS_PROJECT_NAME = "geyser";
+    public NeteaseBedrockBlock(GeyserBedrockBlock geyserBedrockBlock, boolean neteaseFaceDirectional) {
+        super(geyserBedrockBlock.getRuntimeId(), geyserBedrockBlock.getState());
+        this.neteaseFaceDirectional = neteaseFaceDirectional;
+    }
 
-    public static final String FLOODGATE_DOWNLOAD_LOCATION = "https://ci.opencollab.dev/job/GeyserMC/job/Floodgate/job/master/";
+    public boolean isNeteaseFaceDirectional() {
+        return neteaseFaceDirectional;
+    }
 
-    public static final String GEYSER_DOWNLOAD_LOCATION = "https://ci.geysermc.org";
-    public static final String UPDATE_PERMISSION = "geyser.update";
-
-    static final String SAVED_REFRESH_TOKEN_FILE = "saved-refresh-tokens.json";
-
-    public static final String GEYSER_CUSTOM_NAMESPACE = "heypixel";
-
-    public static final String MINECRAFT_SKIN_SERVER_URL = "https://textures.minecraft.net/texture/";
-
-    static {
-        URI wsUri = null;
-        try {
-            wsUri = new URI("wss://api.geysermc.org/ws");
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-        GLOBAL_API_WS_URI = wsUri;
+    @Override
+    public String toString() {
+        return "NeteaseBedrockBlock{" + (this.getState() == null ? null : this.getState().getString("name")) + ", FaceDirectional=" + neteaseFaceDirectional + ", runtimeId=" + getRuntimeId() + "}";
     }
 }

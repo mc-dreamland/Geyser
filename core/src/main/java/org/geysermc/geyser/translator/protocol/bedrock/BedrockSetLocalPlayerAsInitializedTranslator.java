@@ -25,15 +25,27 @@
 
 package org.geysermc.geyser.translator.protocol.bedrock;
 
+import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
+import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
+import org.cloudburstmc.protocol.bedrock.packet.SetEntityDataPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
+import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.event.bedrock.SessionJoinEvent;
 import org.geysermc.geyser.api.network.AuthType;
+import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.InventoryUtils;
 import org.geysermc.geyser.util.LoginEncryptionUtils;
+
+import java.util.EnumSet;
+import java.util.UUID;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Translator(packet = SetLocalPlayerAsInitializedPacket.class)
 public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslator<SetLocalPlayerAsInitializedPacket> {
@@ -42,6 +54,36 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
         if (session.getPlayerEntity().getGeyserId() == packet.getRuntimeEntityId()) {
             if (!session.getUpstream().isInitialized()) {
                 session.getUpstream().setInitialized(true);
+
+                SetEntityDataPacket entityDataPacket = new SetEntityDataPacket();
+                entityDataPacket.setRuntimeEntityId(-10);
+                entityDataPacket.setTick(0);
+                // 后续排查该问题，目前在客户端加载完成后手动发一次。
+                EnumSet<EntityFlag> flags = EnumSet.noneOf(EntityFlag.class);
+                flags.add(EntityFlag.SNEAKING);
+                flags.add(EntityFlag.CAN_SHOW_NAME);
+                flags.add(EntityFlag.CAN_CLIMB);
+                flags.add(EntityFlag.HAS_COLLISION);
+                flags.add(EntityFlag.HAS_GRAVITY);
+                entityDataPacket.getMetadata().putFlags(flags);
+                session.sendUpstreamPacket(entityDataPacket);
+                ScheduledFuture<?> scheduledFuture = session.scheduleInEventLoop(new Runnable() {
+                    @Override
+                    public void run() {
+                        flags.remove(EntityFlag.SNEAKING);
+                        entityDataPacket.getMetadata().putFlags(flags);
+                        session.sendUpstreamPacket(entityDataPacket);
+
+                    }
+                }, 2, TimeUnit.SECONDS);
+
+                UUID uuid = session.getPlayerEntity().getUuid();
+                ByteArrayDataOutput out = ByteStreams.newDataOutput();
+                out.writeInt(packet.getPacketType().ordinal());
+                out.writeUTF(packet.getPacketType().name());
+                out.writeUTF(uuid.toString());
+                session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(PluginMessageChannels.CUSTOM, out.toByteArray()));
+
 
                 if (session.remoteServer().authType() == AuthType.ONLINE) {
                     if (!session.isLoggedIn()) {

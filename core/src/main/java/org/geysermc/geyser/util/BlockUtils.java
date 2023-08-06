@@ -27,14 +27,19 @@ package org.geysermc.geyser.util;
 
 import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
 import org.cloudburstmc.math.vector.Vector3i;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
+import org.geysermc.geyser.api.block.custom.component.BoxComponent;
 import org.geysermc.geyser.inventory.GeyserItemStack;
 import org.geysermc.geyser.inventory.PlayerInventory;
 import org.geysermc.geyser.level.block.BlockStateValues;
+import org.geysermc.geyser.level.physics.BoundingBox;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.type.BlockMapping;
 import org.geysermc.geyser.registry.type.ItemMapping;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.translator.collision.BlockCollision;
+import org.geysermc.geyser.translator.collision.OtherCollision;
 
 import javax.annotation.Nullable;
 
@@ -223,11 +228,39 @@ public final class BlockUtils {
     }
 
     public static BlockCollision getCollisionAt(GeyserSession session, Vector3i blockPos) {
-        return getCollision(session.getGeyser().getWorldManager().getBlockAt(session, blockPos));
+        int blockAt = session.getGeyser().getWorldManager().getBlockAt(session, blockPos);
+        if (blockAt >= BlockStateValues.JAVA_PLAYER_HEAD_ID_MIN && blockAt <= BlockStateValues.JAVA_PLAYER_HEAD_ID_MAX) {
+            SkullCache.Skull skull = session.getSkullCache().getSkulls().get(blockPos);
+            if (skull.getBlockDefinition().getRuntimeId() != -1) {
+                CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(SkullCache.getCustomSkullBlockName(skull));
+                if (customBlockData != null) {
+                    BoxComponent boxComponent = customBlockData.components().collisionBox();
+                    BoundingBox[] boundingBoxes = new BoundingBox[1];
+                    boundingBoxes[0] = new BoundingBox(boxComponent.originX(), boxComponent.originY(), boxComponent.originZ(),
+                            boxComponent.sizeX(), boxComponent.sizeY(), boxComponent.sizeZ());
+                    return new OtherCollision(boundingBoxes);
+                }
+            }
+        }
+        return getCollision(blockAt);
     }
 
     public static BlockCollision getCollisionAt(GeyserSession session, int x, int y, int z) {
-        return getCollision(session.getGeyser().getWorldManager().getBlockAt(session, x, y, z));
+        int blockAt = session.getGeyser().getWorldManager().getBlockAt(session, x, y, z);
+        if (blockAt >= BlockStateValues.JAVA_PLAYER_HEAD_ID_MIN && blockAt <= BlockStateValues.JAVA_PLAYER_HEAD_ID_MAX) {
+            SkullCache.Skull skull = session.getSkullCache().getSkulls().get(Vector3i.from(x, y, z));
+            if (skull != null && skull.getBlockDefinition().getRuntimeId() != -1) {
+                CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(SkullCache.getCustomSkullBlockName(skull));
+                if (customBlockData != null) {
+                    BoxComponent boxComponent = customBlockData.components().collisionBox();
+                    BoundingBox[] boundingBoxes = new BoundingBox[1];
+                    boundingBoxes[0] = new BoundingBox(boxComponent.originX(), boxComponent.originY(), boxComponent.originZ(),
+                            boxComponent.sizeX(), boxComponent.sizeY(), boxComponent.sizeZ());
+                    return new OtherCollision(boundingBoxes);
+                }
+            }
+        }
+        return getCollision(blockAt);
     }
 
     private BlockUtils() {

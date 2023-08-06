@@ -149,6 +149,24 @@ public interface CustomBlockComponents {
      */
     @NonNull Set<String> tags();
 
+    Float destoryTime();
+
+    Integer neteaseFaceDirectional();
+
+    List<NeteaseBoxComponent> neteaseAabbCollision();
+
+    List<NeteaseBoxComponent> neteaseAabbClip();
+
+    boolean neteaseBlockEntity();
+
+    String neteaseTier();
+
+    boolean neteaseSolid();
+
+    String neteaseRenderLayer();
+    Float neteaseLightEmission();
+    Float neteaseLightDampening();
+
     /**
      * Create a Builder for CustomBlockComponents
      *
@@ -188,5 +206,25 @@ public interface CustomBlockComponents {
         Builder tags(Set<String> tags);
 
         CustomBlockComponents build();
+
+        Builder destroy_time(float destroy_time);
+
+        Builder neteaseFaceDirectional(int netease_face_directional);
+
+        Builder neteaseAabbCollision(List<NeteaseBoxComponent> netease_aabb_collision);
+
+        Builder neteaseAabbClip(List<NeteaseBoxComponent> netease_aabb_clip);
+
+        Builder neteaseBlockEntity(boolean netease_block_entity);
+
+        Builder neteaseTier(String netease_tier);
+
+        Builder neteaseSolid(boolean netease_solid);
+
+        Builder neteaseRenderLayer(String text);
+
+        Builder neteaseLightEmission(Float lightEmission);
+
+        Builder neteaseLightDampening(Float lightDampening);
     }
 }

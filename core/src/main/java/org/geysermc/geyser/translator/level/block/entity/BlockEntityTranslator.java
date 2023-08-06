@@ -32,6 +32,8 @@ import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
 import org.geysermc.geyser.util.BlockEntityUtils;
 
+import java.util.Random;
+
 /**
  * The class that all block entities (on both Java and Bedrock) should translate with
  */
@@ -45,6 +47,30 @@ public abstract class BlockEntityTranslator {
         NbtMapBuilder tagBuilder = getConstantBedrockTag(BlockEntityUtils.getBedrockBlockEntityId(type), x, y, z);
         translateTag(tagBuilder, tag, blockState);
         return tagBuilder.build();
+    }
+
+    public static NbtMap getCustomSkullBlockEntityTag(BlockEntityType type, int x, int y, int z, CompoundTag tag, int blockState, String blockName) {
+        NbtMapBuilder nbtMapBuilder = NbtMap.builder();
+        if (!blockName.startsWith("heypixel") && !blockName.contains(":")) {
+            blockName = "heypixel:" + blockName;
+        }
+        nbtMapBuilder.putString("_blockName", blockName);
+//        nbtMapBuilder.putBoolean("_movable", false);
+//        nbtMapBuilder.putBoolean("_tick", false);
+        Random random = new Random();
+        long l = random.nextLong(); //TODO 后续自增长？需缓存起来。用于一些操作。
+        nbtMapBuilder.putLong("_uniqueId", l * -1);
+        NbtMap nbtMapBuilder1 = NbtMap.builder().putByte("1", (byte) 1).putByte("2", (byte) 2).putString("3", "123").build();
+        nbtMapBuilder.putCompound("exData", NbtMap.builder().putCompound("abc", nbtMapBuilder1).build());
+
+        nbtMapBuilder.putString("id", "ModBlock");
+        nbtMapBuilder.putBoolean("isMovable", false);
+        nbtMapBuilder.putInt("x", x);
+        nbtMapBuilder.putInt("y", y);
+        nbtMapBuilder.putInt("z", z);
+
+        return nbtMapBuilder.build();
+
     }
 
     protected NbtMapBuilder getConstantBedrockTag(String bedrockId, int x, int y, int z) {

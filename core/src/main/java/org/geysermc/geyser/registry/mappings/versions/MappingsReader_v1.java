@@ -93,6 +93,7 @@ public class MappingsReader_v1 extends MappingsReader {
 
     public void readBlockMappingsV1(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomBlockMapping> consumer) {
         JsonNode blocksNode = mappingsRoot.get("blocks");
+        JsonNode skullNode = mappingsRoot.get("skull_blocks");
 
         if (blocksNode != null && blocksNode.isObject()) {
             blocksNode.fields().forEachRemaining(entry -> {
@@ -100,6 +101,21 @@ public class MappingsReader_v1 extends MappingsReader {
                     try {
                         String identifier = Identifier.formalize(entry.getKey());
                         CustomBlockMapping customBlockMapping = this.readBlockMappingEntry(identifier, entry.getValue());
+                        consumer.accept(identifier, customBlockMapping);
+                    } catch (Exception e) {
+                        GeyserImpl.getInstance().getLogger().error("Error in registering blocks for custom mapping file: " + file.toString());
+                        GeyserImpl.getInstance().getLogger().error("due to entry: " + entry, e);
+                    }
+                }
+            });
+        }
+
+        if (skullNode != null && skullNode.isObject()) {
+            skullNode.fields().forEachRemaining(entry -> {
+                if (entry.getValue().isObject()) {
+                    try {
+                        String identifier = entry.getKey();
+                        CustomBlockMapping customBlockMapping = this.readSkullBlockMappingEntry(identifier, entry.getValue());
                         consumer.accept(identifier, customBlockMapping);
                     } catch (Exception e) {
                         GeyserImpl.getInstance().getLogger().error("Error in registering blocks for custom mapping file: " + file.toString());
@@ -247,7 +263,7 @@ public class MappingsReader_v1 extends MappingsReader {
             CustomBlockData blockData = customBlockDataBuilder
                     .components(componentsMapping.components())
                     .build();
-            return new CustomBlockMapping(blockData, Map.of(identifier, new CustomBlockStateMapping(blockData.defaultBlockState(), componentsMapping.extendedCollisionBox())), identifier, !onlyOverrideStates);
+            return new CustomBlockMapping(blockData, Map.of(identifier, new CustomBlockStateMapping(blockData.defaultBlockState(), componentsMapping.extendedCollisionBox())), identifier, !onlyOverrideStates, false);
         }
 
         Map<String, CustomBlockComponentsMapping> componentsMap = new LinkedHashMap<>();
@@ -331,7 +347,7 @@ public class MappingsReader_v1 extends MappingsReader {
         Map<String, CustomBlockStateMapping> states = blockStateBuilders.entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getKey, e -> new CustomBlockStateMapping(e.getValue().builder().apply(customBlockData.blockStateBuilder()), e.getValue().extendedCollisionBox())));
 
-        return new CustomBlockMapping(customBlockData, states, identifier, overrideItem);
+        return new CustomBlockMapping(customBlockData, states, identifier, overrideItem, false);
     }
 
     /**
@@ -480,7 +496,96 @@ public class MappingsReader_v1 extends MappingsReader {
             builder.tags(tagsSet);
         }
 
+        if (node.has("netease_face_directional")) {
+            builder.neteaseFaceDirectional(node.get("netease_face_directional").asInt());
+        }
+
+        if (node.has("netease_aabb")) {
+            JsonNode jsonNode = node.get("netease_aabb");
+            if (jsonNode.has("clip")) {
+                builder.neteaseAabbClip(createNetEaseBoxComponent(jsonNode.get("clip")));
+            }
+            if (jsonNode.has("collision")) {
+                builder.neteaseAabbCollision(createNetEaseBoxComponent(jsonNode.get("collision")));
+            }
+        }
+
+        if (node.has("netease_block_entity")) {
+            builder.neteaseBlockEntity(true);
+        }
+
+        if (node.has("netease_tier")) {
+            builder.neteaseTier(node.get("netease_tier").asText());
+        }
+
+        if (node.has("netease_solid")) {
+            builder.neteaseSolid(node.get("netease_solid").asBoolean());
+        }
+
+        if (node.has("netease_render_layer")) {
+            builder.neteaseRenderLayer(node.get("netease_render_layer").asText());
+        }
+
+        if (node.has("netease_light_emission")) {
+            builder.neteaseLightEmission(node.get("light_emission").floatValue());
+        }
+
+        if (node.has("netease_light_dampening")) {
+            builder.neteaseLightDampening(node.get("light_dampening").floatValue());
+        }
+
         return new CustomBlockComponentsMapping(builder.build(), extendedBoxComponent);
+    }
+
+    /**
+     * Read a block mapping entry from a JSON node and Java identifier
+     * @param identifier The Java identifier of the block
+     * @param node The {@link JsonNode} containing the block mapping entry
+     * @return The {@link CustomBlockMapping} record to be read by {@link org.geysermc.geyser.registry.populator.CustomBlockRegistryPopulator#populate}
+     * @throws InvalidCustomMappingsFileException If the JSON node is invalid
+     */
+    @Override
+    public CustomBlockMapping readSkullBlockMappingEntry(String identifier, JsonNode node) throws InvalidCustomMappingsFileException {
+        if (node == null || !node.isObject()) {
+            throw new InvalidCustomMappingsFileException("Invalid custom skull block mappings entry:" + node);
+        }
+
+        String name = node.get("name").asText();
+        if (name == null || name.isEmpty()) {
+            throw new InvalidCustomMappingsFileException("A block entry has no name");
+        }
+
+        boolean includedInCreativeInventory = node.has("included_in_creative_inventory") && node.get("included_in_creative_inventory").asBoolean();
+
+        String creativeCategory = "none";
+        if (node.has("creative_category")) {
+            creativeCategory = node.get("creative_category").asText();
+        }
+
+        String creativeGroup = "";
+        if (node.has("creative_group")) {
+            creativeGroup = node.get("creative_group").asText();
+        }
+
+        // If this is true, we will only register the states the user has specified rather than all the possible block states
+        boolean onlyOverrideStates = node.has("only_override_states") && node.get("only_override_states").asBoolean();
+
+        // Create the data for the overall block
+        CustomBlockData.Builder customBlockDataBuilder = new CustomBlockDataBuilder()
+                .name(name)
+                .includedInCreativeInventory(includedInCreativeInventory)
+                .creativeCategory(creativeCategory)
+                .creativeGroup(creativeGroup);
+
+        if (BlockRegistries.JAVA_IDENTIFIER_TO_ID.get().containsKey(identifier)) {
+            // There is only one Java block state to override
+            throw new InvalidCustomMappingsFileException("Skull block entry for " + identifier + " is a java block, please rename.");
+        }
+        CustomBlockComponentsMapping componentsMapping = createCustomBlockComponentsMapping(node, identifier, name);
+        CustomBlockData blockData = customBlockDataBuilder
+                .components(componentsMapping.components())
+                .build();
+        return new CustomBlockMapping(blockData, Map.of(identifier, new CustomBlockStateMapping(blockData.defaultBlockState(), componentsMapping.extendedCollisionBox())), identifier, !onlyOverrideStates, true);
     }
 
     /**
@@ -561,6 +666,58 @@ public class MappingsReader_v1 extends MappingsReader {
                 16 * (maxZ - minZ)
         );
     }
+
+    /**
+     * Creates a {@link BoxComponent} from a JSON Node
+     * @param node the JSON node
+     * @return the {@link BoxComponent}
+     */
+    private List<NeteaseBoxComponent> createNetEaseBoxComponent(JsonNode node) {
+        List<NeteaseBoxComponent> boxComponents = new ArrayList<>();
+        if (node != null && node.isObject()) {
+            if (node.has("min") && node.has("max")) {
+                JsonNode min = node.get("min");
+                float minX = min.get(0).floatValue();
+                float minY = min.get(1).floatValue();
+                float minZ = min.get(2).floatValue();
+
+                JsonNode max = node.get("max");
+                float maxX = max.get(0).floatValue();
+                float maxY = max.get(1).floatValue();
+                float maxZ = max.get(2).floatValue();
+
+                if (node.has("enable")) {
+                    boxComponents.add(new NeteaseBoxComponent(node.get("enable").asText(), minX, minY, minZ, maxX, maxY, maxZ));
+                } else {
+                    boxComponents.add(new NeteaseBoxComponent("1.000000", minX, minY, minZ, maxX, maxY, maxZ));
+                }
+                return boxComponents;
+            }
+        }
+        if (node != null && node.isArray()) {
+            for (JsonNode nodeInfo : node) {
+                if (nodeInfo.has("min") && nodeInfo.has("max")) {
+                    JsonNode min = nodeInfo.get("min");
+                    float minX = min.get(0).floatValue();
+                    float minY = min.get(1).floatValue();
+                    float minZ = min.get(2).floatValue();
+
+                    JsonNode max = nodeInfo.get("max");
+                    float maxX = max.get(0).floatValue();
+                    float maxY = max.get(1).floatValue();
+                    float maxZ = max.get(2).floatValue();
+                    if (nodeInfo.has("enable")) {
+                        boxComponents.add(new NeteaseBoxComponent(nodeInfo.get("enable").asText(), minX, minY, minZ, maxX, maxY, maxZ));
+                    } else {
+                        boxComponents.add(new NeteaseBoxComponent("1.000000", minX, minY, minZ, maxX, maxY, maxZ));
+                    }
+                    return boxComponents;
+                }
+            }
+        }
+        return null;
+    }
+
 
     /**
      * Creates a {@link BoxComponent} based on a Java block's collision

@@ -29,12 +29,17 @@ import com.github.steveice10.mc.protocol.data.game.entity.player.GameMode;
 import com.github.steveice10.mc.protocol.data.game.level.block.BlockEntityType;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.level.ClientboundBlockEntityDataPacket;
 import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerType;
+import org.cloudburstmc.protocol.bedrock.packet.BlockEntityDataPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerOpenPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateBlockPacket;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.level.block.BlockStateValues;
+import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.translator.level.block.entity.BlockEntityTranslator;
 import org.geysermc.geyser.translator.level.block.entity.RequiresBlockState;
 import org.geysermc.geyser.translator.level.block.entity.SkullBlockEntityTranslator;
@@ -77,6 +82,20 @@ public class JavaBlockEntityDataTranslator extends PacketTranslator<ClientboundB
                 updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NEIGHBORS);
                 updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
                 session.sendUpstreamPacket(updateBlockPacket);
+
+                // 网易方块实体更新，用于显示模型
+                String customSkullBlockName = SkullCache.getCustomSkullBlockName(packet.getNbt());
+                CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(customSkullBlockName);
+                if (customBlockData != null && customBlockData.components().neteaseBlockEntity()) {
+                    NbtMap blockEntityTag = BlockEntityTranslator.getCustomSkullBlockEntityTag(type, position.getX(), position.getY(), position.getZ(),
+                            packet.getNbt(), blockState, customBlockData.name());
+                    BlockEntityDataPacket blockEntityPacket = new BlockEntityDataPacket();
+                    blockEntityPacket.setBlockPosition(position);
+                    blockEntityPacket.setData(blockEntityTag);
+                    session.sendUpstreamPacket(blockEntityPacket);
+
+                }
+                //TODO 判断方块是否为客户端实体
             }
         }
         if (!hasCustomHeadBlock) {

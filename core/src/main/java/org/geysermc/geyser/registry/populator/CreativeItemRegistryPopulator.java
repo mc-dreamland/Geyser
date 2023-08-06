@@ -35,16 +35,17 @@ import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.geysermc.geyser.GeyserBootstrap;
 import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
+import org.geysermc.geyser.registry.ArrayRegistry;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
+import org.geysermc.geyser.registry.type.NeteaseBedrockBlock;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 
@@ -71,7 +72,7 @@ public class CreativeItemRegistryPopulator {
 
         BlockMappings blockMappings = BlockRegistries.BLOCKS.forVersion(palette.protocolVersion());
         for (JsonNode itemNode : creativeItemEntries) {
-            ItemData.Builder itemBuilder = createItemData(itemNode, blockMappings, definitions);
+            ItemData.Builder itemBuilder = createItemData(palette, itemNode, blockMappings, definitions);
             if (itemBuilder == null) {
                 continue;
             }
@@ -80,11 +81,12 @@ public class CreativeItemRegistryPopulator {
         }
     }
 
-    private static ItemData.Builder createItemData(JsonNode itemNode, BlockMappings blockMappings, Map<String, ItemDefinition> definitions) {
+    private static ItemData.Builder createItemData(ItemRegistryPopulator.PaletteVersion palette, JsonNode itemNode, BlockMappings blockMappings, Map<String, ItemDefinition> definitions) {
         int count = 1;
         int damage = 0;
         int bedrockBlockRuntimeId = -1;
         NbtMap tag = null;
+        List<NeteaseBedrockBlock> customBlockRuntimeList = BlockRegistries.customBlockRuntimeList.get(palette.protocolVersion());
 
         String identifier = itemNode.get("id").textValue();
         for (BiPredicate<String, Integer> predicate : JAVA_ONLY_ITEM_FILTER) {
@@ -111,6 +113,9 @@ public class CreativeItemRegistryPopulator {
             if (bedrockBlockRuntimeId == 0 && !identifier.equals("minecraft:blue_candle")) { // FIXME
                 bedrockBlockRuntimeId = -1;
             }
+            int i = BlockRegistryPopulator.manageCreativeItemsRuntimeId(customBlockRuntimeList, bedrockBlockRuntimeId);
+
+            bedrockBlockRuntimeId = bedrockBlockRuntimeId + i;
 
             blockDefinition = bedrockBlockRuntimeId == -1 ? null : blockMappings.getDefinition(bedrockBlockRuntimeId);
         } else if ((blockStateNode = itemNode.get("block_state_b64")) != null) {

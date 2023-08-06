@@ -281,6 +281,13 @@ public class SkinManager {
             JsonNode skinObject = GeyserImpl.JSON_MAPPER.readTree(new String(Base64.getDecoder().decode(encodedJson), StandardCharsets.UTF_8));
             JsonNode textures = skinObject.get("textures");
 
+
+            if (skinObject.hasNonNull("pe")) {
+                String skinUrl = skinObject.get("data").asText();
+                GeyserImpl.getInstance().getLogger().debug("loadFromJson PE " + skinUrl);
+                return new GameProfileData(skinUrl, SkinProvider.EMPTY_CAPE.textureUrl(), skinObject.get("alex").asBoolean());
+            }
+
             if (textures == null) {
                 return null;
             }

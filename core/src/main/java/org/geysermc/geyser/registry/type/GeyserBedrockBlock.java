@@ -48,6 +48,6 @@ public class GeyserBedrockBlock implements BlockDefinition {
 
     @Override
     public String toString() {
-        return "GeyserBedrockBlock{" + state.getString("name") + "}";
+        return "GeyserBedrockBlock{" + (state == null ? null : state.getString("name")) + ", runtimeId=" + this.runtimeId + ", state=" + state + "}";
     }
 }
