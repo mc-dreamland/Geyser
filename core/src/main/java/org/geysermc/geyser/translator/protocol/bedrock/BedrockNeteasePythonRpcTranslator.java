@@ -23,31 +23,38 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.translator.protocol.java.entity.player;
+package org.geysermc.geyser.translator.protocol.bedrock;
 
-import com.github.steveice10.mc.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerCombatKillPacket;
-import org.cloudburstmc.protocol.bedrock.packet.DeathInfoPacket;
-import net.kyori.adventure.text.Component;
-import org.geysermc.geyser.network.GameProtocol;
+import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
+import org.cloudburstmc.protocol.bedrock.packet.NeteasePythonRpcPacket;
+import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
-import org.geysermc.geyser.translator.text.MessageTranslator;
+import org.msgpack.MessagePack;
 
-@Translator(packet = ClientboundPlayerCombatKillPacket.class)
-public class JavaPlayerCombatKillTranslator extends PacketTranslator<ClientboundPlayerCombatKillPacket> {
+import java.io.IOException;
+
+@Translator(packet = NeteasePythonRpcPacket.class)
+public class BedrockNeteasePythonRpcTranslator extends PacketTranslator<NeteasePythonRpcPacket> {
 
     @Override
-    public void translate(GeyserSession session, ClientboundPlayerCombatKillPacket packet) {
-        if (session.getUpstream().getProtocolVersion() <= 504) {
+    public void translate(GeyserSession session, NeteasePythonRpcPacket packet){
+        // Stop the player sending animations before they have fully spawned into the server
+        if(!session.isSpawned()){
             return;
         }
-        if (packet.getPlayerId() == session.getPlayerEntity().getEntityId()) {
-            Component deathMessage = packet.getMessage();
-            // TODO - could inject score in, but as of 1.19.10 newlines don't center and start at the left of the first text
-            DeathInfoPacket deathInfoPacket = new DeathInfoPacket();
-            deathInfoPacket.setCauseAttackName(MessageTranslator.convertMessage(deathMessage, session.locale()));
-            session.sendUpstreamPacket(deathInfoPacket);
+
+        MessagePack messagePack = new MessagePack();
+        byte[] write;
+        try {
+            write = messagePack.write(packet.getJson());
+            session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(PluginMessageChannels.MOD_SDK, write));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
+
     }
+
 }

@@ -871,7 +871,7 @@ public class LoggingPacketHandler implements BedrockPacketHandler {
     }
 
     @Override
-    public PacketSignal handle(NeteaseCustomPacket packet) {
+    public PacketSignal handle(NeteasePythonRpcPacket packet) {
         return defaultHandler(packet);
     }
 }

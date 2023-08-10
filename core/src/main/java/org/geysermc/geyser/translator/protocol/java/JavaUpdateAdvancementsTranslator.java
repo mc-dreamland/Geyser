@@ -77,6 +77,10 @@ public class JavaUpdateAdvancementsTranslator extends PacketTranslator<Clientbou
             // Advancements are being cleared, so they can't be granted
             return;
         }
+
+        if (session.getUpstream().getProtocolVersion() <= 504) {
+            return;
+        }
         for (String advancementId : packet.getProgress().keySet()) {
             GeyserAdvancement advancement = session.getAdvancementsCache().getStoredAdvancements().get(advancementId);
             if (advancement != null && advancement.getDisplayData() != null) {

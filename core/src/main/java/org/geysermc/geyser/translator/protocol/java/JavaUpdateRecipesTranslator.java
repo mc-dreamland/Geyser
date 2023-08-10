@@ -216,11 +216,14 @@ public class JavaUpdateRecipesTranslator extends PacketTranslator<ClientboundUpd
 
         // FIXME: if the server/viaversion doesn't send trim recipes then we shouldn't either.
 
-        // BDS sends armor trim templates and materials before the CraftingDataPacket
-        TrimDataPacket trimDataPacket = new TrimDataPacket();
-        trimDataPacket.getPatterns().addAll(TrimRecipe.PATTERNS);
-        trimDataPacket.getMaterials().addAll(TrimRecipe.MATERIALS);
-        session.sendUpstreamPacket(trimDataPacket);
+
+        if (session.getUpstream().getProtocolVersion() > 504) {
+            // BDS sends armor trim templates and materials before the CraftingDataPacket
+            TrimDataPacket trimDataPacket = new TrimDataPacket();
+            trimDataPacket.getPatterns().addAll(TrimRecipe.PATTERNS);
+            trimDataPacket.getMaterials().addAll(TrimRecipe.MATERIALS);
+            session.sendUpstreamPacket(trimDataPacket);
+        }
 
         // Identical smithing_trim recipe sent by BDS that uses tag-descriptors, as the client seems to ignore the
         // approach of using many default-descriptors (which we do for smithing_transform)

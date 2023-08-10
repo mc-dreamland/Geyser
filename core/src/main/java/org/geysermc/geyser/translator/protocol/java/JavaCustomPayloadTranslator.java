@@ -28,7 +28,7 @@ package org.geysermc.geyser.translator.protocol.java;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundCustomPayloadPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
-import org.cloudburstmc.protocol.bedrock.packet.NeteaseCustomPacket;
+import org.cloudburstmc.protocol.bedrock.packet.NeteasePythonRpcPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TransferPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UnknownPacket;
 import io.netty.buffer.ByteBuf;
@@ -145,7 +145,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
         } else if (channel.equals(PluginMessageChannels.MOD_SDK)) {
             byte[] data = packet.getData();
             byte[] msgPackData = unGZipBytes(data);
-            NeteaseCustomPacket neteaseCustomPacket = new NeteaseCustomPacket(msgPackData);
+            NeteasePythonRpcPacket neteaseCustomPacket = new NeteasePythonRpcPacket(msgPackData);
 
             session.sendUpstreamPacket(neteaseCustomPacket);
         }
