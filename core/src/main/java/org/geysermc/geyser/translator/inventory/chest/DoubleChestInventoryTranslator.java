@@ -39,6 +39,7 @@ import org.geysermc.geyser.inventory.Inventory;
 import org.geysermc.geyser.level.block.BlockStateValues;
 import org.geysermc.geyser.level.block.DoubleChestValue;
 import org.geysermc.geyser.registry.BlockRegistries;
+import org.geysermc.geyser.registry.populator.BlockRegistryPopulator;
 import org.geysermc.geyser.registry.type.BlockMapping;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.level.block.entity.DoubleChestBlockEntityTranslator;
@@ -92,7 +93,7 @@ public class DoubleChestInventoryTranslator extends ChestInventoryTranslator {
         }
 
         Vector3i pairPosition = position.add(Vector3i.UNIT_X);
-        BlockDefinition definition = session.getBlockMappings().getVanillaBedrockBlock(defaultJavaBlockState);
+        BlockDefinition definition = BlockRegistryPopulator.manageBedrockDefinition(session, session.getBlockMappings().getVanillaBedrockBlock(defaultJavaBlockState));
 
         UpdateBlockPacket blockPacket = new UpdateBlockPacket();
         blockPacket.setDataLayer(0);

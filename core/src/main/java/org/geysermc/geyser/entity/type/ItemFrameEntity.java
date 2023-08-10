@@ -41,6 +41,7 @@ import org.cloudburstmc.protocol.bedrock.packet.BlockEntityDataPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateBlockPacket;
 import lombok.Getter;
 import org.geysermc.geyser.entity.EntityDefinition;
+import org.geysermc.geyser.registry.populator.BlockRegistryPopulator;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.inventory.item.ItemTranslator;
 import org.geysermc.geyser.util.InteractionResult;
@@ -91,7 +92,7 @@ public class ItemFrameEntity extends Entity {
                 .putByte("item_frame_photo_bit", (byte) 0);
         blockBuilder.put("states", statesBuilder.build());
 
-        blockDefinition = session.getBlockMappings().getItemFrame(blockBuilder.build());
+        blockDefinition = BlockRegistryPopulator.manageBedrockDefinition(session, session.getBlockMappings().getItemFrame(blockBuilder.build()));
         bedrockPosition = Vector3i.from(position.getFloorX(), position.getFloorY(), position.getFloorZ());
 
         session.getItemFrameCache().put(bedrockPosition, this);

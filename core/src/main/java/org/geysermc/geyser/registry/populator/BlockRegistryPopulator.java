@@ -57,6 +57,7 @@ import org.geysermc.geyser.registry.type.BlockMapping;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
 import org.geysermc.geyser.registry.type.NeteaseBedrockBlock;
+import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.util.BlockUtils;
 
 import java.io.DataInputStream;
@@ -855,8 +856,18 @@ public final class BlockRegistryPopulator {
         return ii;
     }
 
+    public static GeyserBedrockBlock manageBedrockDefinition(GeyserSession session, GeyserBedrockBlock bedrockBlock) {
+        List<NeteaseBedrockBlock> customBlockRuntimeList = BlockRegistries.customBlockRuntimeList.get(session.getUpstream().getProtocolVersion());
+        return new GeyserBedrockBlock(bedrockBlock.getRuntimeId() + manageRuntimeId(customBlockRuntimeList, bedrockBlock.getRuntimeId()), bedrockBlock.getState());
+    }
+
     public static GeyserBedrockBlock manageBedrockDefinition(List<NeteaseBedrockBlock> customIdList, GeyserBedrockBlock bedrockBlock) {
         return new GeyserBedrockBlock(bedrockBlock.getRuntimeId() + manageRuntimeId( customIdList, bedrockBlock.getRuntimeId()), bedrockBlock.getState());
+    }
+
+    public static BlockDefinition manageBedrockDefinition(GeyserSession session, BlockDefinition bedrockBlock) {
+        List<NeteaseBedrockBlock> customBlockRuntimeList = BlockRegistries.customBlockRuntimeList.get(session.getUpstream().getProtocolVersion());
+        return (BlockDefinition) (new GeyserBedrockBlock(bedrockBlock.getRuntimeId() + manageRuntimeId( customBlockRuntimeList, bedrockBlock.getRuntimeId()), null));
     }
 
     public static BlockDefinition manageBedrockDefinition(List<NeteaseBedrockBlock> customIdList, BlockDefinition bedrockBlock) {

@@ -202,9 +202,6 @@ public class ItemRegistryPopulator {
                 }
 
                 ItemDefinition definition = new SimpleItemDefinition(entry.getName().intern(), id, false);
-                if (definition == null) {
-                    System.out.println("definition -> " + "??????");
-                }
                 definitions.put(entry.getName(), definition);
                 registry.put(definition.getRuntimeId(), definition);
             }
@@ -427,7 +424,7 @@ public class ItemRegistryPopulator {
                                             int customProtocolId = nextFreeBedrockId++;
                                             mappingItem.setBedrockData(customProtocolId);
                                             bedrockIdentifier = customBlockData.identifier();
-                                            definition = new SimpleItemDefinition(bedrockIdentifier, customProtocolId, true);
+                                            definition = new SimpleItemDefinition(bedrockIdentifier, customProtocolId, false);
                                             registry.put(customProtocolId, definition);
                                             customBlockItemDefinitions.put(customBlockData, definition);
                                             customIdMappings.put(customProtocolId, bedrockIdentifier);
@@ -617,7 +614,7 @@ public class ItemRegistryPopulator {
                     int customProtocolId = nextFreeBedrockId++;
                     String identifier = customBlock.identifier();
 
-                    final ItemDefinition definition = new SimpleItemDefinition(identifier, customProtocolId, true);
+                    final ItemDefinition definition = new SimpleItemDefinition(identifier, customProtocolId, false);
                     registry.put(customProtocolId, definition);
                     customBlockItemDefinitions.put(customBlock, definition);
                     customIdMappings.put(customProtocolId, identifier);
