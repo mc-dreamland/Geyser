@@ -68,6 +68,6 @@ public class JavaAddPlayerTranslator extends PacketTranslator<ClientboundAddPlay
         session.getEntityCache().cacheEntity(entity);
 
         entity.sendPlayer();
-        SkinManager.requestAndHandleSkinAndCape(entity, session, null);
+//        SkinManager.requestAndHandleSkinAndCape(entity, session, null);
     }
 }

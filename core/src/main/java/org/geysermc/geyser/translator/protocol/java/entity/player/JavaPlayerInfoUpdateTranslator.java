@@ -30,11 +30,13 @@ import com.github.steveice10.mc.protocol.data.game.PlayerListEntry;
 import com.github.steveice10.mc.protocol.data.game.PlayerListEntryAction;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
 import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.skin.SkinManager;
+import org.geysermc.geyser.skin.SkinProvider;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 
@@ -100,9 +102,14 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (entry.isListed()) {
-                    PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
-                    toAdd.add(playerListEntry);
+                    sendAddPlayerList(session, entity);
+//                    if (!session.getCachedPlayerList().containsKey(entity.getUuid())) {
+//                        PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
+//                        toAdd.add(playerListEntry);
+//                        session.getCachedPlayerList().put(entity.getTabListUuid(), playerListEntry.getSkin().getFullSkinId());
+//                    }
                 } else {
+                    session.getCachedPlayerList().remove(entity.getUuid());
                     toRemove.add(new PlayerListPacket.Entry(entity.getTabListUuid()));
                 }
             }
@@ -112,6 +119,22 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 tabListPacket.setAction(PlayerListPacket.Action.ADD);
                 tabListPacket.getEntries().addAll(toAdd);
                 session.sendUpstreamPacket(tabListPacket);
+//                for (PlayerListPacket.Entry entry : toAdd) {
+//                    long uid = entry.getUid();
+//                    if (uid == -1) {
+//                        uid = entry.getUuid().toString().replace("-", "").hashCode();
+//                        if (uid < 0) {
+//                            uid = -uid;
+//                        }
+//                    }
+//                    System.out.println("Java Add Player Info -> " + entry.getUuid() + " | " + uid + " | " + entry.getSkin().getSkinId());
+//                    ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+//                    confirmSkinPacket.setSkinData(entry.getSkin().getSkinData().getImage());
+//                    confirmSkinPacket.setGeometry(entry.getSkin().getGeometryData());
+//                    confirmSkinPacket.setUuid(entry.getUuid());
+//                    confirmSkinPacket.setUid(uid);
+//                    session.sendUpstreamPacket(confirmSkinPacket);
+//                }
             }
             if (!toRemove.isEmpty()) {
                 PlayerListPacket tabListPacket = new PlayerListPacket();
@@ -120,5 +143,43 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 session.sendUpstreamPacket(tabListPacket);
             }
         }
+    }
+
+    private void sendAddPlayerList(GeyserSession session, PlayerEntity entity) {
+        SkinProvider.requestSkinData(entity).whenCompleteAsync((skinData, throwable) -> {
+            if (!session.getCachedPlayerList().containsKey(entity.getUuid())) {
+                PlayerListPacket.Entry updatedEntry = SkinManager.buildEntryManually(
+                        session,
+                        entity.getUuid(),
+                        entity.getUsername(),
+                        entity.getGeyserId(),
+                        skinData.skin(),
+                        skinData.cape(),
+                        skinData.geometry()
+                );
+
+                PlayerListPacket playerAddPacket = new PlayerListPacket();
+                playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+                playerAddPacket.getEntries().add(updatedEntry);
+                session.sendUpstreamPacket(playerAddPacket);
+                session.setHaveSendSkin(true);
+                session.getCachedPlayerList().put(entity.getUuid(), updatedEntry.getSkin().getFullSkinId());
+
+
+                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+                confirmSkinPacket.setSkinData(updatedEntry.getSkin().getSkinData().getImage());
+                confirmSkinPacket.setGeometry(updatedEntry.getSkin().getGeometryData());
+                confirmSkinPacket.setUuid(entity.getUuid());
+                long uid = updatedEntry.getUid();
+                if (uid == -1) {
+                    uid = entity.getUuid().toString().replace("-", "").hashCode();
+                    if (uid < 0) {
+                        uid = -uid;
+                    }
+                }
+                confirmSkinPacket.setUid(uid);
+                session.sendUpstreamPacket(confirmSkinPacket);
+            }
+        });
     }
 }

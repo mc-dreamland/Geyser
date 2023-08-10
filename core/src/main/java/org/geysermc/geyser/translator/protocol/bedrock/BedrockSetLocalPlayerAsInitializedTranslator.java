@@ -37,6 +37,8 @@ import org.geysermc.geyser.api.event.bedrock.SessionJoinEvent;
 import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.skin.SkinManager;
+import org.geysermc.geyser.skin.SkinProvider;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.InventoryUtils;
@@ -115,6 +117,13 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
 
                     GeyserImpl.getInstance().eventBus().fire(new SessionJoinEvent(session));
                 }
+
+                SkinProvider.requestSkinData(session.getPlayerEntity()).whenCompleteAsync((skinData, throwable) -> {
+
+                    if (skinData.geometry() != null) {
+                        SkinManager.sendWhenLoginDone(session, session.getPlayerEntity(), skinData);
+                    }
+                });
             }
         }
     }

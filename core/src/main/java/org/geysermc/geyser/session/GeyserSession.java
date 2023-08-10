@@ -572,6 +572,13 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     private MinecraftProtocol protocol;
 
+
+    private final HashMap<UUID, String> cachedPlayerList;
+    @Setter
+    private boolean haveSendSkin = false;
+    @Setter
+    private List<String> optionPacksUuid;
+
     public GeyserSession(GeyserImpl geyser, BedrockServerSession bedrockServerSession, EventLoop eventLoop) {
         this.geyser = geyser;
         this.upstream = new UpstreamSession(bedrockServerSession);
@@ -622,6 +629,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         }
 
         this.remoteServer = geyser.defaultRemoteServer();
+        this.cachedPlayerList = new HashMap<>();
+        this.optionPacksUuid = new ArrayList<>();
     }
 
     /**
@@ -1627,10 +1636,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * @param packet the bedrock packet from the NukkitX protocol lib
      */
     public void sendUpstreamPacket(BedrockPacket packet) {
-        if (packet.getPacketType().equals(BedrockPacketType.UPDATE_BLOCK)) {
-            System.out.println(packet);
-        }
-
         upstream.sendPacket(packet);
     }
 
@@ -1730,6 +1735,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * Send an AdventureSettingsPacket to the client with the latest flags
      */
     public void sendAdventureSettings() {
+
+        if (this.getUpstream().getProtocolVersion() <= 504) {
+            return;
+        }
+
         long bedrockId = playerEntity.getGeyserId();
         // Set command permission if OP permission level is high enough
         // This allows mobile players access to a GUI for doing commands. The commands there do not change above OPERATOR
@@ -1741,7 +1751,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         // Update the noClip and worldImmutable values based on the current gamemode
         boolean spectator = gameMode == GameMode.SPECTATOR;
         boolean worldImmutable = gameMode == GameMode.ADVENTURE || spectator;
-
         UpdateAdventureSettingsPacket adventureSettingsPacket = new UpdateAdventureSettingsPacket();
         adventureSettingsPacket.setNoMvP(false);
         adventureSettingsPacket.setNoPvM(false);

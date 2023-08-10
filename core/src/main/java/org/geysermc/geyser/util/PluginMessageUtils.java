@@ -27,10 +27,17 @@ package org.geysermc.geyser.util;
 
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
+import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.session.GeyserSession;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class PluginMessageUtils {
     private static final byte[] GEYSER_BRAND_DATA;
@@ -83,5 +90,32 @@ public class PluginMessageUtils {
             return 4;
         }
         return 5;
+    }
+
+    @SneakyThrows
+    public static byte[] syncSkinData(GeyserSession geyserSession){
+        Map<String,Object> map = new LinkedHashMap<>(2);
+        map.put("pe",true);
+        map.put("alex",geyserSession.getClientData().getSkinId().contains("Slim") ?"true":"false");
+        map.put("data",GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/"
+                +geyserSession.getAuthData().uuid()+"?"+
+                hash(geyserSession.getClientData().getSkinData())+"?pe");
+        // 114514 魔法值 无作用
+        return (Base64.getEncoder().encodeToString(GeyserImpl.JSON_MAPPER.writeValueAsBytes(map))+ '\0'+"114514").getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static String hash(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] messageDigest = md.digest(input.getBytes());
+            BigInteger number = new BigInteger(1, messageDigest);
+            StringBuilder hashtext = new StringBuilder(number.toString(16));
+            while (hashtext.length() < 32) {
+                hashtext.insert(0, "0");
+            }
+            return hashtext.toString();
+        } catch (Exception e) {
+            return "";
+        }
     }
 }

@@ -227,6 +227,7 @@ public final class FloodgateSkinUploader {
         node.put("skin_id", clientData.getSkinId());
         node.put("uuid", session.getAuthData().uuid().toString());
         node.put("xuid", session.getAuthData().xuid());
+        node.put("uid", session.getAuthData().uid());
 
         // The reason why I don't like Jackson
         String jsonString;

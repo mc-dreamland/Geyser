@@ -31,6 +31,7 @@ import com.github.steveice10.opennbt.tag.builtin.ListTag;
 import com.github.steveice10.opennbt.tag.builtin.StringTag;
 import org.cloudburstmc.protocol.bedrock.data.skin.ImageData;
 import org.cloudburstmc.protocol.bedrock.data.skin.SerializedSkin;
+import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
 import org.geysermc.geyser.GeyserImpl;
@@ -72,7 +73,8 @@ public class SkinManager {
             // Otherwise, grab the default player skin
             SkinProvider.SkinData fallbackSkinData = SkinProvider.determineFallbackSkinData(playerEntity.getUuid());
             if (skin == null) {
-                skin = fallbackSkinData.skin();
+//                skin = fallbackSkinData.skin();
+                skin = ProvidedSkins.getSteveSkin().getData();
                 geometry = fallbackSkinData.geometry();
             }
             if (cape == null) {
@@ -98,7 +100,7 @@ public class SkinManager {
                                                             SkinProvider.Skin skin,
                                                             SkinProvider.Cape cape,
                                                             SkinProvider.SkinGeometry geometry) {
-        SerializedSkin serializedSkin = getSkin(skin.getTextureUrl(), skin, cape, geometry);
+        SerializedSkin serializedSkin = getSkin(skin, cape, geometry, false);
 
         // This attempts to find the XUID of the player so profile images show up for Xbox accounts
         String xuid = "";
@@ -125,7 +127,66 @@ public class SkinManager {
         entry.setPlatformChatId("");
         entry.setTeacher(false);
         entry.setTrustedSkin(true);
+        entry.setUid(skin.getUid());
         return entry;
+    }
+
+    /**
+     * With all the information needed, build a Bedrock player entry with translated skin information.
+     */
+    public static PlayerListPacket.Entry buildPersonalEntryManually(GeyserSession session, UUID uuid, String username, long geyserId,
+                                                            SkinProvider.Skin skin,
+                                                            SkinProvider.Cape cape,
+                                                            SkinProvider.SkinGeometry geometry) {
+        SerializedSkin serializedSkin = getSkin(skin, cape, geometry, true);
+
+        // This attempts to find the XUID of the player so profile images show up for Xbox accounts
+        String xuid = "";
+        GeyserSession playerSession = GeyserImpl.getInstance().connectionByUuid(uuid);
+
+        if (playerSession != null) {
+            xuid = playerSession.getAuthData().xuid();
+        }
+
+        PlayerListPacket.Entry entry;
+
+        // If we are building a PlayerListEntry for our own session we use our AuthData UUID instead of the Java UUID
+        // as Bedrock expects to get back its own provided UUID
+        if (session.getPlayerEntity().getUuid().equals(uuid)) {
+            entry = new PlayerListPacket.Entry(session.getAuthData().uuid());
+        } else {
+            entry = new PlayerListPacket.Entry(uuid);
+        }
+
+        entry.setName(username);
+        entry.setEntityId(geyserId);
+        entry.setSkin(serializedSkin);
+        entry.setXuid(xuid);
+        entry.setPlatformChatId("");
+        entry.setTeacher(false);
+        entry.setTrustedSkin(true);
+        entry.setUid(skin.getUid());
+        return entry;
+    }
+
+    public static void sendWhenLoginDone(GeyserSession session, PlayerEntity entity, SkinProvider.SkinData skinData) {
+        SkinProvider.Skin skin = skinData.skin();
+        SkinProvider.Cape cape = skinData.cape();
+        SkinProvider.SkinGeometry geometry = skinData.geometry();
+        PlayerListPacket.Entry updatedEntry = buildPersonalEntryManually(
+                session,
+                entity.getUuid(),
+                entity.getUsername(),
+                entity.getGeyserId(),
+                skin,
+                cape,
+                geometry
+        );
+
+        PlayerListPacket playerAddPacket = new PlayerListPacket();
+        playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+        playerAddPacket.getEntries().add(updatedEntry);
+        session.sendUpstreamPacket(playerAddPacket);
     }
 
     public static void sendSkinPacket(GeyserSession session, PlayerEntity entity, SkinProvider.SkinData skinData) {
@@ -134,37 +195,60 @@ public class SkinManager {
         SkinProvider.SkinGeometry geometry = skinData.geometry();
 
         if (entity.getUuid().equals(session.getPlayerEntity().getUuid())) {
-            // TODO is this special behavior needed?
-            PlayerListPacket.Entry updatedEntry = buildEntryManually(
-                    session,
-                    entity.getUuid(),
-                    entity.getUsername(),
-                    entity.getGeyserId(),
-                    skin,
-                    cape,
-                    geometry
-            );
-
-            PlayerListPacket playerAddPacket = new PlayerListPacket();
-            playerAddPacket.setAction(PlayerListPacket.Action.ADD);
-            playerAddPacket.getEntries().add(updatedEntry);
-            session.sendUpstreamPacket(playerAddPacket);
+            if (!session.isHaveSendSkin()) {
+                // TODO is this special behavior needed?
+                PlayerListPacket.Entry updatedEntry = buildPersonalEntryManually(
+                        session,
+                        entity.getUuid(),
+                        entity.getUsername(),
+                        entity.getGeyserId(),
+                        skin,
+                        cape,
+                        geometry
+                );
+                PlayerListPacket playerAddPacket = new PlayerListPacket();
+                playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+                playerAddPacket.getEntries().add(updatedEntry);
+                session.sendUpstreamPacket(playerAddPacket);
+                session.setHaveSendSkin(true);
+            }
         } else {
-            PlayerSkinPacket packet = new PlayerSkinPacket();
-            packet.setUuid(entity.getUuid());
-            packet.setOldSkinName("");
-            packet.setNewSkinName(skin.getTextureUrl());
-            packet.setSkin(getSkin(skin.getTextureUrl(), skin, cape, geometry));
-            packet.setTrustedSkin(true);
-            session.sendUpstreamPacket(packet);
+            if (!session.getCachedPlayerList().containsKey(entity.getUuid()) || !session.getCachedPlayerList().get(entity.getUuid()).equals(skin.getTextureUrl())) {
+                session.getCachedPlayerList().put(entity.getUuid(), skin.getTextureUrl());
+                PlayerSkinPacket packet = new PlayerSkinPacket();
+                packet.setUuid(entity.getUuid());
+                packet.setOldSkinName("");
+                packet.setNewSkinName(skin.getTextureUrl());
+                packet.setSkin(getSkin(skin, cape, geometry, false));
+                packet.setTrustedSkin(true);
+                session.sendUpstreamPacket(packet);
+
+
+                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+                confirmSkinPacket.setSkinData(skin.getSkinData());
+                confirmSkinPacket.setGeometry(geometry.geometryData());
+                confirmSkinPacket.setUuid(entity.getUuid());
+
+                long uid = skin.getUid();
+                if (uid == -1) {
+                    uid = entity.getUuid().toString().replace("-", "").hashCode();
+                    if (uid < 0) {
+                        uid = -uid;
+                    }
+                }
+
+                confirmSkinPacket.setUid(uid);
+                session.sendUpstreamPacket(confirmSkinPacket);
+            }
         }
     }
 
-    private static SerializedSkin getSkin(String skinId, SkinProvider.Skin skin, SkinProvider.Cape cape, SkinProvider.SkinGeometry geometry) {
+    private static SerializedSkin getSkin(SkinProvider.Skin skin, SkinProvider.Cape cape, SkinProvider.SkinGeometry geometry, boolean persona) {
+        String skinId = skin.getTextureUrl();
         return SerializedSkin.of(skinId, "", geometry.geometryName(),
                 ImageData.of(skin.getSkinData()), Collections.emptyList(),
                 ImageData.of(cape.capeData()), geometry.geometryData(),
-                "", true, false, false, cape.capeId(), skinId);
+                "", true, persona, false, cape.capeId(), skinId);
     }
 
     public static void requestAndHandleSkinAndCape(PlayerEntity entity, GeyserSession session,

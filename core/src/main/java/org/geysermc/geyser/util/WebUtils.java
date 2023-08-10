@@ -26,6 +26,7 @@
 package org.geysermc.geyser.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
 
 import javax.annotation.Nullable;
@@ -102,6 +103,7 @@ public class WebUtils {
      * @param reqURL URL to fetch
      * @return the response as JSON
      */
+    @SneakyThrows
     public static JsonNode getJson(String reqURL) throws IOException {
         HttpURLConnection con = (HttpURLConnection) new URL(reqURL).openConnection();
         con.setRequestProperty("User-Agent", "Geyser-" + GeyserImpl.getInstance().getPlatformType().toString() + "/" + GeyserImpl.VERSION);

@@ -63,6 +63,10 @@ public final class ProvidedSkins {
         return PROVIDED_SKINS[Math.floorMod(uuid.hashCode(), PROVIDED_SKINS.length)];
     }
 
+    public static ProvidedSkin getSteveSkin() {
+        return PROVIDED_SKINS[15];
+    }
+
     private ProvidedSkins() {
     }
 
