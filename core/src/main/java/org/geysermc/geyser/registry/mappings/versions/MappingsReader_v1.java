@@ -169,6 +169,11 @@ public class MappingsReader_v1 extends MappingsReader {
             customItemOptions.defaultItem(defaultItem.asBoolean());
         }
 
+        JsonNode component_based = node.get("component_based");
+        if (component_based != null && component_based.isBoolean()) {
+            customItemOptions.componentBased(component_based.asBoolean());
+        }
+
         return customItemOptions.build();
     }
 

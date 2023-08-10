@@ -64,6 +64,8 @@ public interface CustomItemOptions {
      */
     boolean defaultItem();
 
+    boolean componentBased();
+
     /**
      * Checks if the item has at least one option set
      *
@@ -87,6 +89,8 @@ public interface CustomItemOptions {
         Builder damagePredicate(int damagePredicate);
 
         Builder defaultItem(boolean defaultItem);
+
+        Builder componentBased(boolean componentBased);
 
         CustomItemOptions build();
     }

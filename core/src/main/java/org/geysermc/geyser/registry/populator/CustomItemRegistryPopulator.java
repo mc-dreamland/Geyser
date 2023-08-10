@@ -98,7 +98,12 @@ public class CustomItemRegistryPopulator {
     }
 
     public static GeyserCustomMappingData registerCustomItem(String customItemName, Item javaItem, GeyserMappingItem mapping, CustomItemData customItemData, int bedrockId) {
-        ItemDefinition itemDefinition = new SimpleItemDefinition(customItemName, bedrockId, true);
+        ItemDefinition itemDefinition;
+        if (customItemName.contains("furnace")) {
+            itemDefinition = new SimpleItemDefinition(customItemName, bedrockId, true);
+        } else {
+            itemDefinition = new SimpleItemDefinition(customItemName, bedrockId, customItemData.customItemOptions().componentBased());
+        }
 
         NbtMapBuilder builder = createComponentNbt(customItemData, javaItem, mapping, customItemName, bedrockId);
         ComponentItemData componentItemData = new ComponentItemData(customItemName, builder.build());
@@ -141,7 +146,7 @@ public class CustomItemRegistryPopulator {
         Items.register(item, customItemData.javaId());
 
         ItemMapping customItemMapping = ItemMapping.builder()
-                .bedrockDefinition(new SimpleItemDefinition(customIdentifier, customItemId, true))
+                .bedrockDefinition(new SimpleItemDefinition(customIdentifier, customItemId, false))
                 .bedrockData(0)
                 .bedrockBlockDefinition(null)
                 .toolType(customItemData.toolType())

@@ -33,10 +33,10 @@ import java.util.OptionalInt;
 public record GeyserCustomItemOptions(TriState unbreakable,
                                       OptionalInt customModelData,
                                       OptionalInt damagePredicate,
-                                      boolean defaultItem) implements CustomItemOptions {
+                                      boolean defaultItem, boolean componentBased) implements CustomItemOptions {
 
-    public GeyserCustomItemOptions(TriState unbreakable, OptionalInt customModelData, OptionalInt damagePredicate) {
-        this(unbreakable, customModelData, damagePredicate, false);
+    public GeyserCustomItemOptions(TriState unbreakable, OptionalInt customModelData, OptionalInt damagePredicate, boolean componentBased) {
+        this(unbreakable, customModelData, damagePredicate, false, componentBased);
     }
 
     public static class CustomItemOptionsBuilder implements CustomItemOptions.Builder {
@@ -44,6 +44,7 @@ public record GeyserCustomItemOptions(TriState unbreakable,
         private OptionalInt customModelData = OptionalInt.empty();
         private OptionalInt damagePredicate = OptionalInt.empty();
         private boolean defaultItem = false;
+        private boolean componentBased = false;
 
         @Override
         public Builder unbreakable(boolean unbreakable) {
@@ -74,8 +75,14 @@ public record GeyserCustomItemOptions(TriState unbreakable,
         }
 
         @Override
+        public Builder componentBased(boolean componentBased) {
+            this.componentBased = componentBased;
+            return this;
+        }
+
+        @Override
         public CustomItemOptions build() {
-            return new GeyserCustomItemOptions(this.unbreakable, this.customModelData, this.damagePredicate, this.defaultItem);
+            return new GeyserCustomItemOptions(this.unbreakable, this.customModelData, this.damagePredicate, this.defaultItem, this.componentBased);
         }
     }
 }
