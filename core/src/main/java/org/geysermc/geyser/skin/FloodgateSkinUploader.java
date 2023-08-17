@@ -223,6 +223,7 @@ public final class FloodgateSkinUploader {
         }
         node.put("hash", MathUtils.hash(clientData.getSkinData()));
         node.put("geometry_data", clientData.getGeometryData());
+//        node.put("geometry_data",MathUtils.gZipBytes(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8)));
         node.put("geometry_name", clientData.getGeometryName());
         node.put("skin_id", clientData.getSkinId());
         node.put("uuid", session.getAuthData().uuid().toString());

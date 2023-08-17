@@ -376,7 +376,7 @@ public class SkinProvider {
                 }
             }).thenApply(json -> {
                 byte[] geometryNameBytes = Base64.getDecoder().decode((json.get("geometry_name").asText()));
-                byte[] geometry_data = MathUtils.unGZipBytes(Base64.getDecoder().decode(json.get("geometry_data").asText()));
+                byte[] geometry_data = Base64.getDecoder().decode(json.get("geometry_data").asText());
                 GeyserImpl.getInstance().getLogger().debug("storeBedrock Geometry: " + uuid + " data length: " + geometry_data.length);
                 SkinProvider.storeBedrockGeometry(uuid, geometryNameBytes, geometry_data);
 
