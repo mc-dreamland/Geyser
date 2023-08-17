@@ -237,10 +237,7 @@ public class ItemRegistryPopulator {
                             blacklistedIdentifiers.put(identifier, item.getBlockDefinition().getRuntimeId());
                         } else {
                             // Unless there's multiple possibilities for this one state, let this be
-                            BlockDefinition blockDefinition = item.getBlockDefinition();
-                            int runtimeId = blockDefinition.getRuntimeId();
-                            BlockDefinition geyserBedrockBlock = new GeyserBedrockBlock(runtimeId + BlockRegistryPopulator.manageRuntimeId(customBlockRuntimeList, runtimeId), null);
-                            bedrockBlockIdOverrides.put(identifier, geyserBedrockBlock);
+                            bedrockBlockIdOverrides.put(identifier, item.getBlockDefinition());
                         }
                     }
                 }
@@ -381,9 +378,7 @@ public class ItemRegistryPopulator {
                                             }
                                         }
                                         if (valid) {
-                                            int runtimeId = block.getRuntimeId() + BlockRegistryPopulator.manageRuntimeId(customBlockRuntimeList, block);
-                                            GeyserBedrockBlock geyserBedrockBlock = new GeyserBedrockBlock(runtimeId, block.getState());
-                                            bedrockBlock = geyserBedrockBlock;
+                                            bedrockBlock = block;
                                             break;
                                         }
                                     }

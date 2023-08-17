@@ -324,9 +324,9 @@ public final class BlockRegistryPopulator {
             GeyserBedrockBlock[] bedrockRuntimeMap = new GeyserBedrockBlock[blockStates.size()];
             for (int i = 0; i < blockStates.size(); i++) {
                 NbtMap tag = blockStates.get(i);
-                if (blockStateOrderedMap.containsKey(tag)) {
-                    throw new AssertionError("Duplicate block states in Bedrock palette: " + tag);
-                }
+//                if (blockStateOrderedMap.containsKey(tag)) {
+//                    throw new AssertionError("Duplicate block states in Bedrock palette: " + tag);
+//                }
                 GeyserBedrockBlock block = new GeyserBedrockBlock(i, tag);
                 blockStateOrderedMap.put(tag, block);
                 bedrockRuntimeMap[i] = block;
@@ -857,20 +857,32 @@ public final class BlockRegistryPopulator {
     }
 
     public static GeyserBedrockBlock manageBedrockDefinition(GeyserSession session, GeyserBedrockBlock bedrockBlock) {
+        if (true) {
+            return bedrockBlock;
+        }
         List<NeteaseBedrockBlock> customBlockRuntimeList = BlockRegistries.customBlockRuntimeList.get(session.getUpstream().getProtocolVersion());
         return new GeyserBedrockBlock(bedrockBlock.getRuntimeId() + manageRuntimeId(customBlockRuntimeList, bedrockBlock.getRuntimeId()), bedrockBlock.getState());
     }
 
     public static GeyserBedrockBlock manageBedrockDefinition(List<NeteaseBedrockBlock> customIdList, GeyserBedrockBlock bedrockBlock) {
+        if (true) {
+            return bedrockBlock;
+        }
         return new GeyserBedrockBlock(bedrockBlock.getRuntimeId() + manageRuntimeId( customIdList, bedrockBlock.getRuntimeId()), bedrockBlock.getState());
     }
 
     public static BlockDefinition manageBedrockDefinition(GeyserSession session, BlockDefinition bedrockBlock) {
+        if (true) {
+            return bedrockBlock;
+        }
         List<NeteaseBedrockBlock> customBlockRuntimeList = BlockRegistries.customBlockRuntimeList.get(session.getUpstream().getProtocolVersion());
         return (BlockDefinition) (new GeyserBedrockBlock(bedrockBlock.getRuntimeId() + manageRuntimeId( customBlockRuntimeList, bedrockBlock.getRuntimeId()), null));
     }
 
     public static BlockDefinition manageBedrockDefinition(List<NeteaseBedrockBlock> customIdList, BlockDefinition bedrockBlock) {
+        if (true) {
+            return bedrockBlock;
+        }
         return (BlockDefinition) (new GeyserBedrockBlock(bedrockBlock.getRuntimeId() + manageRuntimeId( customIdList, bedrockBlock.getRuntimeId()), null));
     }
 }

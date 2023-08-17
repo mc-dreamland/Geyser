@@ -23,28 +23,22 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.translator.protocol.java.level;
+package org.geysermc.geyser.command.defaults;
 
-import com.github.steveice10.mc.protocol.packet.ingame.clientbound.level.ClientboundOpenSignEditorPacket;
-import org.cloudburstmc.protocol.bedrock.packet.OpenSignPacket;
-import org.geysermc.geyser.network.GameProtocol;
+import org.geysermc.geyser.command.GeyserCommand;
+import org.geysermc.geyser.command.GeyserCommandSource;
 import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.geyser.translator.protocol.PacketTranslator;
-import org.geysermc.geyser.translator.protocol.Translator;
+import org.geysermc.geyser.skin.SkinProvider;
+import org.jetbrains.annotations.Nullable;
 
-@Translator(packet = ClientboundOpenSignEditorPacket.class)
-public class JavaOpenSignEditorTranslator extends PacketTranslator<ClientboundOpenSignEditorPacket> {
+public class ReloadSkinCommand extends GeyserCommand {
+    public ReloadSkinCommand(String name, String description, String permission) {
+        super(name, description, permission);
+    }
 
     @Override
-    public void translate(GeyserSession session, ClientboundOpenSignEditorPacket packet) {
-        if (!GameProtocol.supports1_19_80(session)) {
-            return;
-        }
-        OpenSignPacket openSignPacket = new OpenSignPacket();
-        openSignPacket.setPosition(packet.getPosition());
-        openSignPacket.setFrontSide(packet.isFrontText());
-        session.sendUpstreamPacket(openSignPacket);
-
-        session.getWorldCache().setEditingSignOnFront(packet.isFrontText());
+    public void execute(@Nullable GeyserSession session, GeyserCommandSource sender, String[] args) {
+        if (!sender.isConsole()) return;
+        SkinProvider.loadCustomSkins();
     }
 }

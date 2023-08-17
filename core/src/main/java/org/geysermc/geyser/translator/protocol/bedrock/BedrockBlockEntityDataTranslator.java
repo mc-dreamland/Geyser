@@ -30,6 +30,7 @@ import com.github.steveice10.mc.protocol.packet.ingame.serverbound.level.Serverb
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.protocol.bedrock.packet.BlockEntityDataPacket;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
@@ -46,9 +47,13 @@ public class BedrockBlockEntityDataTranslator extends PacketTranslator<BlockEnti
         if (id.endsWith("Sign")) {
             // Hanging signs are narrower
             int widthMax = SignUtils.getSignWidthMax(id.startsWith("Hanging"));
-
-            String text = MessageTranslator.convertToPlainText(
-                tag.getCompound(session.getWorldCache().isEditingSignOnFront() ? "FrontText" : "BackText").getString("Text"));
+            String text = "";
+            if (tag.containsKey("FrontText") || tag.containsKey("BackText")) {
+                text = MessageTranslator.convertToPlainText(
+                        tag.getCompound(session.getWorldCache().isEditingSignOnFront() ? "FrontText" : "BackText").getString("Text"));
+            } else {
+                text = tag.getString("Text");
+            }
             // Note: as of 1.18.30, only one packet is sent from Bedrock when the sign is finished.
             // Previous versions did not have this behavior.
             StringBuilder newMessage = new StringBuilder();
@@ -107,7 +112,12 @@ public class BedrockBlockEntityDataTranslator extends PacketTranslator<BlockEnti
             // Put the final line on since it isn't done in the for loop
             if (iterator < lines.length) lines[iterator] = newMessage.toString();
             Vector3i pos = Vector3i.from(tag.getInt("x"), tag.getInt("y"), tag.getInt("z"));
-            ServerboundSignUpdatePacket signUpdatePacket = new ServerboundSignUpdatePacket(pos, lines, session.getWorldCache().isEditingSignOnFront());
+            ServerboundSignUpdatePacket signUpdatePacket;
+            boolean editingSignOnFront = session.getWorldCache().isEditingSignOnFront();
+            if (!GameProtocol.supports1_19_80(session)) {
+                editingSignOnFront = true;
+            }
+            signUpdatePacket = new ServerboundSignUpdatePacket(pos, lines, editingSignOnFront);
             session.sendDownstreamPacket(signUpdatePacket);
 
         } else if (id.equals("JigsawBlock")) {

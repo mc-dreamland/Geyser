@@ -578,6 +578,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private boolean haveSendSkin = false;
     @Setter
     private List<String> optionPacksUuid;
+    @Setter
+    private boolean noUnloadChunk = true;
+    @Setter
+    private boolean quickSwitchDimension = true;
+
 
     public GeyserSession(GeyserImpl geyser, BedrockServerSession bedrockServerSession, EventLoop eventLoop) {
         this.geyser = geyser;
@@ -1736,10 +1741,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      */
     public void sendAdventureSettings() {
 
-        if (this.getUpstream().getProtocolVersion() <= 504) {
-            return;
-        }
-
         long bedrockId = playerEntity.getGeyserId();
         // Set command permission if OP permission level is high enough
         // This allows mobile players access to a GUI for doing commands. The commands there do not change above OPERATOR
@@ -1751,42 +1752,83 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         // Update the noClip and worldImmutable values based on the current gamemode
         boolean spectator = gameMode == GameMode.SPECTATOR;
         boolean worldImmutable = gameMode == GameMode.ADVENTURE || spectator;
-        UpdateAdventureSettingsPacket adventureSettingsPacket = new UpdateAdventureSettingsPacket();
-        adventureSettingsPacket.setNoMvP(false);
-        adventureSettingsPacket.setNoPvM(false);
-        adventureSettingsPacket.setImmutableWorld(worldImmutable);
-        adventureSettingsPacket.setShowNameTags(false);
-        adventureSettingsPacket.setAutoJump(true);
-        sendUpstreamPacket(adventureSettingsPacket);
+        if (GameProtocol.supports1_19_10(this)) {
+            UpdateAdventureSettingsPacket adventureSettingsPacket = new UpdateAdventureSettingsPacket();
+            adventureSettingsPacket.setNoMvP(false);
+            adventureSettingsPacket.setNoPvM(false);
+            adventureSettingsPacket.setImmutableWorld(worldImmutable);
+            adventureSettingsPacket.setShowNameTags(false);
+            adventureSettingsPacket.setAutoJump(true);
+            sendUpstreamPacket(adventureSettingsPacket);
 
-        UpdateAbilitiesPacket updateAbilitiesPacket = new UpdateAbilitiesPacket();
-        updateAbilitiesPacket.setUniqueEntityId(bedrockId);
-        updateAbilitiesPacket.setCommandPermission(commandPermission);
-        updateAbilitiesPacket.setPlayerPermission(playerPermission);
+            UpdateAbilitiesPacket updateAbilitiesPacket = new UpdateAbilitiesPacket();
+            updateAbilitiesPacket.setUniqueEntityId(bedrockId);
+            updateAbilitiesPacket.setCommandPermission(commandPermission);
+            updateAbilitiesPacket.setPlayerPermission(playerPermission);
 
-        AbilityLayer abilityLayer = new AbilityLayer();
-        Set<Ability> abilities = abilityLayer.getAbilityValues();
+            AbilityLayer abilityLayer = new AbilityLayer();
+            Set<Ability> abilities = abilityLayer.getAbilityValues();
+            if (canFly || spectator) {
+                abilities.add(Ability.MAY_FLY);
+            }
+
+            // Default stuff we have to fill in
+            abilities.add(Ability.BUILD);
+            abilities.add(Ability.MINE);
+            // Needed so you can drop items
+            abilities.add(Ability.DOORS_AND_SWITCHES);
+            // Required for lecterns to work (likely started around 1.19.10; confirmed on 1.19.70)
+            abilities.add(Ability.OPEN_CONTAINERS);
+            if (gameMode == GameMode.CREATIVE) {
+                // Needed so the client doesn't attempt to take away items
+                abilities.add(Ability.INSTABUILD);
+            }
+
+            if (commandPermission == CommandPermission.GAME_DIRECTORS) {
+                // Fixes a bug? since 1.19.11 where the player can change their gamemode in Bedrock settings and
+                // a packet is not sent to the server.
+                // https://github.com/GeyserMC/Geyser/issues/3191
+                abilities.add(Ability.OPERATOR_COMMANDS);
+            }
+
+            if (flying || spectator) {
+                if (spectator && !flying) {
+                    // We're "flying locked" in this gamemode
+                    flying = true;
+                    ServerboundPlayerAbilitiesPacket abilitiesPacket = new ServerboundPlayerAbilitiesPacket(true);
+                    sendDownstreamPacket(abilitiesPacket);
+                }
+                abilities.add(Ability.FLYING);
+            }
+
+            if (spectator) {
+                abilities.add(Ability.NO_CLIP);
+            }
+
+            // https://github.com/GeyserMC/Geyser/issues/3769 Setting Spectator mode ability layer
+            if (spectator) {
+                abilityLayer.setLayerType(AbilityLayer.Type.SPECTATOR);
+            } else {
+                abilityLayer.setLayerType(AbilityLayer.Type.BASE);
+            }
+            abilityLayer.setFlySpeed(flySpeed);
+            // https://github.com/GeyserMC/Geyser/issues/3139 as of 1.19.10
+            abilityLayer.setWalkSpeed(walkSpeed == 0f ? 0.01f : walkSpeed);
+            Collections.addAll(abilityLayer.getAbilitiesSet(), USED_ABILITIES);
+
+            updateAbilitiesPacket.getAbilityLayers().add(abilityLayer);
+            sendUpstreamPacket(updateAbilitiesPacket);
+            return;
+        }
+
+        AdventureSettingsPacket adventureSettingsPacket = new AdventureSettingsPacket();
+        adventureSettingsPacket.setUniqueEntityId(bedrockId);
+        adventureSettingsPacket.setCommandPermission(commandPermission);
+        adventureSettingsPacket.setPlayerPermission(playerPermission);
+
+        Set<AdventureSetting> flags = adventureSettingsPacket.getSettings();
         if (canFly || spectator) {
-            abilities.add(Ability.MAY_FLY);
-        }
-
-        // Default stuff we have to fill in
-        abilities.add(Ability.BUILD);
-        abilities.add(Ability.MINE);
-        // Needed so you can drop items
-        abilities.add(Ability.DOORS_AND_SWITCHES);
-        // Required for lecterns to work (likely started around 1.19.10; confirmed on 1.19.70)
-        abilities.add(Ability.OPEN_CONTAINERS);
-        if (gameMode == GameMode.CREATIVE) {
-            // Needed so the client doesn't attempt to take away items
-            abilities.add(Ability.INSTABUILD);
-        }
-
-        if (commandPermission == CommandPermission.GAME_DIRECTORS) {
-            // Fixes a bug? since 1.19.11 where the player can change their gamemode in Bedrock settings and
-            // a packet is not sent to the server.
-            // https://github.com/GeyserMC/Geyser/issues/3191
-            abilities.add(Ability.OPERATOR_COMMANDS);
+            flags.add(AdventureSetting.MAY_FLY);
         }
 
         if (flying || spectator) {
@@ -1796,26 +1838,20 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                 ServerboundPlayerAbilitiesPacket abilitiesPacket = new ServerboundPlayerAbilitiesPacket(true);
                 sendDownstreamPacket(abilitiesPacket);
             }
-            abilities.add(Ability.FLYING);
+            flags.add(AdventureSetting.FLYING);
+        }
+
+        if (worldImmutable) {
+            flags.add(AdventureSetting.WORLD_IMMUTABLE);
         }
 
         if (spectator) {
-            abilities.add(Ability.NO_CLIP);
+            flags.add(AdventureSetting.NO_CLIP);
         }
 
-        // https://github.com/GeyserMC/Geyser/issues/3769 Setting Spectator mode ability layer
-        if (spectator) {
-            abilityLayer.setLayerType(AbilityLayer.Type.SPECTATOR);
-        } else {
-            abilityLayer.setLayerType(AbilityLayer.Type.BASE);
-        }
-        abilityLayer.setFlySpeed(flySpeed);
-        // https://github.com/GeyserMC/Geyser/issues/3139 as of 1.19.10
-        abilityLayer.setWalkSpeed(walkSpeed == 0f ? 0.01f : walkSpeed);
-        Collections.addAll(abilityLayer.getAbilitiesSet(), USED_ABILITIES);
+        flags.add(AdventureSetting.AUTO_JUMP);
 
-        updateAbilitiesPacket.getAbilityLayers().add(abilityLayer);
-        sendUpstreamPacket(updateAbilitiesPacket);
+        sendUpstreamPacket(adventureSettingsPacket);
     }
 
     private int getRenderDistance() {
@@ -2039,9 +2075,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     }
 
     private void softEnumPacket(String name, SoftEnumUpdateType type, String enums) {
+        if (!this.geyser.getConfig().isCommandSuggestions()) {
+            return;
+        }
         UpdateSoftEnumPacket packet = new UpdateSoftEnumPacket();
         packet.setType(type);
         packet.setSoftEnum(new CommandEnumData(name, Collections.singletonMap(enums, Collections.emptySet()), true));
-        sendUpstreamPacket(packet);
+//        sendUpstreamPacket(packet); //对于我们来说，目前不需要改包
     }
 }

@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.util;
 
+import org.cloudburstmc.protocol.bedrock.data.BlockChangeEntry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -37,6 +38,7 @@ import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 import org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket;
 import org.cloudburstmc.protocol.bedrock.packet.NetworkChunkPublisherUpdatePacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateBlockPacket;
+import org.cloudburstmc.protocol.bedrock.packet.UpdateSubChunkBlocksPacket;
 import org.geysermc.geyser.entity.type.ItemFrameEntity;
 import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.level.JavaDimension;
@@ -45,10 +47,14 @@ import org.geysermc.geyser.level.chunk.BlockStorage;
 import org.geysermc.geyser.level.chunk.GeyserChunkSection;
 import org.geysermc.geyser.level.chunk.bitarray.SingletonBitArray;
 import org.geysermc.geyser.registry.BlockRegistries;
+import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.geysermc.geyser.level.block.BlockStateValues.JAVA_AIR_ID;
 
@@ -113,6 +119,99 @@ public class ChunkUtils {
     public static void updateBlock(GeyserSession session, int blockState, Vector3i position) {
         updateBlockClientSide(session, blockState, position);
         session.getChunkCache().updateBlock(position.getX(), position.getY(), position.getZ(), blockState);
+    }
+
+    public static void updateBlock(GeyserSession session, Vector3i chunkPos, com.github.steveice10.mc.protocol.data.game.level.block.BlockChangeEntry[] blockChangeEntries) {
+        updateBlockClientSide(session, chunkPos, blockChangeEntries);
+        for (com.github.steveice10.mc.protocol.data.game.level.block.BlockChangeEntry blockChangeEntry : blockChangeEntries) {
+            Vector3i position = blockChangeEntry.getPosition();
+            session.getChunkCache().updateBlock(position.getX(), position.getY(), position.getZ(), blockChangeEntry.getBlock());
+        }
+    }
+
+    /**
+     * Updates a block, but client-side only.
+     */
+    public static void updateBlockClientSide(GeyserSession session, Vector3i chunkPos, com.github.steveice10.mc.protocol.data.game.level.block.BlockChangeEntry[] blockChangeEntries) {
+        // Checks for item frames so they aren't tripped up and removed
+        List<BlockChangeEntry> list = new ArrayList<>();
+        List<BlockChangeEntry> list2 = new ArrayList<>();
+        for (com.github.steveice10.mc.protocol.data.game.level.block.BlockChangeEntry blockChangeEntry : blockChangeEntries) {
+            int blockState = blockChangeEntry.getBlock();
+            Vector3i position = blockChangeEntry.getPosition();
+            ItemFrameEntity itemFrameEntity = ItemFrameEntity.getItemFrameEntity(session, position);
+            if (itemFrameEntity != null) {
+                if (blockState == JAVA_AIR_ID) {
+                    itemFrameEntity.updateBlock(true);
+                    continue;
+                }
+            }
+
+            int blockId = session.getBlockMappings().getBedrockBlockId(blockState);
+            GeyserBedrockBlock bedrockBlock = session.getBlockMappings().getBedrockBlock(blockState);
+            int skullVariant = BlockStateValues.getSkullVariant(blockState);
+            if (skullVariant == -1) {
+                // Skull is gone
+                session.getSkullCache().removeSkull(position);
+            } else if (skullVariant == 3) {
+                // The changed block was a player skull so check if a custom block was defined for this skull
+                SkullCache.Skull skull = session.getSkullCache().updateSkull(position, blockState);
+                if (skull != null && skull.getBlockDefinition().getRuntimeId() != -1) {
+                    blockId = skull.getBlockDefinition().getRuntimeId();
+                }
+            }
+
+            // Prevent moving_piston from being placed
+            // It's used for extending piston heads, but it isn't needed on Bedrock and causes pistons to flicker
+            if (!BlockStateValues.isMovingPiston(blockState)) {
+                BlockChangeEntry blockChangeEntry1;
+                boolean sameBlock = session.getChunkCache().getBlockAt(position.getX(), position.getY(), position.getZ()) == blockId;
+                if (BlockRegistries.WATERLOGGED.get().get(blockState)) {
+                    if (!sameBlock) {
+                        blockChangeEntry1 = new BlockChangeEntry(position, session.getBlockMappings().getBedrockWater(), 2, -1,  BlockChangeEntry.MessageType.NONE);
+                    } else {
+                        blockChangeEntry1 = new BlockChangeEntry(position, session.getBlockMappings().getBedrockWater(), 3, -1,  BlockChangeEntry.MessageType.NONE);
+                    }
+                } else {
+                    if (session.getBlockMappings().getBedrockAir().getRuntimeId() == blockId) {
+                        if (sameBlock) {
+                            continue;
+                        } else {
+                            blockChangeEntry1 = new BlockChangeEntry(position, session.getBlockMappings().getBedrockAir(), 0, -1,  BlockChangeEntry.MessageType.NONE);
+                        }
+                    } else {
+                        if (sameBlock) {
+                            continue;
+                        } else {
+                            blockChangeEntry1 = new BlockChangeEntry(position, bedrockBlock, 3, -1,  BlockChangeEntry.MessageType.NONE);
+                        }
+                    }
+                }
+                list.add(blockChangeEntry1);
+            }
+
+
+            BlockStateValues.getLecternBookStates().handleBlockChange(session, blockState, position);
+
+            // Iterates through all Bedrock-only block entity translators and determines if a manual block entity packet
+            // needs to be sent
+            for (BedrockOnlyBlockEntity bedrockOnlyBlockEntity : BlockEntityUtils.BEDROCK_ONLY_BLOCK_ENTITIES) {
+                if (bedrockOnlyBlockEntity.isBlock(blockState)) {
+                    // Flower pots are block entities only in Bedrock and are not updated anywhere else like note blocks
+                    bedrockOnlyBlockEntity.updateBlock(session, blockState, position);
+                    break; //No block will be a part of two classes
+                }
+            }
+        }
+
+        UpdateSubChunkBlocksPacket updateSubChunkBlocksPacket = new UpdateSubChunkBlocksPacket();
+        updateSubChunkBlocksPacket.setChunkX(chunkPos.getX());
+        updateSubChunkBlocksPacket.setChunkX(chunkPos.getY());
+        updateSubChunkBlocksPacket.setChunkX(chunkPos.getZ());
+
+        updateSubChunkBlocksPacket.getStandardBlocks().addAll(list);
+        updateSubChunkBlocksPacket.getExtraBlocks().addAll(list2);
+        session.sendUpstreamPacket(updateSubChunkBlocksPacket);
     }
 
     /**

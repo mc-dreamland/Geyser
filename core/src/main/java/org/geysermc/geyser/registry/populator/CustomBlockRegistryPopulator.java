@@ -192,13 +192,40 @@ public class CustomBlockRegistryPopulator {
                 permIndex /= property.values().size();
             }
             NbtMap states = statesBuilder.build();
-    
+
             blockStates.add(NbtMap.builder()
                     .putString("name", customBlock.identifier())
                     .putInt("version", stateVersion)
                     .putCompound("states", states)
                     .build());
+
             customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+            if (customBlock.defaultBlockState().block().components().neteaseFaceDirectional() != null && customBlock.defaultBlockState().block().components().neteaseFaceDirectional() == 1) {
+                statesBuilder.putInt("face", 1);
+                states = statesBuilder.build();
+                customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+                blockStates.add(NbtMap.builder()
+                        .putString("name", customBlock.identifier())
+                        .putInt("version", stateVersion)
+                        .putCompound("states", states)
+                        .build());
+                statesBuilder.putInt("face", 2);
+                states = statesBuilder.build();
+                customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+                blockStates.add(NbtMap.builder()
+                        .putString("name", customBlock.identifier())
+                        .putInt("version", stateVersion)
+                        .putCompound("states", states)
+                        .build());
+                statesBuilder.putInt("face", 3);
+                states = statesBuilder.build();
+                customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+                blockStates.add(NbtMap.builder()
+                        .putString("name", customBlock.identifier())
+                        .putInt("version", stateVersion)
+                        .putCompound("states", states)
+                        .build());
+            }
         }
     }
 

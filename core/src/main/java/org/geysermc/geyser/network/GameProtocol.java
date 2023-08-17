@@ -36,6 +36,7 @@ import org.cloudburstmc.protocol.bedrock.codec.v545.Bedrock_v545;
 import org.cloudburstmc.protocol.bedrock.codec.v554.Bedrock_v554;
 import org.cloudburstmc.protocol.bedrock.codec.v557.Bedrock_v557;
 import org.cloudburstmc.protocol.bedrock.codec.v560.Bedrock_v560;
+import org.cloudburstmc.protocol.bedrock.codec.v567.Bedrock_v567;
 import org.cloudburstmc.protocol.bedrock.codec.v582.Bedrock_v582;
 import org.cloudburstmc.protocol.bedrock.codec.v589.Bedrock_v589;
 import org.cloudburstmc.protocol.bedrock.codec.v594.Bedrock_v594;
@@ -111,6 +112,23 @@ public final class GameProtocol {
             }
         }
         return null;
+    }
+    /* Bedrock convenience methods to gatekeep features and easily remove the check on version removal */
+
+    public static boolean supports1_19_50(GeyserSession session) {
+        return session.getUpstream().getProtocolVersion() >= Bedrock_v560.CODEC.getProtocolVersion();
+    }
+
+    public static boolean supports1_19_60(GeyserSession session) {
+        return session.getUpstream().getProtocolVersion() >= Bedrock_v567.CODEC.getProtocolVersion();
+    }
+
+    public static boolean supports1_19_80(GeyserSession session) {
+        return session.getUpstream().getProtocolVersion() >= Bedrock_v582.CODEC.getProtocolVersion();
+    }
+
+    public static boolean supports1_19_10(GeyserSession session) {
+        return session.getUpstream().getProtocolVersion() >= Bedrock_v534.CODEC.getProtocolVersion();
     }
 
     /* Bedrock convenience methods to gatekeep features and easily remove the check on version removal */

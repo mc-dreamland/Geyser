@@ -60,7 +60,7 @@ public class DimensionUtils {
      */
     public static final String THE_END = "minecraft:the_end";
 
-    public static void switchDimension(GeyserSession session, String javaDimension) {
+    public static void switchDimension(GeyserSession session, String javaDimension, boolean changeDimension) {
         int bedrockDimension = javaToBedrock(javaDimension); // new bedrock dimension
         String previousDimension = session.getDimension(); // previous java dimension
 
@@ -93,14 +93,16 @@ public class DimensionUtils {
 
         Vector3f pos = Vector3f.from(0, Short.MAX_VALUE, 0);
 
-        ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
-        changeDimensionPacket.setDimension(bedrockDimension);
-        changeDimensionPacket.setRespawn(true);
-        changeDimensionPacket.setPosition(pos);
-        session.sendUpstreamPacket(changeDimensionPacket);
+        if (!session.isQuickSwitchDimension() || changeDimension) {
+            ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
+            changeDimensionPacket.setDimension(bedrockDimension);
+            changeDimensionPacket.setRespawn(true);
+            changeDimensionPacket.setPosition(pos);
+            session.sendUpstreamPacket(changeDimensionPacket);
 
-        session.setDimension(javaDimension);
-        setBedrockDimension(session, javaDimension);
+            session.setDimension(javaDimension);
+            setBedrockDimension(session, javaDimension);
+        }
 
         player.setPosition(pos);
         session.setSpawned(false);
@@ -134,18 +136,21 @@ public class DimensionUtils {
         ackPacket.setFace(0);
         session.sendUpstreamPacket(ackPacket);
 
-        // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
-        // The client wants sections sent to it before it can successfully respawn.
-        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
-        // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
-        // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
-        // thinks they are in the end dimension.
-        if (isCustomBedrockNetherId()) {
-            if (NETHER.equals(javaDimension)) {
-                session.sendFog(BEDROCK_FOG_HELL);
-            } else if (NETHER.equals(previousDimension)) {
-                session.removeFog(BEDROCK_FOG_HELL);
+        if (!session.isQuickSwitchDimension() || changeDimension) {
+            // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
+            // The client wants sections sent to it before it can successfully respawn.
+            ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 4, true);
+
+            // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
+            // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
+            // thinks they are in the end dimension.
+            if (isCustomBedrockNetherId()) {
+                if (NETHER.equals(javaDimension)) {
+                    session.sendFog(BEDROCK_FOG_HELL);
+                } else if (NETHER.equals(previousDimension)) {
+                    session.removeFog(BEDROCK_FOG_HELL);
+                }
             }
         }
     }

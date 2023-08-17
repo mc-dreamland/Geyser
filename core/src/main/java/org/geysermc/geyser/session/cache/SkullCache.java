@@ -324,7 +324,7 @@ public class SkullCache {
                 rotation1 = 0;
             }
             int finalRotation = rotation1;
-            return () -> orDefault.getRuntimeId() + finalRotation + BlockRegistryPopulator.manageRuntimeId(integers, orDefault.getRuntimeId());
+            return () -> orDefault.getRuntimeId() + finalRotation;
         }
         return () -> -1;
     }

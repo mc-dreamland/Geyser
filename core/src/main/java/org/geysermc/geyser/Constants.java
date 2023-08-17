@@ -48,8 +48,11 @@ public final class Constants {
     static {
         URI wsUri = null;
         try {
-            wsUri = new URI("wss://api.geysermc.org/ws");
+            wsUri = new URI("ws://"+GeyserImpl.getInstance().getConfig().getService().getSkinurl()
+                    .replace("http://","")
+                    .replace("https://","")+"/geyser");
         } catch (URISyntaxException e) {
+            GeyserImpl.getInstance().getLogger().error("Unable to resolve api.geysermc.org! Check your internet connection.");
             e.printStackTrace();
         }
         GLOBAL_API_WS_URI = wsUri;

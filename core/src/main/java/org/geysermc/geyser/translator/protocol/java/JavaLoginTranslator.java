@@ -85,8 +85,10 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         // If the player is already initialized and a join game packet is sent, they
         // are swapping servers
         if (session.isSpawned()) {
-            String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), packet.getDimension());
-            DimensionUtils.switchDimension(session, fakeDim);
+            if (!session.isQuickSwitchDimension()) {
+                String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), packet.getDimension());
+                DimensionUtils.switchDimension(session, fakeDim, true);
+            }
 
             session.getWorldCache().removeScoreboard();
         }
@@ -144,9 +146,9 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
             session.sendDownstreamPacket(new ServerboundCustomPayloadPacket("minecraft:register", PluginMessageChannels.getFloodgateRegisterData()));
         }
 
-        if (!newDimension.equals(session.getDimension())) {
-            DimensionUtils.switchDimension(session, newDimension);
-        } else if (DimensionUtils.isCustomBedrockNetherId() && newDimension.equalsIgnoreCase(DimensionUtils.NETHER)) {
+        if (!newDimension.equals(session.getDimension()) && !session.isQuickSwitchDimension()) {
+            DimensionUtils.switchDimension(session, newDimension, true);
+        } else if (DimensionUtils.isCustomBedrockNetherId() && newDimension.equalsIgnoreCase(DimensionUtils.NETHER) && !session.isQuickSwitchDimension()) {
             // If the player is spawning into the "fake" nether, send them some fog
             session.sendFog(DimensionUtils.BEDROCK_FOG_HELL);
         }

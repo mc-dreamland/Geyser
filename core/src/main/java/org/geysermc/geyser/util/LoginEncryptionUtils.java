@@ -84,11 +84,10 @@ public class LoginEncryptionUtils {
             geyser.getLogger().debug(String.format("Is player data signed? %s", result.signed()));
 
             boolean validNeteaseChainData = validateNeteaseChainData(certChainData);
-//            boolean validNeteaseChainData = false;
 
 //            if ((!result.signed() && !session.getGeyser().getConfig().isEnableProxyConnections()) || (!validNeteaseChainData && session.getGeyser().getConfig().isOnlineMode())) {
             //TODO 同时支持网易和mojang
-            if ((!validNeteaseChainData && session.getGeyser().getConfig().isOnlineMode())) {
+            if (!validNeteaseChainData && session.getGeyser().getConfig().isOnlineMode()) {
                 session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
                 return;
             }
