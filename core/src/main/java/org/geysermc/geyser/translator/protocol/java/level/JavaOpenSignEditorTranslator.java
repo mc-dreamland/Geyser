@@ -37,14 +37,12 @@ public class JavaOpenSignEditorTranslator extends PacketTranslator<ClientboundOp
 
     @Override
     public void translate(GeyserSession session, ClientboundOpenSignEditorPacket packet) {
-        if (!GameProtocol.supports1_19_80(session)) {
-            return;
+        if (GameProtocol.supports1_19_80(session)) {
+            OpenSignPacket openSignPacket = new OpenSignPacket();
+            openSignPacket.setPosition(packet.getPosition());
+            openSignPacket.setFrontSide(packet.isFrontText());
+            session.sendUpstreamPacket(openSignPacket);
         }
-        OpenSignPacket openSignPacket = new OpenSignPacket();
-        openSignPacket.setPosition(packet.getPosition());
-        openSignPacket.setFrontSide(packet.isFrontText());
-        session.sendUpstreamPacket(openSignPacket);
-
         session.getWorldCache().setEditingSignOnFront(packet.isFrontText());
     }
 }

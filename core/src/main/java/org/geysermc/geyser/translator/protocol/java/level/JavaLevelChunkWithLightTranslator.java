@@ -65,6 +65,7 @@ import org.geysermc.geyser.level.chunk.GeyserChunkSection;
 import org.geysermc.geyser.level.chunk.bitarray.BitArray;
 import org.geysermc.geyser.level.chunk.bitarray.BitArrayVersion;
 import org.geysermc.geyser.level.chunk.bitarray.SingletonBitArray;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.SkullCache;
@@ -518,7 +519,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             // Encode tile entities into buffer
             NBTOutputStream nbtStream = NbtUtils.createNetworkWriter(new ByteBufOutputStream(byteBuf));
             for (NbtMap blockEntity : bedrockBlockEntities) {
-                nbtStream.writeTag(blockEntity);
+                nbtStream.writeTag(manageBlockEntityNbt(session, blockEntity));
             }
             payload = new byte[byteBuf.readableBytes()];
             byteBuf.readBytes(payload);
@@ -570,6 +571,30 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 //TODO optimize
                 entry.getValue().updateBlock(true);
             }
+        }
+    }
+
+    // 低版本部分玩法的NBT有所区别
+    public static NbtMap manageBlockEntityNbt(GeyserSession session, NbtMap blockEntity) {
+
+        if (!blockEntity.containsKey("FrontText")) {
+            return blockEntity;
+        }
+        if (!GameProtocol.supports1_19_80(session)) {
+            NbtMap frontText = blockEntity.getCompound("FrontText");
+            String text = frontText.getString("Text");
+            boolean ignoreLighting = frontText.getBoolean("IgnoreLighting");
+            NbtMapBuilder builder = NbtMap.builder();
+            builder.putAll(blockEntity);
+            builder.putString("Text", text);
+            builder.putBoolean("IgnoreLighting", ignoreLighting);
+            builder.putBoolean("TextIgnoreLegacyBugResolved", false);
+            builder.remove("FrontText");
+            builder.remove("BackText");
+            builder.remove("IsWaxed");
+            return builder.build();
+        } else {
+            return blockEntity;
         }
     }
 

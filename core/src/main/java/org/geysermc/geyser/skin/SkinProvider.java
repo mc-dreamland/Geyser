@@ -369,7 +369,7 @@ public class SkinProvider {
         try {
             CompletableFuture<Skin> skinCompletableFuture = CompletableFuture.supplyAsync(() -> {
                 try {
-                    return WebUtils.getJson("skinsync.bjd-mc.com");
+                    return WebUtils.getJson(textureUrl);
 //                    return WebUtils.getJson(textureUrl.replace("skinsync.bjd-mc.com", "42.186.61.180"));
                 } catch (IOException e) {
                     throw new RuntimeException(e);

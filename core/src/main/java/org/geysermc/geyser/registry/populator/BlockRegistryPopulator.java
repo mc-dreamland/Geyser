@@ -836,24 +836,13 @@ public final class BlockRegistryPopulator {
 
     public static int manageCreativeItemsRuntimeId(List<NeteaseBedrockBlock> customIdList, int runtimeId) {
         int i = 0;
-        for (NeteaseBedrockBlock neteaseBedrockBlock : customIdList) {
-            int j = 0;
-            if (neteaseBedrockBlock.getRuntimeId() - i >= runtimeId) {
-                j = i;
-            }
-            if (runtimeId + j >= neteaseBedrockBlock.getRuntimeId()) {
+        for (int i1 = 0; i1 < customIdList.size(); i1++) {
+            int runtimeId1 = customIdList.get(i1).getRuntimeId();
+            if (runtimeId1 - i <= runtimeId) {
                 i++;
             }
         }
-        int ii = 0;
-
-
-        for (NeteaseBedrockBlock neteaseBedrockBlock : customIdList) {
-            if ((runtimeId + i) >= neteaseBedrockBlock.getRuntimeId()) {
-                ii++;
-            }
-        }
-        return ii;
+        return i;
     }
 
     public static GeyserBedrockBlock manageBedrockDefinition(GeyserSession session, GeyserBedrockBlock bedrockBlock) {

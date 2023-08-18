@@ -30,7 +30,6 @@ import com.github.steveice10.mc.protocol.packet.ingame.serverbound.level.Serverb
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.protocol.bedrock.packet.BlockEntityDataPacket;
-import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
@@ -114,9 +113,6 @@ public class BedrockBlockEntityDataTranslator extends PacketTranslator<BlockEnti
             Vector3i pos = Vector3i.from(tag.getInt("x"), tag.getInt("y"), tag.getInt("z"));
             ServerboundSignUpdatePacket signUpdatePacket;
             boolean editingSignOnFront = session.getWorldCache().isEditingSignOnFront();
-            if (!GameProtocol.supports1_19_80(session)) {
-                editingSignOnFront = true;
-            }
             signUpdatePacket = new ServerboundSignUpdatePacket(pos, lines, editingSignOnFront);
             session.sendDownstreamPacket(signUpdatePacket);
 

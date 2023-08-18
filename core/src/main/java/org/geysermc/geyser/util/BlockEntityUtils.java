@@ -34,6 +34,7 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
 import org.geysermc.geyser.translator.level.block.entity.BlockEntityTranslator;
 import org.geysermc.geyser.translator.level.block.entity.FlowerPotBlockEntityTranslator;
+import org.geysermc.geyser.translator.protocol.java.level.JavaLevelChunkWithLightTranslator;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -86,7 +87,7 @@ public class BlockEntityUtils {
     public static void updateBlockEntity(GeyserSession session, @Nonnull NbtMap blockEntity, Vector3i position) {
         BlockEntityDataPacket blockEntityPacket = new BlockEntityDataPacket();
         blockEntityPacket.setBlockPosition(position);
-        blockEntityPacket.setData(blockEntity);
+        blockEntityPacket.setData(JavaLevelChunkWithLightTranslator.manageBlockEntityNbt(session, blockEntity));
         session.sendUpstreamPacket(blockEntityPacket);
     }
 }
