@@ -310,8 +310,6 @@ public class SkullCache {
     private BlockDefinition translateCustomSkull(Skull skull, int blockState) {
         CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(getCustomSkullBlockName(skull));
         if (customBlockData != null) {
-            List<NeteaseBedrockBlock> integers = BlockRegistries.customBlockRuntimeList.get(session.getUpstream().getProtocolVersion());
-            //TODO 处理 旋转问题
             byte rotation = BlockStateValues.getSkullRotation(blockState);
             int rotation1 = getRotation(blockState, rotation);
             GeyserBedrockBlock orDefault = session.getBlockMappings().getCustomBlockStateDefinitions().getOrDefault(customBlockData.defaultBlockState(), null);

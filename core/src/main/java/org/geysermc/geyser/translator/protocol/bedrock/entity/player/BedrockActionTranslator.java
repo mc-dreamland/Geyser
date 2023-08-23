@@ -170,12 +170,21 @@ public class BedrockActionTranslator extends PacketTranslator<PlayerActionPacket
                     CustomBlockState blockStateOverride = BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get(blockState);
                     SkullCache.Skull skull = session.getSkullCache().getSkulls().get(vector);
 
+                    if (blockStateOverride == null) {
+                        if (skull != null) {
+                            blockStateOverride = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(skull.getOwnerName().replace("heypixel:", "")).defaultBlockState();
+                        }
+                    }
                     session.setBlockBreakStartTime(0);
                     if (blockStateOverride != null || customItem != null || (skull != null && skull.getBlockDefinition() != null)) {
                         session.setBlockBreakStartTime(System.currentTimeMillis());
                     }
                     startBreak.setData((int) (65535 / breakTime));
-                    session.setBreakingBlock(blockState);
+                    if (skull != null && blockStateOverride != null) {
+                        breakTime = blockStateOverride.block().components().destoryTime() * 20;
+                        session.setBreakingBlockTime(breakTime);
+                    }
+                    session.setBreakingBlock(skull != null ? skull.getBlockDefinition().getRuntimeId() : blockState);
                     session.sendUpstreamPacket(startBreak);
                 }
 
@@ -205,10 +214,17 @@ public class BedrockActionTranslator extends PacketTranslator<PlayerActionPacket
                     breakingBlock = BlockStateValues.JAVA_AIR_ID;
                 }
 
+                SkullCache.Skull skull = session.getSkullCache().getSkulls().get(vector);
                 Vector3f vectorFloat = vector.toFloat();
                 LevelEventPacket continueBreakPacket = new LevelEventPacket();
                 continueBreakPacket.setType(LevelEvent.PARTICLE_CRACK_BLOCK);
-                continueBreakPacket.setData((session.getBlockMappings().getBedrockBlockId(breakingBlock)) | (packet.getFace() << 24));
+                int data = (session.getBlockMappings().getBedrockBlockId(breakingBlock)) | (packet.getFace() << 24);
+                int dataA = (session.getBlockMappings().getBedrockBlockId(breakingBlock)) | (packet.getFace() << 24);
+                if (skull != null && skull.getBlockDefinition() != null) {
+                    data = skull.getBlockDefinition().getRuntimeId() | (packet.getFace() << 24);
+                    dataA = skull.getBlockDefinition().getRuntimeId();
+                }
+                continueBreakPacket.setData(data);
                 continueBreakPacket.setPosition(vectorFloat);
                 session.sendUpstreamPacket(continueBreakPacket);
 
@@ -217,6 +233,9 @@ public class BedrockActionTranslator extends PacketTranslator<PlayerActionPacket
                 updateBreak.setType(LevelEvent.BLOCK_UPDATE_BREAK);
                 updateBreak.setPosition(vectorFloat);
                 double breakTime = BlockUtils.getSessionBreakTime(session, BlockRegistries.JAVA_BLOCKS.get(breakingBlock)) * 20;
+                if (skull != null) {
+                    breakTime = session.getBreakingBlockTime();
+                }
 
 
                 // If the block is custom, we must keep track of when it should break ourselves
@@ -229,7 +248,7 @@ public class BedrockActionTranslator extends PacketTranslator<PlayerActionPacket
                         LevelEventPacket effectPacket = new LevelEventPacket();
                         effectPacket.setPosition(vectorFloat);
                         effectPacket.setType(LevelEvent.PARTICLE_DESTROY_BLOCK);
-                        effectPacket.setData(session.getBlockMappings().getBedrockBlockId(breakingBlock));
+                        effectPacket.setData(dataA);
                         session.sendUpstreamPacket(effectPacket);
                         
                         // Break the block

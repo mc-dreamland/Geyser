@@ -262,20 +262,31 @@ public class CustomBlockRegistryPopulator {
     
         String creativeCategory = customBlock.creativeCategory() != null ? customBlock.creativeCategory() : "none";
         String creativeGroup = customBlock.creativeGroup() != null ? customBlock.creativeGroup() : "";
-        NbtMap propertyTag = NbtMap.builder()
-                .putCompound("components", CustomBlockRegistryPopulator.convertComponents(customBlock.components(), protocolVersion))
+        NbtMap components = CustomBlockRegistryPopulator.convertComponents(customBlock.components(), protocolVersion);
+        if (components.containsKey("netease:face_directional")) {
+            if (components.getCompound("netease:face_directional").getByte("direction") == (byte) 1) {
+                properties.add(NbtMap.builder().putString("name", "minecraft:direction").build());
+            } else {
+                properties.add(NbtMap.builder().putString("name", "netease:face_direction").build());
+            }
+        }
+        NbtMapBuilder nbtMapBuilder = NbtMap.builder()
+                .putCompound("components", components)
                 // this is required or the client will crash
                 // in the future, this can be used to replace items in the creative inventory
                 // this would require us to map https://wiki.bedrock.dev/documentation/creative-categories.html#for-blocks programatically
                 .putCompound("menu_category", NbtMap.builder()
-                    .putString("category", creativeCategory)
-                    .putString("group", creativeGroup)
-                    .putBoolean("is_hidden_in_commands", false)
-                .build())
+                        .putString("category", creativeCategory)
+                        .putString("group", creativeGroup)
+                        .putBoolean("is_hidden_in_commands", false)
+                        .build())
                 // meaning of this version is unknown, but it's required for tags to work and should probably be checked periodically
                 .putInt("molangVersion", 1)
                 .putList("permutations", NbtType.COMPOUND, permutations)
                 .putList("properties", NbtType.COMPOUND, properties)
+                .putString("base_block", "")
+                .putString("micro_size", "");
+        NbtMap propertyTag = nbtMapBuilder
                 .build();
         return new BlockPropertyData(customBlock.identifier(), propertyTag);
     }
@@ -335,11 +346,11 @@ public class CustomBlockRegistryPopulator {
                     .putList("conditions", NbtType.COMPOUND, convertPlacementFilter(components.placementFilter()))
                     .build());
         }
-        if (components.destructibleByMining() != null) {
-            builder.putCompound("minecraft:destructible_by_mining", NbtMap.builder()
-                    .putFloat("value", components.destructibleByMining())
-                    .build());
-        }
+//        if (components.destructibleByMining() != null) {
+//            builder.putCompound("minecraft:destructible_by_mining", NbtMap.builder()
+//                    .putFloat("value", components.destructibleByMining())
+//                    .build());
+//        }
         if (components.friction() != null) {
             builder.putCompound("minecraft:friction", NbtMap.builder()
                     .putFloat("value", components.friction())
@@ -390,6 +401,9 @@ public class CustomBlockRegistryPopulator {
         if (components.destoryTime() != null) {
             builder.putCompound("minecraft:destroy_time", NbtMap.builder()
                     .putFloat("value", components.destoryTime())
+                    .build());
+            builder.putCompound("minecraft:destructible_by_mining", NbtMap.builder()
+                    .putFloat("seconds_to_destroy", components.destoryTime())
                     .build());
         }
 

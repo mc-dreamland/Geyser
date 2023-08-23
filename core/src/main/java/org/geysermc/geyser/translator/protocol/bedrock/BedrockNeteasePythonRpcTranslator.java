@@ -40,7 +40,6 @@ public class BedrockNeteasePythonRpcTranslator extends PacketTranslator<NeteaseP
 
     @Override
     public void translate(GeyserSession session, NeteasePythonRpcPacket packet){
-        // Stop the player sending animations before they have fully spawned into the server
         if(!session.isSpawned()){
             return;
         }

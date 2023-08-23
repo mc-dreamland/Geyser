@@ -501,6 +501,12 @@ public class MappingsReader_v1 extends MappingsReader {
             builder.tags(tagsSet);
         }
 
+        if (node.has("destroy_time")) {
+            builder.destroy_time(node.get("destroy_time").floatValue());
+        } else {
+            builder.destroy_time(30f);
+        }
+
         if (node.has("netease_face_directional")) {
             builder.neteaseFaceDirectional(node.get("netease_face_directional").asInt());
         }
@@ -515,9 +521,7 @@ public class MappingsReader_v1 extends MappingsReader {
             }
         }
 
-        if (node.has("netease_block_entity")) {
-            builder.neteaseBlockEntity(true);
-        }
+        builder.neteaseBlockEntity(node.has("netease_block_entity") && node.get("netease_block_entity").asBoolean());
 
         if (node.has("netease_tier")) {
             builder.neteaseTier(node.get("netease_tier").asText());

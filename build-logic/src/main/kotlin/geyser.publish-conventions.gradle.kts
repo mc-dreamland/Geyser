@@ -4,6 +4,6 @@ plugins {
 }
 
 indra {
-    publishSnapshotsTo("geysermc", "https://repo.opencollab.dev/maven-snapshots")
-    publishReleasesTo("geysermc", "https://repo.opencollab.dev/maven-releases")
+    publishSnapshotsTo("geysermc", "https://nexus.bjd-mc.com:8443/repository/maven-snapshots/")
+    publishReleasesTo("geysermc", "https://nexus.bjd-mc.com:8443/repository/maven-releases")
 }

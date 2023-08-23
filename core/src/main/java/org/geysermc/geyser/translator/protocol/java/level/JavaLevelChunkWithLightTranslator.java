@@ -119,7 +119,8 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         ByteBuf byteBuf = null;
         GeyserChunkSection[] sections = new GeyserChunkSection[javaChunks.length - (yOffset + (bedrockDimension.minY() >> 4))];
 
-        HashMap<BlockEntityDataPacket, BlockDefinition> blockEntityDataPackets = new HashMap<>();
+        List<BlockEntityDataPacket> blockEntityDataPackets = new ArrayList<>();
+        List<UpdateBlockPacket> customBlockDataPackets = new ArrayList<>();
         try {
             ByteBuf in = Unpooled.wrappedBuffer(packet.getChunkData());
             boolean extendedCollisionNextSection = false;
@@ -435,14 +436,23 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
 
                         // 如果是netease 客户端实体方块，则在此处不将头颅更新为自定义方块，缓存在区块发送之后再更新
                         // 避免客户端处理过慢(?)导致更新失败。
-                        if (customBlockData != null && customBlockData.components().neteaseBlockEntity()) {
-                            NbtMap blockEntityTag = BlockEntityTranslator.getCustomSkullBlockEntityTag(type, skullLocation.getX(), skullLocation.getY(), skullLocation.getZ(),
-                                    tag, blockState, customBlockData.name());
+                        if (customBlockData != null) {
+                            UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
+                            updateBlockPacket.setDataLayer(0);
+                            updateBlockPacket.setBlockPosition(skullLocation);
+                            updateBlockPacket.setDefinition(blockDefinition);
+                            updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NEIGHBORS);
+                            updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
+                            customBlockDataPackets.add(updateBlockPacket);
+                            if (customBlockData.components().neteaseBlockEntity()) {
+                                NbtMap blockEntityTag = BlockEntityTranslator.getCustomSkullBlockEntityTag(type, skullLocation.getX(), skullLocation.getY(), skullLocation.getZ(),
+                                        tag, blockState, customBlockData.name());
 
-                            BlockEntityDataPacket blockEntityPacket = new BlockEntityDataPacket();
-                            blockEntityPacket.setBlockPosition(skullLocation);
-                            blockEntityPacket.setData(blockEntityTag);
-                            blockEntityDataPackets.put(blockEntityPacket, blockDefinition);
+                                BlockEntityDataPacket blockEntityPacket = new BlockEntityDataPacket();
+                                blockEntityPacket.setBlockPosition(skullLocation);
+                                blockEntityPacket.setData(blockEntityTag);
+                                blockEntityDataPackets.add(blockEntityPacket);
+                            }
                         } else {
                             int bedrockSectionY = (y >> 4) - (bedrockDimension.minY() >> 4);
                             if (0 <= bedrockSectionY && bedrockSectionY < maxBedrockSectionY) {
@@ -551,16 +561,8 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
 
 
         // 区块发送之后，依次将区块内的自定义实体
-        blockEntityDataPackets.forEach((blockEntityDataPacket, runtimeId) -> {
-            UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
-            updateBlockPacket.setDataLayer(0);
-            updateBlockPacket.setBlockPosition(blockEntityDataPacket.getBlockPosition());
-            updateBlockPacket.setDefinition(runtimeId);
-            updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NEIGHBORS);
-            updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
-            session.sendUpstreamPacket(updateBlockPacket);
-            session.sendUpstreamPacket(blockEntityDataPacket);
-        });
+        customBlockDataPackets.forEach(session::sendUpstreamPacket);
+        blockEntityDataPackets.forEach(session::sendUpstreamPacket);
 //        blockEntityDataPackets.forEach(session::sendUpstreamPacket);
 
 

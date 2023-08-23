@@ -55,6 +55,7 @@ import org.geysermc.geyser.translator.level.block.entity.BedrockOnlyBlockEntity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.geysermc.geyser.level.block.BlockStateValues.JAVA_AIR_ID;
 
@@ -246,23 +247,48 @@ public class ChunkUtils {
         // Prevent moving_piston from being placed
         // It's used for extending piston heads, but it isn't needed on Bedrock and causes pistons to flicker
         if (!BlockStateValues.isMovingPiston(blockState)) {
-            UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
-            updateBlockPacket.setDataLayer(0);
-            updateBlockPacket.setBlockPosition(position);
-            updateBlockPacket.setDefinition(definition);
-            updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NEIGHBORS);
-            updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
-            session.sendUpstreamPacket(updateBlockPacket);
+            if (skullVariant != -1) {
+                BlockDefinition finalDefinition = definition;
+                session.scheduleInEventLoop(() -> {
+                    if (!session.getSkullCache().getSkulls().containsKey(position)) {
+                        UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
+                        updateBlockPacket.setDataLayer(0);
+                        updateBlockPacket.setBlockPosition(position);
+                        updateBlockPacket.setDefinition(finalDefinition);
+                        updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NEIGHBORS);
+                        updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
+                        session.sendUpstreamPacket(updateBlockPacket);
 
-            UpdateBlockPacket waterPacket = new UpdateBlockPacket();
-            waterPacket.setDataLayer(1);
-            waterPacket.setBlockPosition(position);
-            if (BlockRegistries.WATERLOGGED.get().get(blockState)) {
-                waterPacket.setDefinition(session.getBlockMappings().getBedrockWater());
+                        UpdateBlockPacket waterPacket = new UpdateBlockPacket();
+                        waterPacket.setDataLayer(1);
+                        waterPacket.setBlockPosition(position);
+                        if (BlockRegistries.WATERLOGGED.get().get(blockState)) {
+                            waterPacket.setDefinition(session.getBlockMappings().getBedrockWater());
+                        } else {
+                            waterPacket.setDefinition(session.getBlockMappings().getBedrockAir());
+                        }
+                        session.sendUpstreamPacket(waterPacket);
+                    }
+                }, 100L, TimeUnit.MILLISECONDS);
             } else {
-                waterPacket.setDefinition(session.getBlockMappings().getBedrockAir());
+                UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
+                updateBlockPacket.setDataLayer(0);
+                updateBlockPacket.setBlockPosition(position);
+                updateBlockPacket.setDefinition(definition);
+                updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NEIGHBORS);
+                updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
+                session.sendUpstreamPacket(updateBlockPacket);
+
+                UpdateBlockPacket waterPacket = new UpdateBlockPacket();
+                waterPacket.setDataLayer(1);
+                waterPacket.setBlockPosition(position);
+                if (BlockRegistries.WATERLOGGED.get().get(blockState)) {
+                    waterPacket.setDefinition(session.getBlockMappings().getBedrockWater());
+                } else {
+                    waterPacket.setDefinition(session.getBlockMappings().getBedrockAir());
+                }
+                session.sendUpstreamPacket(waterPacket);
             }
-            session.sendUpstreamPacket(waterPacket);
         }
 
         // Extended collision boxes for custom blocks

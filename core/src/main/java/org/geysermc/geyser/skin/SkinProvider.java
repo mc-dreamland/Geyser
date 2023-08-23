@@ -75,8 +75,11 @@ public class SkinProvider {
     private static final Cache<String, Cape> CACHED_JAVA_CAPES = CacheBuilder.newBuilder()
             .expireAfterAccess(1, TimeUnit.HOURS)
             .build();
-    private static final Cache<String, Skin> CACHED_JAVA_SKINS = CacheBuilder.newBuilder()
-            .expireAfterAccess(1, TimeUnit.HOURS)
+    public static final Cache<String, Skin> CACHED_JAVA_SKINS = CacheBuilder.newBuilder()
+            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .build();
+    public static final Cache<UUID, String> CACHED_JAVA_SKINS_UUID = CacheBuilder.newBuilder()
+            .expireAfterAccess(30, TimeUnit.MINUTES)
             .build();
 
     private static final Cache<String, Cape> CACHED_BEDROCK_CAPES = CacheBuilder.newBuilder()
@@ -89,7 +92,8 @@ public class SkinProvider {
     private static final Map<String, CompletableFuture<Cape>> requestedCapes = new ConcurrentHashMap<>();
     private static final Map<String, CompletableFuture<Skin>> requestedSkins = new ConcurrentHashMap<>();
 
-    private static final Map<UUID, SkinGeometry> cachedGeometry = new ConcurrentHashMap<>();
+    private static final Map<UUID, String> cachedGeometry = new ConcurrentHashMap<>();
+    private static final Map<String, SkinGeometry> cachedGeometryMap = new ConcurrentHashMap<>();
 
     /**
      * Citizens NPCs use UUID version 2, while legitimate Minecraft players use version 4, and
@@ -191,7 +195,7 @@ public class SkinProvider {
                 skin = CACHED_BEDROCK_SKINS.getIfPresent(skinId);
                 String capeId = session.getClientData().getCapeId();
                 cape = CACHED_BEDROCK_CAPES.getIfPresent(capeId);
-                geometry = cachedGeometry.getOrDefault(uuid, geometry);
+                geometry = cachedGeometryMap.getOrDefault(cachedGeometry.getOrDefault(uuid, "none"), geometry);
             }
         }
 
@@ -335,18 +339,21 @@ public class SkinProvider {
 
         CompletableFuture<Skin> future;
         if (newThread) {
-            future = CompletableFuture.supplyAsync(() -> supplySkin(playerId, textureUrl), EXECUTOR_SERVICE)
-                    .whenCompleteAsync((skin, throwable) -> {
-                        skin.updated = true;
-                        CACHED_JAVA_SKINS.put(textureUrl, skin);
-                        requestedSkins.remove(textureUrl);
-                    });
             if (textureUrl.endsWith("?pe")){
                 future = CompletableFuture.supplyAsync(()-> requestSkin(playerId,textureUrl),EXECUTOR_SERVICE).whenCompleteAsync((skin,throwable)->{
                     skin.updated = true;
                     CACHED_JAVA_SKINS.put(textureUrl, skin);
+                    CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
                     requestedSkins.remove(textureUrl);
                 });
+            } else {
+                future = CompletableFuture.supplyAsync(() -> supplySkin(playerId, textureUrl), EXECUTOR_SERVICE)
+                        .whenCompleteAsync((skin, throwable) -> {
+                            skin.updated = true;
+                            CACHED_JAVA_SKINS.put(textureUrl, skin);
+                            CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
+                            requestedSkins.remove(textureUrl);
+                        });
             }
             requestedSkins.put(textureUrl, future);
         } else {
@@ -354,12 +361,14 @@ public class SkinProvider {
                 Skin skin = requestSkin(playerId,textureUrl);
                 future = CompletableFuture.completedFuture(skin);
                 CACHED_JAVA_SKINS.put(textureUrl, skin);
+                CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
                 return future;
             }
             // 成功HTTP拿到皮肤进行缓存
             Skin skin = supplySkin(playerId, textureUrl);
             future = CompletableFuture.completedFuture(skin);
             CACHED_JAVA_SKINS.put(textureUrl, skin);
+            CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
         }
         return future;
     }
@@ -511,8 +520,10 @@ public class SkinProvider {
     }
 
     static void storeBedrockGeometry(UUID playerID, byte[] geometryName, byte[] geometryData) {
-        SkinGeometry geometry = new SkinGeometry(new String(geometryName), new String(geometryData), false);
-        cachedGeometry.put(playerID, geometry);
+        String geometryNameStr = new String(geometryName);
+        SkinGeometry geometry = new SkinGeometry(geometryNameStr, new String(geometryData), false);
+        cachedGeometry.put(playerID, geometryNameStr);
+        cachedGeometryMap.put(geometryNameStr, geometry);
     }
 
     /**
@@ -531,7 +542,9 @@ public class SkinProvider {
      * @param isSlim If the player is using an slim base
      */
     private static void storeEarGeometry(UUID playerID, boolean isSlim) {
-        cachedGeometry.put(playerID, SkinGeometry.getEars(isSlim));
+        SkinGeometry ears = SkinGeometry.getEars(isSlim);
+        cachedGeometry.put(playerID, ears.geometryName);
+        cachedGeometryMap.put(ears.geometryName, ears);
     }
 
     private static Skin supplySkin(UUID uuid, String textureUrl) {

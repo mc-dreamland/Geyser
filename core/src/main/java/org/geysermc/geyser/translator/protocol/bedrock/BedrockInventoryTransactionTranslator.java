@@ -33,6 +33,8 @@ import com.github.steveice10.mc.protocol.data.game.entity.player.InteractAction;
 import com.github.steveice10.mc.protocol.data.game.entity.player.PlayerAction;
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.serverbound.player.*;
+import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
+import com.github.steveice10.opennbt.tag.builtin.StringTag;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import org.cloudburstmc.math.vector.Vector3d;
@@ -51,6 +53,7 @@ import org.cloudburstmc.protocol.bedrock.packet.ContainerOpenPacket;
 import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateBlockPacket;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.ItemFrameEntity;
@@ -206,9 +209,12 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
 
                         // Check to make sure the client isn't spamming interaction
                         // Based on Nukkit 1.0, with changes to ensure holding down still works
-                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < 110.0 &&
-                                packetBlockPosition.distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001;
+                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < 80.0 &&
+                                packetBlockPosition.distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001 &&
+                                packet.getBlockFace() == session.getLastInteractionFace() &&
+                                Math.abs(session.getLastInteractionPlayerPosition().getY() - session.getPlayerEntity().getPosition().getY()) < 0.01;
                         session.setLastInteractionBlockPosition(packetBlockPosition);
+                        session.setLastInteractionFace(packet.getBlockFace());
                         session.setLastInteractionPlayerPosition(session.getPlayerEntity().getPosition());
                         if (hasAlreadyClicked) {
                             break;
@@ -480,6 +486,35 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                 switch (packet.getActionType()) {
                     case 0 -> processEntityInteraction(session, packet, entity); // Interact
                     case 1 -> { // Attack
+                        long attackDelay = System.currentTimeMillis() - session.getLastAttackTime();
+
+                        if (attackDelay <= 30) {
+                            session.setQucikAttackTimes(session.getQucikAttackTimes() + 10);
+                        } else if (attackDelay <= 50) {
+                            session.setQucikAttackTimes(session.getQucikAttackTimes() + 7);
+                        } else if (attackDelay <= 60) {
+                            session.setQucikAttackTimes(session.getQucikAttackTimes() + 5);
+                        } else if (attackDelay <= 70) {
+                            session.setQucikAttackTimes(session.getQucikAttackTimes() + 3);
+                        } else if (attackDelay <= 85) {
+                            session.setQucikAttackTimes(session.getQucikAttackTimes() + 2);
+                        } else if (attackDelay <= 100) {
+                            session.setQucikAttackTimes(session.getQucikAttackTimes() + 1);
+                        } else {
+                            if (attackDelay >= 500) {
+                                session.setQucikAttackTimes(0);
+                            } else if (attackDelay >= 300) {
+                                session.setQucikAttackTimes(session.getQucikAttackTimes() - 20);
+                            } else if (attackDelay >= 200) {
+                                session.setQucikAttackTimes(session.getQucikAttackTimes() - 10);
+                            } else {
+                                session.setQucikAttackTimes(session.getQucikAttackTimes() - 5);
+                            }
+                        }
+
+                        if (session.getQucikAttackTimes() > 50) {
+                            return;
+                        }
                         int entityId;
                         if (entity.getDefinition() == EntityDefinitions.ENDER_DRAGON) {
                             // Redirects the attack to its body entity, this only happens when

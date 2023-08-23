@@ -616,7 +616,8 @@ public class ItemRegistryPopulator {
 
                     GeyserBedrockBlock bedrockBlock = blockMappings.getCustomBlockStateDefinitions().getOrDefault(customBlock.defaultBlockState(), null);
 
-                    if (bedrockBlock != null && customBlock.includedInCreativeInventory()) {
+//                    if (bedrockBlock != null && customBlock.includedInCreativeInventory()) {
+                    if (bedrockBlock != null) {
                         creativeItems.add(ItemData.builder()
                                 .definition(definition)
                                 .blockDefinition(bedrockBlock)
