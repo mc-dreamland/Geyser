@@ -76,10 +76,10 @@ public class SkinProvider {
             .expireAfterAccess(1, TimeUnit.HOURS)
             .build();
     public static final Cache<String, Skin> CACHED_JAVA_SKINS = CacheBuilder.newBuilder()
-            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .expireAfterAccess(60, TimeUnit.MINUTES)
             .build();
     public static final Cache<UUID, String> CACHED_JAVA_SKINS_UUID = CacheBuilder.newBuilder()
-            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .expireAfterAccess(60, TimeUnit.MINUTES)
             .build();
 
     private static final Cache<String, Cape> CACHED_BEDROCK_CAPES = CacheBuilder.newBuilder()
