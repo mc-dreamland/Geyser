@@ -94,8 +94,8 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
 
     private static final float MAXIMUM_BLOCK_PLACING_DISTANCE = 144f;
     private static final int CREATIVE_EYE_HEIGHT_PLACE_DISTANCE = 144;
-    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 49;
-    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 49f;
+    private static final int SURVIVAL_EYE_HEIGHT_PLACE_DISTANCE = 64;
+    private static final float MAXIMUM_BLOCK_DESTROYING_DISTANCE = 64f;
 
     @Override
     public void translate(GeyserSession session, InventoryTransactionPacket packet) {
@@ -200,7 +200,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                             if (belowBlockPos != null) {
                                 int belowBlock = session.getGeyser().getWorldManager().getBlockAt(session, belowBlockPos);
                                 BlockDefinition extendedCollisionDefinition = session.getBlockMappings().getExtendedCollisionBoxes().get(belowBlock);
-                                if (extendedCollisionDefinition != null && (System.currentTimeMillis() - session.getLastInteractionTime()) < 200) {
+                                if (extendedCollisionDefinition != null && (System.currentTimeMillis() - session.getLastInteractionTime()) < 80) {
                                     restoreCorrectBlock(session, blockPos, packet);
                                     return;
                                 }
