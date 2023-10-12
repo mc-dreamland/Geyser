@@ -126,10 +126,6 @@ public class Item {
             }
         }
 
-        if (tag.get("SkullOwner") != null && ((CompoundTag) tag.get("SkullOwner")).get("Name").getValue().toString().startsWith("heypixel:")) {
-            tag.remove("Damage");
-        }
-
         List<Tag> newTags = new ArrayList<>();
         Tag enchantmentTag = tag.remove("Enchantments");
         if (enchantmentTag instanceof ListTag listTag) {

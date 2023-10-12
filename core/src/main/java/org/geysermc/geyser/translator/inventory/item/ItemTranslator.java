@@ -656,7 +656,6 @@ public final class ItemTranslator {
 
                     builder.definition(itemDefinition);
                     builder.blockDefinition(blockDefinition);
-                    builder.damage(0);
                     return;
                 }
             }
@@ -668,7 +667,6 @@ public final class ItemTranslator {
             BlockDefinition blockDefinition = session.getBlockMappings().getCustomBlockStateDefinitions().get(customBlockData.defaultBlockState());
             builder.definition(itemDefinition);
             builder.blockDefinition(blockDefinition);
-            builder.damage(0);
         }
     }
 

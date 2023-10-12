@@ -40,6 +40,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class BlockEntityUtils {
     /**
@@ -88,6 +89,14 @@ public class BlockEntityUtils {
         BlockEntityDataPacket blockEntityPacket = new BlockEntityDataPacket();
         blockEntityPacket.setBlockPosition(position);
         blockEntityPacket.setData(JavaLevelChunkWithLightTranslator.manageBlockEntityNbt(session, blockEntity));
+        if (blockEntity.containsKey("SkullType")) {
+            if (blockEntity.getByte("SkullType") == (byte) 3) {
+                session.scheduleInEventLoop(() -> {
+                    session.sendUpstreamPacket(blockEntityPacket);
+                }, 150L, TimeUnit.MILLISECONDS);
+                return;
+            }
+        }
         session.sendUpstreamPacket(blockEntityPacket);
     }
 }

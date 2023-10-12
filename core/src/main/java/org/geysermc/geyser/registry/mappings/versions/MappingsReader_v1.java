@@ -419,7 +419,7 @@ public class MappingsReader_v1 extends MappingsReader {
             builder.lightDampening(node.get("light_dampening").asInt());
         }
 
-        boolean placeAir = true;
+        boolean placeAir = false;
         if (node.has("place_air")) {
             placeAir = node.get("place_air").asBoolean();
         }
@@ -504,7 +504,7 @@ public class MappingsReader_v1 extends MappingsReader {
         if (node.has("destroy_time")) {
             builder.destroy_time(node.get("destroy_time").floatValue());
         } else {
-            builder.destroy_time(30f);
+            builder.destroy_time(60f);
         }
 
         if (node.has("netease_face_directional")) {

@@ -247,7 +247,7 @@ public class ChunkUtils {
         // Prevent moving_piston from being placed
         // It's used for extending piston heads, but it isn't needed on Bedrock and causes pistons to flicker
         if (!BlockStateValues.isMovingPiston(blockState)) {
-            if (skullVariant != -1) {
+            if (skullVariant == 3) {
                 BlockDefinition finalDefinition = definition;
                 session.scheduleInEventLoop(() -> {
                     if (!session.getSkullCache().getSkulls().containsKey(position)) {
