@@ -78,7 +78,7 @@ public class PaintingEntity extends Entity {
 
     private Vector3f fixOffset(PaintingType paintingName) {
         Vector3f position = super.position;
-        position = position.add(0.5, 0.5, 0.5);
+//        position = position.add(0.5, 0.5, 0.5); // 网易版目前似乎不需要偏移
         double widthOffset = paintingName.getWidth() > 1 ? 0.5 : 0;
         double heightOffset = paintingName.getHeight() > 1 && paintingName.getHeight() != 3 ? 0.5 : 0;
 
