@@ -151,6 +151,8 @@ public interface CustomBlockComponents {
 
     Float destoryTime();
 
+    List<String> neteaseConnection();
+
     Integer neteaseFaceDirectional();
 
     List<NeteaseBoxComponent> neteaseAabbCollision();
@@ -210,6 +212,7 @@ public interface CustomBlockComponents {
         Builder destroy_time(float destroy_time);
 
         Builder neteaseFaceDirectional(int netease_face_directional);
+        Builder neteaseConnection(List<String> netease_connection);
 
         Builder neteaseAabbCollision(List<NeteaseBoxComponent> netease_aabb_collision);
 

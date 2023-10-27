@@ -507,6 +507,10 @@ public class MappingsReader_v1 extends MappingsReader {
             builder.destroy_time(60f);
         }
 
+        if (node.has("netease_connection")) {
+            builder.neteaseConnection(createNeteaseConnection(node.get("netease_connection")));
+        }
+
         if (node.has("netease_face_directional")) {
             builder.neteaseFaceDirectional(node.get("netease_face_directional").asInt());
         }
@@ -674,6 +678,18 @@ public class MappingsReader_v1 extends MappingsReader {
                 16 * (maxY - minY),
                 16 * (maxZ - minZ)
         );
+    }
+
+    private List<String> createNeteaseConnection(JsonNode node) {
+        List<String> blocks = new ArrayList<>();
+        if (node == null || !node.isArray()) {
+            return blocks;
+        }
+        for (JsonNode jsonNode : node) {
+            blocks.add(jsonNode.asText());
+        }
+        return blocks;
+
     }
 
     /**

@@ -56,6 +56,7 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
     boolean placeAir;
     Set<String> tags;
     Float destroyTime;
+    List<String> neteaseConnection;
     Integer neteaseFaceDirectional;
     List<NeteaseBoxComponent> neteaseAabbCollision;
     List<NeteaseBoxComponent> neteaseAabbClip;
@@ -90,6 +91,7 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
             this.tags = Set.copyOf(builder.tags);
         }
         this.destroyTime = builder.destroy_time;
+        this.neteaseConnection = builder.neteaseConnection;
         this.neteaseFaceDirectional = builder.neteaseFaceDirectional;
         this.neteaseAabbCollision = builder.neteaseAabbCollision;
         this.neteaseAabbClip = builder.neteaseAabbClip;
@@ -177,6 +179,10 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
     }
 
     @Override
+    public List<String> neteaseConnection() {
+        return neteaseConnection;
+    }
+
     public Integer neteaseFaceDirectional() {
         return neteaseFaceDirectional;
     }
@@ -239,6 +245,7 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         protected boolean placeAir = false;
         protected final Set<String> tags = new HashSet<>();
         protected float destroy_time;
+        protected List<String> neteaseConnection;
         protected Integer neteaseFaceDirectional;
         protected List<NeteaseBoxComponent> neteaseAabbCollision;
         protected List<NeteaseBoxComponent> neteaseAabbClip;
@@ -398,6 +405,12 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         @Override
         public Builder neteaseFaceDirectional(int netease_face_directional) {
             this.neteaseFaceDirectional = netease_face_directional;
+            return this;
+        }
+
+        @Override
+        public Builder neteaseConnection(List<String> netease_connection) {
+            this.neteaseConnection = netease_connection;
             return this;
         }
 

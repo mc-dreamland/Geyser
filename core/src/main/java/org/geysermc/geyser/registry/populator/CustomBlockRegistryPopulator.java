@@ -407,11 +407,18 @@ public class CustomBlockRegistryPopulator {
                     .build());
         }
 
+        if (components.neteaseConnection() != null && !components.neteaseConnection().isEmpty()) {
+            builder.putCompound("netease:connection", NbtMap.builder()
+                    .putList("blocks", NbtType.STRING, components.neteaseConnection())
+                    .build());
+        }
+
         if (components.neteaseFaceDirectional() != null) {
             builder.putCompound("netease:face_directional", NbtMap.builder()
                     .putByte("direction", components.neteaseFaceDirectional().byteValue())
                     .build());
         }
+
         if (components.neteaseAabbCollision() != null || components.neteaseAabbClip() != null) {
             NbtMapBuilder endMap = NbtMap.builder();
             List<NeteaseBoxComponent> collision = components.neteaseAabbCollision();
