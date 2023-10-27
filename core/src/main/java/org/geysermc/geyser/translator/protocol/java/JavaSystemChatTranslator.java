@@ -55,12 +55,44 @@ public class JavaSystemChatTranslator extends PacketTranslator<ClientboundSystem
         textPacket.setType(packet.isOverlay() ? TextPacket.Type.TIP : TextPacket.Type.SYSTEM);
 
         textPacket.setNeedsTranslation(false);
-        textPacket.setMessage(MessageTranslator.convertMessage(packet.getContent(), session.locale()));
+        String message = MessageTranslator.convertMessage(packet.getContent(), session.locale());
+        int length = message.length();
 
-        if (session.isSentSpawnPacket()) {
-            session.sendUpstreamPacket(textPacket);
+        if (length >= 512) {
+            int i = length / (512);
+            if ( (i * (512)) < length) {
+                i++;
+            }
+            for (int i1 = 0; i1 < i; i1++) {
+                TextPacket textPacket2 = new TextPacket();
+                textPacket2.setPlatformChatId("");
+                textPacket2.setSourceName("");
+                textPacket2.setXuid(session.getAuthData().xuid());
+                textPacket2.setType(packet.isOverlay() ? TextPacket.Type.TIP : TextPacket.Type.SYSTEM);
+
+                textPacket2.setNeedsTranslation(false);
+                String msg;
+                if (512 * i1 <= length) {
+                    int l2 = 512 * (i1 + 1);
+                    if (l2 > length) {
+                        l2 = length;
+                    }
+                    msg = (message.substring(512 * i1, l2));
+                    textPacket2.setMessage(msg);
+                    if (session.isSentSpawnPacket()) {
+                        session.sendUpstreamPacket(textPacket2);
+                    } else {
+                        session.getUpstream().queuePostStartGamePacket(textPacket2);
+                    }
+                }
+            }
         } else {
-            session.getUpstream().queuePostStartGamePacket(textPacket);
+            textPacket.setMessage(message);
+            if (session.isSentSpawnPacket()) {
+                session.sendUpstreamPacket(textPacket);
+            } else {
+                session.getUpstream().queuePostStartGamePacket(textPacket);
+            }
         }
     }
 }
