@@ -89,7 +89,7 @@ public final class CustomItemTranslator {
             }
 
             OptionalInt customModelDataOption = options.customModelData();
-            if (customModelDataOption.isPresent() && customModelData < customModelDataOption.getAsInt()) {
+            if (customModelDataOption.isPresent() && customModelData != customModelDataOption.getAsInt()) {
                 continue;
             }
 
