@@ -130,7 +130,8 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
 
         session.setReducedDebugInfo(packet.isReducedDebugInfo());
 
-        session.setServerRenderDistance(packet.getViewDistance());
+        int distance = Math.min(packet.getViewDistance(), 10);
+        session.setServerRenderDistance(distance);
 
         // TODO customize
         session.sendJavaClientSettings();

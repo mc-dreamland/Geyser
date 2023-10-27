@@ -35,6 +35,7 @@ public class JavaSetChunkCacheRadiusTranslator extends PacketTranslator<Clientbo
 
     @Override
     public void translate(GeyserSession session, ClientboundSetChunkCacheRadiusPacket packet) {
-        session.setServerRenderDistance(packet.getViewDistance());
+        int distance = Math.min(packet.getViewDistance(), 10);
+        session.setServerRenderDistance(distance);
     }
 }

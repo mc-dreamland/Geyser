@@ -76,7 +76,7 @@ public class DimensionUtils {
         session.getPistonCache().clear();
         session.getSkullCache().clear();
 
-        if (session.getServerRenderDistance() > 32 && !session.isEmulatePost1_13Logic()) {
+        if (session.getServerRenderDistance() > 16 && !session.isEmulatePost1_13Logic()) {
             // The server-sided view distance wasn't a thing until Minecraft Java 1.14
             // So ViaVersion compensates by sending a "view distance" of 64
             // That's fine, except when the actual view distance sent from the server is five chunks
@@ -86,7 +86,7 @@ public class DimensionUtils {
             session.getGeyser().getLogger().debug("Applying dimension switching workaround for Bedrock render distance of "
                     + session.getServerRenderDistance());
             ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
-            chunkRadiusUpdatedPacket.setRadius(32);
+            chunkRadiusUpdatedPacket.setRadius(16);
             session.sendUpstreamPacket(chunkRadiusUpdatedPacket);
             // Will be re-adjusted on spawn
         }
