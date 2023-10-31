@@ -339,13 +339,26 @@ public class SkullCache {
                 default -> 0;
             };
         } else {
-            // 地面头颅朝向
-            if (rotation == 15) {
-                rotation = 0;
-            } else {
-                rotation += 1;
+//            // 地面头颅朝向
+//            if (rotation == 15) {
+//                rotation = 0;
+//            } else {
+//                rotation += 2;
+//            }
+            if (rotation == 15 || rotation <= 2) {
+                return 2;
             }
-            return ((rotation / 4) + 2) % 4;
+            if (rotation <= 6) {
+                return 3;
+            }
+            if (rotation <= 10) {
+                return 0;
+            }
+            if (rotation <= 14) {
+                return 1;
+            }
+            return 0;
+//            return ((rotation / 4) + 2) % 4;
         }
     }
 
