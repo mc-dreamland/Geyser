@@ -79,7 +79,8 @@ public class BlockInventoryHolder extends InventoryHolder {
         // Check to see if there is an existing block we can use that the player just selected.
         // First, verify that the player's position has not changed, so we don't try to select a block wildly out of range.
         // (This could be a virtual inventory that the player is opening)
-        if (checkInteractionPosition(session) && (!inventory.getContainerType().toString().startsWith("GENERIC")
+        if (checkInteractionPosition(session)
+                && (!inventory.getContainerType().toString().startsWith("GENERIC")
                 && !inventory.getContainerType().toString().equals("ENCHANTMENT")
                 && !inventory.getContainerType().toString().equals("ANVIL")
                 && !inventory.getContainerType().toString().equals("FURNACE")
