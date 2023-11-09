@@ -92,17 +92,19 @@ public final class GeyserServer {
 
     @Getter
     private final ExpiringMap<InetSocketAddress, InetSocketAddress> proxiedAddresses;
-    private final int threadCount;
+    private final int listenCount;
 
     private ChannelFuture[] futures;
 
     public GeyserServer(GeyserImpl geyser, int threadCount) {
         this.geyser = geyser;
-        this.threadCount = threadCount;
-        this.group = TRANSPORT.eventLoopGroupFactory().apply(threadCount);
+        // bindCount = 1/2 of processors, and max to 20
+        // It's offers up to 20*250=5000 workload
+        this.listenCount = Bootstraps.isReusePortAvailable() ? Math.max(1, Math.min(20, threadCount / 4)) : 1;
+        this.group = TRANSPORT.eventLoopGroupFactory().apply(listenCount);
         this.childGroup = TRANSPORT.eventLoopGroupFactory().apply(threadCount);
 
-        this.bootstrap = this.createBootstrap(this.group);
+        this.bootstrap = this.createBootstrap();
         // setup SO_REUSEPORT if exists
         Bootstraps.setupBootstrap(this.bootstrap);
 
@@ -116,18 +118,17 @@ public final class GeyserServer {
     }
 
     public CompletableFuture<Void> bind(InetSocketAddress address) {
-        int size = Bootstraps.isReusePortAvailable() ? threadCount : 1;
-        futures = new ChannelFuture[size];
-        for (int i = 0; i < size; i++) {
+        futures = new ChannelFuture[listenCount];
+        for (int i = 0; i < listenCount; i++) {
             futures[i] = Optional.of(bootstrap)
                     .map(f -> f.bind(address))
                     .map(f -> addHandlers(f, this))
                     .orElseThrow();
             // log
-            this.geyser.getLogger().info("Binding to " + address + " " +
-                    i +
-                    "/" +
-                    size);
+//            this.geyser.getLogger().info("Binding to " + address + " " +
+//                    i +
+//                    "/" +
+//                    size);
         }
 
         return Bootstraps.allOf(futures);
@@ -154,7 +155,7 @@ public final class GeyserServer {
         }
     }
 
-    private ServerBootstrap createBootstrap(EventLoopGroup group) {
+    private ServerBootstrap createBootstrap() {
         if (this.geyser.getConfig().isDebugMode()) {
             this.geyser.getLogger().debug("EventLoop type: " + TRANSPORT.datagramChannel());
             if (TRANSPORT.datagramChannel() == NioDatagramChannel.class) {

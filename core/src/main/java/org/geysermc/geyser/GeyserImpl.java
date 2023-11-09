@@ -389,7 +389,7 @@ public class GeyserImpl implements GeyserApi {
         Integer bedrockThreadCount = Integer.getInteger("Geyser.BedrockNetworkThreads");
         if (bedrockThreadCount == null) {
             // Copy the code from Netty's default thread count fallback
-            bedrockThreadCount = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 4));
+            bedrockThreadCount = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
         }
 
         if (shouldStartListener) {
