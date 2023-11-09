@@ -93,7 +93,7 @@ public class BlockEntityUtils {
             if (blockEntity.getByte("SkullType") == (byte) 3) {
                 session.scheduleInEventLoop(() -> {
                     session.sendUpstreamPacket(blockEntityPacket);
-                }, 150L, TimeUnit.MILLISECONDS);
+                }, 200L, TimeUnit.MILLISECONDS);
                 return;
             }
         }

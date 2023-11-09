@@ -98,62 +98,64 @@ public class SkullCache {
         if (skull.ownerName != null && skull.ownerName.startsWith("heypixel:")) {
             return putSkull(position, skull.ownerName, blockState);
         }
-
-        if (!texturesProperty.equals(skull.texturesProperty)) {
-            skull.texturesProperty = texturesProperty;
-            skull.skinHash = null;
-            try {
-                SkinManager.GameProfileData gameProfileData = SkinManager.GameProfileData.loadFromJson(texturesProperty);
-                if (gameProfileData != null && gameProfileData.skinUrl() != null) {
-                    String skinUrl = gameProfileData.skinUrl();
-                    skull.skinHash = skinUrl.substring(skinUrl.lastIndexOf('/') + 1);
-                } else {
-                    session.getGeyser().getLogger().debug("Player skull with invalid Skin tag: " + position + " Textures: " + texturesProperty);
-                }
-            } catch (IOException e) {
-                session.getGeyser().getLogger().debug("Player skull with invalid Skin tag: " + position + " Textures: " + texturesProperty);
-                if (GeyserImpl.getInstance().getConfig().isDebugMode()) {
-                    e.printStackTrace();
-                }
-            }
-        }
         skull.blockState = blockState;
-        skull.blockDefinition = translateCustomSkull(skull.skinHash, blockState);
-
-        if (skull.blockDefinition != null) {
-            reassignSkullEntity(skull);
-            return skull;
-        }
-
-        if (skull.entity != null) {
-            skull.entity.updateSkull(skull);
-        } else {
-            if (!cullingEnabled) {
-                assignSkullEntity(skull);
-                return skull;
-            }
-            if (lastPlayerPosition == null) {
-                return skull;
-            }
-            skull.distanceSquared = position.distanceSquared(lastPlayerPosition.getX(), lastPlayerPosition.getY(), lastPlayerPosition.getZ());
-            if (skull.distanceSquared < skullRenderDistanceSquared) {
-                // Keep list in order
-                int i = Collections.binarySearch(inRangeSkulls, skull, Comparator.comparingInt(Skull::getDistanceSquared));
-                if (i < 0) { // skull.distanceSquared is a new distance value
-                    i = -i - 1;
-                }
-                inRangeSkulls.add(i, skull);
-
-                if (i < maxVisibleSkulls) {
-                    // Reassign entity from the farthest skull to this one
-                    if (inRangeSkulls.size() > maxVisibleSkulls) {
-                        freeSkullEntity(inRangeSkulls.get(maxVisibleSkulls));
-                    }
-                    assignSkullEntity(skull);
-                }
-            }
-        }
         return skull;
+//
+//        if (!texturesProperty.equals(skull.texturesProperty)) {
+//            skull.texturesProperty = texturesProperty;
+//            skull.skinHash = null;
+//            try {
+//                SkinManager.GameProfileData gameProfileData = SkinManager.GameProfileData.loadFromJson(texturesProperty);
+//                if (gameProfileData != null && gameProfileData.skinUrl() != null) {
+//                    String skinUrl = gameProfileData.skinUrl();
+//                    skull.skinHash = skinUrl.substring(skinUrl.lastIndexOf('/') + 1);
+//                } else {
+//                    session.getGeyser().getLogger().debug("Player skull with invalid Skin tag: " + position + " Textures: " + texturesProperty);
+//                }
+//            } catch (IOException e) {
+//                session.getGeyser().getLogger().debug("Player skull with invalid Skin tag: " + position + " Textures: " + texturesProperty);
+//                if (GeyserImpl.getInstance().getConfig().isDebugMode()) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
+//        skull.blockState = blockState;
+//        skull.blockDefinition = translateCustomSkull(skull.skinHash, blockState);
+//
+//        if (skull.blockDefinition != null) {
+//            reassignSkullEntity(skull);
+//            return skull;
+//        }
+//
+//        if (skull.entity != null) {
+//            skull.entity.updateSkull(skull);
+//        } else {
+//            if (!cullingEnabled) {
+//                assignSkullEntity(skull);
+//                return skull;
+//            }
+//            if (lastPlayerPosition == null) {
+//                return skull;
+//            }
+//            skull.distanceSquared = position.distanceSquared(lastPlayerPosition.getX(), lastPlayerPosition.getY(), lastPlayerPosition.getZ());
+//            if (skull.distanceSquared < skullRenderDistanceSquared) {
+//                // Keep list in order
+//                int i = Collections.binarySearch(inRangeSkulls, skull, Comparator.comparingInt(Skull::getDistanceSquared));
+//                if (i < 0) { // skull.distanceSquared is a new distance value
+//                    i = -i - 1;
+//                }
+//                inRangeSkulls.add(i, skull);
+//
+//                if (i < maxVisibleSkulls) {
+//                    // Reassign entity from the farthest skull to this one
+//                    if (inRangeSkulls.size() > maxVisibleSkulls) {
+//                        freeSkullEntity(inRangeSkulls.get(maxVisibleSkulls));
+//                    }
+//                    assignSkullEntity(skull);
+//                }
+//            }
+//        }
+//        return skull;
     }
 
     public Skull putSkull(Vector3i position, String skullOwnerName, int blockState) {
@@ -234,26 +236,27 @@ public class SkullCache {
     }
 
     private void assignSkullEntity(Skull skull) {
-        if (getCustomSkullBlockName(skull) != null) {
-            return;
-        }
-        if (skull.entity != null) {
-            return;
-        }
-        if (unusedSkullEntities.isEmpty()) {
-            if (!cullingEnabled || totalSkullEntities < maxVisibleSkulls) {
-                // Create a new entity
-                long geyserId = session.getEntityCache().getNextEntityId().incrementAndGet();
-                skull.entity = new SkullPlayerEntity(session, geyserId);
-                skull.entity.spawnEntity();
-                skull.entity.updateSkull(skull);
-                totalSkullEntities++;
-            }
-        } else {
-            // Reuse an entity
-            skull.entity = unusedSkullEntities.removeFirst();
-            skull.entity.updateSkull(skull);
-        }
+        // 取消PE头颅放在地上显示皮肤的功能
+//        if (getCustomSkullBlockName(skull) != null) {
+//            return;
+//        }
+//        if (skull.entity != null) {
+//            return;
+//        }
+//        if (unusedSkullEntities.isEmpty()) {
+//            if (!cullingEnabled || totalSkullEntities < maxVisibleSkulls) {
+//                // Create a new entity
+//                long geyserId = session.getEntityCache().getNextEntityId().incrementAndGet();
+//                skull.entity = new SkullPlayerEntity(session, geyserId);
+//                skull.entity.spawnEntity();
+//                skull.entity.updateSkull(skull);
+//                totalSkullEntities++;
+//            }
+//        } else {
+//            // Reuse an entity
+//            skull.entity = unusedSkullEntities.removeFirst();
+//            skull.entity.updateSkull(skull);
+//        }
     }
 
     private void freeSkullEntity(Skull skull) {
