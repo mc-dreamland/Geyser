@@ -107,7 +107,7 @@ public final class ProvidedSkins {
 
         public SkinProvider.Skin getData() {
             // Fall back to the default skin if we can't load our skins, or it's not loaded yet.
-            return Objects.requireNonNullElse(data, SkinProvider.EMPTY_SKIN);
+            return Objects.requireNonNullElse(data, ProvidedSkins.getSteveSkin().data);
         }
 
         public boolean isSlim() {

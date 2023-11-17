@@ -168,7 +168,11 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
 
                 ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
                 confirmSkinPacket.setSkinData(updatedEntry.getSkin().getSkinData().getImage());
-                confirmSkinPacket.setGeometry(updatedEntry.getSkin().getGeometryData());
+                if (updatedEntry.getSkin().getGeometryName().contains("geometry.humanoid.custom")) {
+                    confirmSkinPacket.setGeometry("");
+                } else {
+                    confirmSkinPacket.setGeometry(updatedEntry.getSkin().getGeometryData());
+                }
                 confirmSkinPacket.setUuid(entity.getUuid());
                 long uid = updatedEntry.getUid();
                 if (uid == -1) {

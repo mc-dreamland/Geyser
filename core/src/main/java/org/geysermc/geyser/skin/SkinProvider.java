@@ -309,7 +309,7 @@ public class SkinProvider {
 
             CapeProvider provider = capeUrl != null ? CapeProvider.MINECRAFT : null;
             SkinAndCape skinAndCape = new SkinAndCape(
-                    getOrDefault(requestSkin(playerId, skinUrl, false), EMPTY_SKIN, 5),
+                    getOrDefault(requestSkin(playerId, skinUrl, false), ProvidedSkins.getSteveSkin().getData(), 5),
                     getOrDefault(requestCape(capeUrl, provider, false), EMPTY_CAPE, 5)
             );
 
@@ -320,7 +320,7 @@ public class SkinProvider {
 
     static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
         GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url:" + textureUrl);
-        if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(EMPTY_SKIN);
+        if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(ProvidedSkins.getSteveSkin().getData());
         //  从 cachedSkins 里面拿皮肤
         // 从HTTP请求缓存里面拿皮肤
         CompletableFuture<Skin> requestedSkin = requestedSkins.get(textureUrl);
@@ -378,8 +378,12 @@ public class SkinProvider {
         try {
             CompletableFuture<Skin> skinCompletableFuture = CompletableFuture.supplyAsync(() -> {
                 try {
-                    return WebUtils.getJson(textureUrl);
-//                    return WebUtils.getJson(textureUrl.replace("skinsync.bjd-mc.com", "42.186.61.180"));
+                    String os = System.getProperty("os.name").toLowerCase();
+                    if (os.contains("win")) {
+                        return WebUtils.getJson(textureUrl.replace("skinsync.bjd-mc.com", "42.186.61.180").replace("10.191.171.36", "42.186.61.180"));
+                    } else {
+                        return WebUtils.getJson(textureUrl);
+                    }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -394,7 +398,7 @@ public class SkinProvider {
             return skinCompletableFuture.get();
         } catch (Exception ignored) {
         }
-        return new Skin(uuid, "empty", EMPTY_SKIN.getSkinData(), System.currentTimeMillis(), false, false);
+        return new Skin(uuid, "", ProvidedSkins.getSteveSkin().getData().getSkinData(), System.currentTimeMillis(), false, false);
     }
 
     private static Skin buildSkin(UUID uuid, String textureUrl, JsonNode jsonNode) {
@@ -553,7 +557,7 @@ public class SkinProvider {
             return new Skin(uuid, textureUrl, skin, System.currentTimeMillis(), false, false);
         } catch (Exception ignored) {} // just ignore I guess
 
-        return new Skin(uuid, "empty", EMPTY_SKIN.getSkinData(), System.currentTimeMillis(), false, false);
+        return new Skin(uuid, "empty", ProvidedSkins.getSteveSkin().getData().getSkinData(), System.currentTimeMillis(), false, false);
     }
 
     private static Cape supplyCape(String capeUrl, CapeProvider provider) {

@@ -193,7 +193,6 @@ public class SkinManager {
         SkinProvider.Skin skin = skinData.skin();
         SkinProvider.Cape cape = skinData.cape();
         SkinProvider.SkinGeometry geometry = skinData.geometry();
-
         if (entity.getUuid().equals(session.getPlayerEntity().getUuid())) {
             if (!session.isHaveSendSkin()) {
                 // TODO is this special behavior needed?
@@ -226,7 +225,11 @@ public class SkinManager {
 
                 ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
                 confirmSkinPacket.setSkinData(skin.getSkinData());
-                confirmSkinPacket.setGeometry(geometry.geometryData());
+                if (geometry.geometryName().contains("geometry.humanoid.custom")) {
+                    confirmSkinPacket.setGeometry("");
+                } else {
+                    confirmSkinPacket.setGeometry(geometry.geometryData());
+                }
                 confirmSkinPacket.setUuid(entity.getUuid());
 
                 long uid = skin.getUid();
