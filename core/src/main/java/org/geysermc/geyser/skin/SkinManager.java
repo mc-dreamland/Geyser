@@ -194,55 +194,49 @@ public class SkinManager {
         SkinProvider.Cape cape = skinData.cape();
         SkinProvider.SkinGeometry geometry = skinData.geometry();
         if (entity.getUuid().equals(session.getPlayerEntity().getUuid())) {
-            if (!session.isHaveSendSkin()) {
-                // TODO is this special behavior needed?
-                PlayerListPacket.Entry updatedEntry = buildPersonalEntryManually(
-                        session,
-                        entity.getUuid(),
-                        entity.getUsername(),
-                        entity.getGeyserId(),
-                        skin,
-                        cape,
-                        geometry
-                );
-                PlayerListPacket playerAddPacket = new PlayerListPacket();
-                playerAddPacket.setAction(PlayerListPacket.Action.ADD);
-                playerAddPacket.getEntries().add(updatedEntry);
-                session.sendUpstreamPacket(playerAddPacket);
-                session.setHaveSendSkin(true);
-            }
+            // TODO is this special behavior needed?
+            PlayerListPacket.Entry updatedEntry = buildPersonalEntryManually(
+                    session,
+                    entity.getUuid(),
+                    entity.getUsername(),
+                    entity.getGeyserId(),
+                    skin,
+                    cape,
+                    geometry
+            );
+            PlayerListPacket playerAddPacket = new PlayerListPacket();
+            playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+            playerAddPacket.getEntries().add(updatedEntry);
+            session.sendUpstreamPacket(playerAddPacket);
         } else {
-            if (!session.getCachedPlayerList().containsKey(entity.getUuid()) || !session.getCachedPlayerList().get(entity.getUuid()).equals(skin.getTextureUrl())) {
-                session.getCachedPlayerList().put(entity.getUuid(), skin.getTextureUrl());
-                PlayerSkinPacket packet = new PlayerSkinPacket();
-                packet.setUuid(entity.getUuid());
-                packet.setOldSkinName("");
-                packet.setNewSkinName(skin.getTextureUrl());
-                packet.setSkin(getSkin(skin, cape, geometry, false));
-                packet.setTrustedSkin(true);
-                session.sendUpstreamPacket(packet);
+            PlayerSkinPacket packet = new PlayerSkinPacket();
+            packet.setUuid(entity.getUuid());
+            packet.setOldSkinName("");
+            packet.setNewSkinName(skin.getTextureUrl());
+            packet.setSkin(getSkin(skin, cape, geometry, false));
+            packet.setTrustedSkin(true);
+            session.sendUpstreamPacket(packet);
 
 
-                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
-                confirmSkinPacket.setSkinData(skin.getSkinData());
-                if (geometry.geometryName().contains("geometry.humanoid.custom")) {
-                    confirmSkinPacket.setGeometry("");
-                } else {
-                    confirmSkinPacket.setGeometry(geometry.geometryData());
-                }
-                confirmSkinPacket.setUuid(entity.getUuid());
-
-                long uid = skin.getUid();
-                if (uid == -1) {
-                    uid = entity.getUuid().toString().replace("-", "").hashCode();
-                    if (uid < 0) {
-                        uid = -uid;
-                    }
-                }
-
-                confirmSkinPacket.setUid(uid);
-                session.sendUpstreamPacket(confirmSkinPacket);
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+            confirmSkinPacket.setSkinData(skin.getSkinData());
+            if (geometry.geometryName().contains("geometry.humanoid.custom")) {
+                confirmSkinPacket.setGeometry("");
+            } else {
+                confirmSkinPacket.setGeometry(geometry.geometryData());
             }
+            confirmSkinPacket.setUuid(entity.getUuid());
+
+            long uid = skin.getUid();
+            if (uid == -1) {
+                uid = entity.getUuid().toString().replace("-", "").hashCode();
+                if (uid < 0) {
+                    uid = -uid;
+                }
+            }
+
+            confirmSkinPacket.setUid(uid);
+            session.sendUpstreamPacket(confirmSkinPacket);
         }
     }
 

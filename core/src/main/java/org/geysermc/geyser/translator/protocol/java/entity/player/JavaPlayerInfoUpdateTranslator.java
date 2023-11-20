@@ -103,13 +103,7 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
 
                 if (entry.isListed()) {
                     sendAddPlayerList(session, entity);
-//                    if (!session.getCachedPlayerList().containsKey(entity.getUuid())) {
-//                        PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
-//                        toAdd.add(playerListEntry);
-//                        session.getCachedPlayerList().put(entity.getTabListUuid(), playerListEntry.getSkin().getFullSkinId());
-//                    }
                 } else {
-                    session.getCachedPlayerList().remove(entity.getUuid());
                     toRemove.add(new PlayerListPacket.Entry(entity.getTabListUuid()));
                 }
             }
@@ -119,22 +113,6 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 tabListPacket.setAction(PlayerListPacket.Action.ADD);
                 tabListPacket.getEntries().addAll(toAdd);
                 session.sendUpstreamPacket(tabListPacket);
-//                for (PlayerListPacket.Entry entry : toAdd) {
-//                    long uid = entry.getUid();
-//                    if (uid == -1) {
-//                        uid = entry.getUuid().toString().replace("-", "").hashCode();
-//                        if (uid < 0) {
-//                            uid = -uid;
-//                        }
-//                    }
-//                    System.out.println("Java Add Player Info -> " + entry.getUuid() + " | " + uid + " | " + entry.getSkin().getSkinId());
-//                    ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
-//                    confirmSkinPacket.setSkinData(entry.getSkin().getSkinData().getImage());
-//                    confirmSkinPacket.setGeometry(entry.getSkin().getGeometryData());
-//                    confirmSkinPacket.setUuid(entry.getUuid());
-//                    confirmSkinPacket.setUid(uid);
-//                    session.sendUpstreamPacket(confirmSkinPacket);
-//                }
             }
             if (!toRemove.isEmpty()) {
                 PlayerListPacket tabListPacket = new PlayerListPacket();
@@ -162,8 +140,10 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 playerAddPacket.setAction(PlayerListPacket.Action.ADD);
                 playerAddPacket.getEntries().add(updatedEntry);
                 session.sendUpstreamPacket(playerAddPacket);
-                session.setHaveSendSkin(true);
-                session.getCachedPlayerList().put(entity.getUuid(), updatedEntry.getSkin().getFullSkinId());
+                //TODO 后续需修改此判断以正确的判断是否是玩家还是NPC
+                if (!entity.getUuid().toString().startsWith("00000000")) {
+                    session.getCachedPlayerList().put(entity.getUuid(), updatedEntry.getSkin().getFullSkinId());
+                }
 
 
                 ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
