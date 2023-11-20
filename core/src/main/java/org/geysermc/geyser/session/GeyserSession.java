@@ -580,6 +580,9 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     private final HashMap<UUID, String> cachedPlayerList;
     @Setter
+    @Getter
+    private boolean sendSelf = false;
+    @Setter
     private List<String> optionPacksUuid;
     @Setter
     private boolean noUnloadChunk = true;

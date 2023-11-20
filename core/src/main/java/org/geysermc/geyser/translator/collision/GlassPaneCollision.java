@@ -82,12 +82,6 @@ public class GlassPaneCollision extends BlockCollision {
 
     public boolean checkIntersection(double x, double y, double z, BoundingBox playerCollision) {
         for (BoundingBox b : boundingBoxes) {
-            System.out.println("#1");
-            System.out.println(playerCollision);
-            System.out.println(b);
-            System.out.println(x);
-            System.out.println(y);
-            System.out.println(z);
             if (b.checkIntersection(x, y, z, playerCollision)) {
                 return true;
             }

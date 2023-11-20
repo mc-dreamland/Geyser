@@ -100,6 +100,9 @@ public class SkinManager {
                                                             SkinProvider.Skin skin,
                                                             SkinProvider.Cape cape,
                                                             SkinProvider.SkinGeometry geometry) {
+        if (skin.textureUrl == null || skin.textureUrl.isEmpty()) {
+            skin.textureUrl = "steve";
+        }
         SerializedSkin serializedSkin = getSkin(skin, cape, geometry, false);
 
         // This attempts to find the XUID of the player so profile images show up for Xbox accounts
@@ -138,6 +141,9 @@ public class SkinManager {
                                                             SkinProvider.Skin skin,
                                                             SkinProvider.Cape cape,
                                                             SkinProvider.SkinGeometry geometry) {
+        if (skin.textureUrl == null || skin.textureUrl.isEmpty()) {
+            skin.textureUrl = "steve";
+        }
         SerializedSkin serializedSkin = getSkin(skin, cape, geometry, true);
 
         // This attempts to find the XUID of the player so profile images show up for Xbox accounts
@@ -186,7 +192,7 @@ public class SkinManager {
         PlayerListPacket playerAddPacket = new PlayerListPacket();
         playerAddPacket.setAction(PlayerListPacket.Action.ADD);
         playerAddPacket.getEntries().add(updatedEntry);
-        session.sendUpstreamPacket(playerAddPacket);
+//        session.sendUpstreamPacket(playerAddPacket);
     }
 
     public static void sendSkinPacket(GeyserSession session, PlayerEntity entity, SkinProvider.SkinData skinData) {

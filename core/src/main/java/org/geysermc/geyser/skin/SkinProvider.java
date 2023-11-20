@@ -854,7 +854,7 @@ public class SkinProvider {
     @Getter
     public static class Skin {
         private UUID skinOwner;
-        private final String textureUrl;
+        public String textureUrl;
         private final byte[] skinData;
         private final long requestedOn;
         private boolean updated;
