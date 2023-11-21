@@ -44,6 +44,8 @@ import org.geysermc.geyser.translator.collision.BlockCollision;
 import org.geysermc.geyser.translator.collision.ScaffoldingCollision;
 import org.geysermc.geyser.util.BlockUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
@@ -143,9 +145,12 @@ public class CollisionManager {
         // lose precision and thus, causes players to get stuck when walking near walls
         double javaY = bedrockPosition.getY() - EntityDefinitions.PLAYER.offset();
 
-        Vector3d position = Vector3d.from(Double.parseDouble(Float.toString(bedrockPosition.getX())), javaY,
-                Double.parseDouble(Float.toString(bedrockPosition.getZ())));
-
+//        Vector3d position = Vector3d.from(Double.parseDouble(Float.toString(bedrockPosition.getX())), javaY,
+//                Double.parseDouble(Float.toString(bedrockPosition.getZ())));
+        Vector3d position = Vector3d.from(
+                new BigDecimal(Float.toString(bedrockPosition.getX())).setScale(5, RoundingMode.HALF_UP).doubleValue(),
+                javaY,
+                new BigDecimal(Float.toString(bedrockPosition.getZ())).setScale(5, RoundingMode.HALF_UP).doubleValue());
         Vector3d startingPos = playerBoundingBox.getBottomCenter();
         Vector3d movement = position.sub(startingPos);
         Vector3d adjustedMovement = correctPlayerMovement(movement, false, teleported);
