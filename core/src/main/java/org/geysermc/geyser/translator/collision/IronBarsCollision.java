@@ -30,8 +30,8 @@ import org.geysermc.geyser.level.physics.BoundingBox;
 import org.geysermc.geyser.session.GeyserSession;
 
 @EqualsAndHashCode(callSuper = true)
-@CollisionRemapper(regex = "glass_pane$", usesParams = true, passDefaultBoxes = true)
-public class GlassPaneCollision extends BlockCollision {
+@CollisionRemapper(regex = "iron_bars$", usesParams = true, passDefaultBoxes = true)
+public class IronBarsCollision extends BlockCollision {
     /**
      * 1 = north
      * 2 = east
@@ -40,7 +40,7 @@ public class GlassPaneCollision extends BlockCollision {
      */
     private int facing;
 
-    public GlassPaneCollision(String params, BoundingBox[] defaultBoxes) {
+    public IronBarsCollision(String params, BoundingBox[] defaultBoxes) {
         super(defaultBoxes);
         //east=true,north=true,south=true,west=true
         if (params.contains("north=true") && params.contains("east=false") && params.contains("south=false") && params.contains("west=false")) {
@@ -62,7 +62,7 @@ public class GlassPaneCollision extends BlockCollision {
         playerCollision.setSizeY(playerCollision.getSizeY() - 0.0001);
         playerCollision.setSizeZ(playerCollision.getSizeZ() - 0.0001);
 
-        // Check for glass_pane bug (glass_pane are 0.5625 wide thick on Java but 0.5 blocks wide on Bedrock)
+        // Check for iron_bars bug (iron_bars are 0.5625 wide thick on Java but 0.5 blocks wide on Bedrock)
         if (this.checkIntersection(x, y, z, playerCollision)) {
             switch (facing) {
                 case 1 -> playerCollision.setMiddleZ(z + 0.8625); // North
