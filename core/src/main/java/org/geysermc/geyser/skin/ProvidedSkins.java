@@ -84,25 +84,43 @@ public final class ProvidedSkins {
             String assetName = asset.substring(asset.lastIndexOf('/') + 1);
 
             Path location = folder.resolve(assetName);
-            AssetUtils.addTask(!Files.exists(location), new AssetUtils.ClientJarTask("assets/minecraft/" + asset,
-                    (stream) -> AssetUtils.saveFile(location, stream),
-                    () -> {
-                        try {
-                            // TODO lazy initialize?
-                            BufferedImage image;
-                            try (InputStream stream = Files.newInputStream(location)) {
-                                image = ImageIO.read(stream);
+            if (Files.exists(location)) {
+                try {
+                    // TODO lazy initialize?
+                    BufferedImage image;
+                    try (InputStream stream = Files.newInputStream(location)) {
+                        image = ImageIO.read(stream);
+                    }
+
+                    byte[] byteData = SkinProvider.bufferedImageToImageData(image);
+                    image.flush();
+
+                    String identifier = "geysermc:" + assetName + "_" + (slim ? "slim" : "wide");
+                    this.data = new SkinProvider.Skin(-1, identifier, byteData);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                AssetUtils.addTask(!Files.exists(location), new AssetUtils.ClientJarTask("assets/minecraft/" + asset,
+                        (stream) -> AssetUtils.saveFile(location, stream),
+                        () -> {
+                            try {
+                                // TODO lazy initialize?
+                                BufferedImage image;
+                                try (InputStream stream = Files.newInputStream(location)) {
+                                    image = ImageIO.read(stream);
+                                }
+
+                                byte[] byteData = SkinProvider.bufferedImageToImageData(image);
+                                image.flush();
+
+                                String identifier = "geysermc:" + assetName + "_" + (slim ? "slim" : "wide");
+                                this.data = new SkinProvider.Skin(-1, identifier, byteData);
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
-
-                            byte[] byteData = SkinProvider.bufferedImageToImageData(image);
-                            image.flush();
-
-                            String identifier = "geysermc:" + assetName + "_" + (slim ? "slim" : "wide");
-                            this.data = new SkinProvider.Skin(-1, identifier, byteData);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-            }));
+                        }));
+            }
         }
 
         public SkinProvider.Skin getData() {
