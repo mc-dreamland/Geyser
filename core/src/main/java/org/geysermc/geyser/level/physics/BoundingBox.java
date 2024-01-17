@@ -62,9 +62,9 @@ public class BoundingBox implements Cloneable {
     }
 
     public boolean checkIntersection(double offsetX, double offsetY, double offsetZ, BoundingBox otherBox) {
-        return (Math.abs((middleX + offsetX) - otherBox.getMiddleX()) * 2 < (sizeX + otherBox.getSizeX())) &&
+        return (Math.abs((int) ((middleX + offsetX) * 1000) - (int) (otherBox.getMiddleX() * 1000)) * 2 < ((int) (sizeX * 1000) + (int) (otherBox.getSizeX() * 1000))) &&
                 (Math.abs((middleY + offsetY) - otherBox.getMiddleY()) * 2 < (sizeY + otherBox.getSizeY())) &&
-                (Math.abs((middleZ + offsetZ) - otherBox.getMiddleZ()) * 2 < (sizeZ + otherBox.getSizeZ()));
+                (Math.abs((int) ((middleZ + offsetZ) * 1000) - (int) (otherBox.getMiddleZ() * 1000)) * 2 < ((int) (sizeZ * 1000) + (int) (otherBox.getSizeZ() * 1000)));
     }
 
     public boolean checkIntersection(Vector3d offset, BoundingBox otherBox) {
