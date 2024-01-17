@@ -249,7 +249,7 @@ public final class BlockUtils {
         int blockAt = session.getGeyser().getWorldManager().getBlockAt(session, x, y, z);
         if (blockAt >= BlockStateValues.JAVA_PLAYER_HEAD_ID_MIN && blockAt <= BlockStateValues.JAVA_PLAYER_HEAD_ID_MAX) {
             SkullCache.Skull skull = session.getSkullCache().getSkulls().get(Vector3i.from(x, y, z));
-            if (skull != null && skull.getBlockDefinition().getRuntimeId() != -1) {
+            if (skull != null && skull.getBlockDefinition() != null && skull.getBlockDefinition().getRuntimeId() != -1) {
                 CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(SkullCache.getCustomSkullBlockName(skull));
                 if (customBlockData != null) {
                     BoxComponent boxComponent = customBlockData.components().collisionBox();
