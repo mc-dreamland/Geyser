@@ -81,7 +81,7 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
 
                 UUID uuid = session.getPlayerEntity().getUuid();
                 ByteArrayDataOutput out = ByteStreams.newDataOutput();
-                out.writeInt(packet.getPacketType().ordinal());
+                out.writeInt(113);
                 out.writeUTF(packet.getPacketType().name());
                 out.writeUTF(uuid.toString());
                 session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(PluginMessageChannels.CUSTOM, out.toByteArray()));
