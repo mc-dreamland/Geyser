@@ -318,7 +318,7 @@ public class SkinProvider {
         }, EXECUTOR_SERVICE);
     }
 
-    static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
+    public static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
         GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url:" + textureUrl);
         if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(ProvidedSkins.getSteveSkin().getData());
         //  从 cachedSkins 里面拿皮肤
@@ -374,7 +374,7 @@ public class SkinProvider {
     }
 
     @SneakyThrows
-    private static Skin requestSkin(UUID uuid, String textureUrl) {
+    public static Skin requestSkin(UUID uuid, String textureUrl) {
         try {
             CompletableFuture<Skin> skinCompletableFuture = CompletableFuture.supplyAsync(() -> {
                 try {
