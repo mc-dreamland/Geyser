@@ -93,15 +93,19 @@ public class PluginMessageUtils {
     }
 
     @SneakyThrows
-    public static byte[] syncSkinData(GeyserSession geyserSession){
-        Map<String,Object> map = new LinkedHashMap<>(2);
-        map.put("pe",true);
-        map.put("alex",geyserSession.getClientData().getSkinId().contains("Slim") ?"true":"false");
-        map.put("data",GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/"
-                +geyserSession.getAuthData().uuid()+"?"+
-                hash(geyserSession.getClientData().getSkinData())+"?pe");
+    public static byte[] syncSkinData(GeyserSession geyserSession) {
+        Map<String, Object> map = new LinkedHashMap<>(2);
+        map.put("pe", true);
+        map.put("alex", geyserSession.getClientData().getSkinId().contains("Slim") ? "true" : "false");
+        map.put("data", GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/"
+                + geyserSession.getAuthData().uuid() + "?" +
+                hash(geyserSession.getClientData().getSkinData()) + "?pe");
         // 114514 魔法值 无作用
-        return (Base64.getEncoder().encodeToString(GeyserImpl.JSON_MAPPER.writeValueAsBytes(map))+ '\0'+"114514").getBytes(StandardCharsets.UTF_8);
+        return (Base64.getEncoder().encodeToString(GeyserImpl.JSON_MAPPER.writeValueAsBytes(map)) + '\0' + "114514").getBytes(StandardCharsets.UTF_8);
+    }
+
+    public static String getSkinUrl(String uuid) {
+        return GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe";
     }
 
     private static String hash(String input) {
