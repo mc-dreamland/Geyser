@@ -861,13 +861,13 @@ public class SkinProvider {
         private boolean ears;
         private long uid = -1;
 
-        Skin(long requestedOn, String textureUrl, byte[] skinData) {
+        public Skin(long requestedOn, String textureUrl, byte[] skinData) {
             this.requestedOn = requestedOn;
             this.textureUrl = textureUrl;
             this.skinData = skinData;
         }
 
-        Skin(UUID skinOwner, String textureUrl, byte[] skinData, long requestedOn, boolean updated, boolean ears) {
+        public Skin(UUID skinOwner, String textureUrl, byte[] skinData, long requestedOn, boolean updated, boolean ears) {
 
             this.skinOwner = skinOwner;
             this.textureUrl = textureUrl;
