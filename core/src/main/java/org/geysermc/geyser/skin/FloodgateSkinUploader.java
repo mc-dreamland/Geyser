@@ -60,9 +60,12 @@ public final class FloodgateSkinUploader {
     private final WebSocketClient client;
     private volatile boolean closed;
 
-    @Getter private int id;
-    @Getter private String verifyCode;
-    @Getter private int subscribersCount;
+    @Getter
+    private int id;
+    @Getter
+    private String verifyCode;
+    @Getter
+    private int subscribersCount;
 
     public FloodgateSkinUploader(GeyserImpl geyser) {
         this.logger = geyser.getLogger();
@@ -217,7 +220,7 @@ public final class FloodgateSkinUploader {
         if (skin != null) {
             // skin data byte[]
             node.put("skin_data", Base64.getEncoder().encodeToString(MathUtils.gZipBytes(skin.getSkinData())));
-        }else{
+        } else {
             // client data base64 String
             node.put("skin_data", Base64.getEncoder().encodeToString(MathUtils.gZipBytes(Base64.getDecoder().decode(skinData))));
         }
@@ -245,6 +248,16 @@ public final class FloodgateSkinUploader {
             return;
         }
         skinQueue.add(jsonString);
+    }
+
+    @SneakyThrows
+    public void websocketSend(Object o) {
+        String json = JACKSON.writeValueAsString(o);
+        if (client.isOpen()) {
+            client.send(json);
+            return;
+        }
+        skinQueue.add(json);
     }
 
     private void reconnectLater(GeyserImpl geyser) {
