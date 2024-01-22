@@ -42,6 +42,7 @@ import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.FileUtils;
 import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.geyser.util.WebUtils;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -346,19 +347,31 @@ public class SkinProvider {
                     CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
                     requestedSkins.remove(textureUrl);
                 });
+            } else if (textureUrl.endsWith("?pc")) {
+                future = CompletableFuture.supplyAsync(() -> requestPCSkin(playerId, textureUrl), EXECUTOR_SERVICE).whenCompleteAsync((skin, throwable) -> {
+                    skin.updated = true;
+                    CACHED_JAVA_SKINS.put(textureUrl, skin);
+                    CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
+                    requestedSkins.remove(textureUrl);
+                });
             } else {
-                future = CompletableFuture.supplyAsync(() -> supplySkin(playerId, textureUrl), EXECUTOR_SERVICE)
-                        .whenCompleteAsync((skin, throwable) -> {
-                            skin.updated = true;
-                            CACHED_JAVA_SKINS.put(textureUrl, skin);
-                            CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
-                            requestedSkins.remove(textureUrl);
-                        });
+                future = CompletableFuture.supplyAsync(() -> supplySkin(playerId, textureUrl), EXECUTOR_SERVICE).whenCompleteAsync((skin, throwable) -> {
+                    skin.updated = true;
+                    CACHED_JAVA_SKINS.put(textureUrl, skin);
+                    CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
+                    requestedSkins.remove(textureUrl);
+                });
             }
             requestedSkins.put(textureUrl, future);
         } else {
-            if (textureUrl.endsWith("?pe")){
-                Skin skin = requestSkin(playerId,textureUrl);
+            if (textureUrl.endsWith("?pe")) {
+                Skin skin = requestSkin(playerId, textureUrl);
+                future = CompletableFuture.completedFuture(skin);
+                CACHED_JAVA_SKINS.put(textureUrl, skin);
+                CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
+                return future;
+            } else if (textureUrl.endsWith("?pc")) {
+                Skin skin = requestPCSkin(playerId, textureUrl);
                 future = CompletableFuture.completedFuture(skin);
                 CACHED_JAVA_SKINS.put(textureUrl, skin);
                 CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
@@ -376,18 +389,7 @@ public class SkinProvider {
     @SneakyThrows
     public static Skin requestSkin(UUID uuid, String textureUrl) {
         try {
-            CompletableFuture<Skin> skinCompletableFuture = CompletableFuture.supplyAsync(() -> {
-                try {
-                    String os = System.getProperty("os.name").toLowerCase();
-                    if (os.contains("win")) {
-                        return WebUtils.getJson(textureUrl.replace("skinsync.bjd-mc.com", "42.186.61.180").replace("10.191.171.36", "42.186.61.180"));
-                    } else {
-                        return WebUtils.getJson(textureUrl);
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).thenApply(json -> {
+            CompletableFuture<Skin> skinCompletableFuture = getTextureJson(textureUrl).thenApply(json -> {
                 byte[] geometryNameBytes = Base64.getDecoder().decode((json.get("geometry_name").asText()));
                 byte[] geometry_data = Base64.getDecoder().decode(json.get("geometry_data").asText());
                 GeyserImpl.getInstance().getLogger().debug("storeBedrock Geometry: " + uuid + " data length: " + geometry_data.length);
@@ -399,6 +401,31 @@ public class SkinProvider {
         } catch (Exception ignored) {
         }
         return new Skin(uuid, "", ProvidedSkins.getSteveSkin().getData().getSkinData(), System.currentTimeMillis(), false, false);
+    }
+
+    public static Skin requestPCSkin(UUID uuid, String textureUrl) {
+        try {
+            CompletableFuture<Skin> skinCompletableFuture = getTextureJson(textureUrl).thenApply(json -> buildSkin(uuid, textureUrl, json));
+            return skinCompletableFuture.get();
+        } catch (Exception ignored) {
+        }
+        return ProvidedSkins.getDefaultPlayerSkin(uuid).getData();
+    }
+
+    @NotNull
+    private static CompletableFuture<JsonNode> getTextureJson(String textureUrl) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String os = System.getProperty("os.name").toLowerCase();
+                if (os.contains("win")) {
+                    return WebUtils.getJson(textureUrl.replace("skinsync.bjd-mc.com", "42.186.61.180").replace("10.191.171.36", "42.186.61.180"));
+                } else {
+                    return WebUtils.getJson(textureUrl);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     private static Skin buildSkin(UUID uuid, String textureUrl, JsonNode jsonNode) {
