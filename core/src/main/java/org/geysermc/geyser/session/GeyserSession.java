@@ -1685,7 +1685,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
         startGamePacket.setSeed(-1L);
         startGamePacket.setDimensionId(DimensionUtils.javaToBedrock(chunkCache.getBedrockDimension()));
-        startGamePacket.setGeneratorId(1);
+        startGamePacket.setGeneratorId(2);
         startGamePacket.setLevelGameType(GameType.SURVIVAL);
         startGamePacket.setDifficulty(1);
         startGamePacket.setDefaultSpawn(Vector3i.ZERO);
@@ -1699,7 +1699,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         startGamePacket.setBroadcastingToLan(true);
         startGamePacket.setPlatformBroadcastMode(GamePublishSetting.PUBLIC);
         startGamePacket.setXblBroadcastMode(GamePublishSetting.PUBLIC);
-        startGamePacket.setCommandsEnabled(!geyser.getConfig().isXboxAchievementsEnabled());
+        startGamePacket.setCommandsEnabled(true);
         startGamePacket.setTexturePacksRequired(false);
         startGamePacket.setBonusChestEnabled(false);
         startGamePacket.setStartingWithMap(false);

@@ -247,6 +247,16 @@ public final class FloodgateSkinUploader {
         skinQueue.add(jsonString);
     }
 
+    @SneakyThrows
+    public void websocketSend(Object o) {
+        String json = JACKSON.writeValueAsString(o);
+        if (client.isOpen()) {
+            client.send(json);
+            return;
+        }
+        skinQueue.add(json);
+    }
+
     private void reconnectLater(GeyserImpl geyser) {
         // we ca only reconnect when the thread pool is open
         if (geyser.getScheduledThread().isShutdown() || closed) {

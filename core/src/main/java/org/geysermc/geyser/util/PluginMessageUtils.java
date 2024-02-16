@@ -104,6 +104,11 @@ public class PluginMessageUtils {
         return (Base64.getEncoder().encodeToString(GeyserImpl.JSON_MAPPER.writeValueAsBytes(map))+ '\0'+"114514").getBytes(StandardCharsets.UTF_8);
     }
 
+    public static String getSkinUrl(String uuid) {
+        return GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe";
+    }
+
+
     private static String hash(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");

@@ -371,7 +371,11 @@ public class SkinManager {
 
             if (skinObject.hasNonNull("pe")) {
                 String skinUrl = skinObject.get("data").asText();
-                GeyserImpl.getInstance().getLogger().debug("loadFromJson PE " + skinUrl);
+                if (skinObject.get("pe").asBoolean()) { // load PE
+                    GeyserImpl.getInstance().getLogger().debug("loadFromJson PE " + skinUrl);
+                } else { // load PC
+                    GeyserImpl.getInstance().getLogger().debug("loadFromJson PC " + skinUrl);
+                }
                 return new GameProfileData(skinUrl, SkinProvider.EMPTY_CAPE.textureUrl(), skinObject.get("alex").asBoolean());
             }
 
