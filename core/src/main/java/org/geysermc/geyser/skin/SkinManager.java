@@ -31,7 +31,6 @@ import com.github.steveice10.opennbt.tag.builtin.ListTag;
 import com.github.steveice10.opennbt.tag.builtin.StringTag;
 import org.cloudburstmc.protocol.bedrock.data.skin.ImageData;
 import org.cloudburstmc.protocol.bedrock.data.skin.SerializedSkin;
-import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
 import org.geysermc.geyser.GeyserImpl;
@@ -224,25 +223,25 @@ public class SkinManager {
             session.sendUpstreamPacket(packet);
 
 
-            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
-            confirmSkinPacket.setSkinData(skin.getSkinData());
-            if (geometry.geometryName().contains("geometry.humanoid.custom")) {
-                confirmSkinPacket.setGeometry("");
-            } else {
-                confirmSkinPacket.setGeometry(geometry.geometryData());
-            }
-            confirmSkinPacket.setUuid(entity.getUuid());
-
-            long uid = skin.getUid();
-            if (uid == -1) {
-                uid = entity.getUuid().toString().replace("-", "").hashCode();
-                if (uid < 0) {
-                    uid = -uid;
-                }
-            }
-
-            confirmSkinPacket.setUid(uid);
-            session.sendUpstreamPacket(confirmSkinPacket);
+//            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+//            confirmSkinPacket.setSkinData(skin.getSkinData());
+//            if (geometry.geometryName().contains("geometry.humanoid.custom")) {
+//                confirmSkinPacket.setGeometry("");
+//            } else {
+//                confirmSkinPacket.setGeometry(geometry.geometryData());
+//            }
+//            confirmSkinPacket.setUuid(entity.getUuid());
+//
+//            long uid = skin.getUid();
+//            if (uid == -1) {
+//                uid = entity.getUuid().toString().replace("-", "").hashCode();
+//                if (uid < 0) {
+//                    uid = -uid;
+//                }
+//            }
+//
+//            confirmSkinPacket.setUid(uid);
+//            session.sendUpstreamPacket(confirmSkinPacket);
         }
     }
 

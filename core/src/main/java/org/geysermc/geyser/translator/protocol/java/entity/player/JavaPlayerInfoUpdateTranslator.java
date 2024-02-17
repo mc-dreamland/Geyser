@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2023 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -102,6 +102,9 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (entry.isListed()) {
+                    PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
+                    toAdd.add(playerListEntry);
+
                     sendAddPlayerList(session, entity);
                 } else {
                     toRemove.add(new PlayerListPacket.Entry(entity.getTabListUuid()));
@@ -113,6 +116,7 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 tabListPacket.setAction(PlayerListPacket.Action.ADD);
                 tabListPacket.getEntries().addAll(toAdd);
                 session.sendUpstreamPacket(tabListPacket);
+
             }
             if (!toRemove.isEmpty()) {
                 PlayerListPacket tabListPacket = new PlayerListPacket();
@@ -125,45 +129,36 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
 
     private void sendAddPlayerList(GeyserSession session, PlayerEntity entity) {
         SkinProvider.requestSkinData(entity).whenCompleteAsync((skinData, throwable) -> {
-            if (!session.getCachedPlayerList().containsKey(entity.getUuid())) {
-                PlayerListPacket.Entry updatedEntry = SkinManager.buildEntryManually(
-                        session,
-                        entity.getUuid(),
-                        entity.getUsername(),
-                        entity.getGeyserId(),
-                        skinData.skin(),
-                        skinData.cape(),
-                        skinData.geometry()
-                );
 
-                PlayerListPacket playerAddPacket = new PlayerListPacket();
-                playerAddPacket.setAction(PlayerListPacket.Action.ADD);
-                playerAddPacket.getEntries().add(updatedEntry);
-                session.sendUpstreamPacket(playerAddPacket);
-                //TODO 后续需修改此判断以正确的判断是否是玩家还是NPC
-                if (!entity.getUuid().toString().startsWith("00000000")) {
-                    session.getCachedPlayerList().put(entity.getUuid(), updatedEntry.getSkin().getFullSkinId());
-                }
+            PlayerListPacket.Entry updatedEntry = SkinManager.buildEntryManually(
+                    session,
+                    entity.getUuid(),
+                    entity.getUsername(),
+                    entity.getGeyserId(),
+                    skinData.skin(),
+                    skinData.cape(),
+                    skinData.geometry()
+            );
 
-
-                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
-                confirmSkinPacket.setSkinData(updatedEntry.getSkin().getSkinData().getImage());
-                if (updatedEntry.getSkin().getGeometryName().contains("geometry.humanoid.custom")) {
-                    confirmSkinPacket.setGeometry("");
-                } else {
-                    confirmSkinPacket.setGeometry(updatedEntry.getSkin().getGeometryData());
-                }
-                confirmSkinPacket.setUuid(entity.getUuid());
-                long uid = updatedEntry.getUid();
-                if (uid == -1) {
-                    uid = entity.getUuid().toString().replace("-", "").hashCode();
-                    if (uid < 0) {
-                        uid = -uid;
-                    }
-                }
-                confirmSkinPacket.setUid(uid);
-                session.sendUpstreamPacket(confirmSkinPacket);
+            PlayerListPacket playerAddPacket = new PlayerListPacket();
+            playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+            playerAddPacket.getEntries().add(updatedEntry);
+            session.sendUpstreamPacket(playerAddPacket);
+            //TODO 后续需修改此判断以正确的判断是否是玩家还是NPC
+            if (!entity.getUuid().toString().startsWith("00000000")) {
+                return;
             }
+
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+            confirmSkinPacket.setSkinData(updatedEntry.getSkin().getSkinData().getImage());
+            confirmSkinPacket.setGeometry(updatedEntry.getSkin().getGeometryData());
+            confirmSkinPacket.setUuid(entity.getUuid());
+            long uid = updatedEntry.getUid();
+            if (uid == -1) {
+                return;
+            }
+            confirmSkinPacket.setUid(uid);
+            session.sendUpstreamPacket(confirmSkinPacket);
         });
     }
 }
