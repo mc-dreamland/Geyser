@@ -25,8 +25,10 @@
 
 package org.geysermc.geyser.util;
 
+import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.zip.GZIPInputStream;
@@ -237,9 +239,23 @@ public class MathUtils {
             gzip.close();
             bis.close();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            return decompress(data);
         }
         return b;
+    }
+    public static byte[] decompress(@Nonnull byte[] compressedData) {
+        ByteArrayInputStream bais = new ByteArrayInputStream(compressedData);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (GZIPInputStream gzis = new GZIPInputStream(bais)) {
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = gzis.read(buffer)) != -1) {
+                baos.write(buffer, 0, len);
+            }
+        } catch (IOException e) {
+            return compressedData;
+        }
+        return baos.toByteArray();
     }
 
     public static String hash(String input) {
