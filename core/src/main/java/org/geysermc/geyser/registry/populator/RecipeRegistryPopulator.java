@@ -64,7 +64,7 @@ public class RecipeRegistryPopulator {
 
     public static void populate() {
         JsonNode items;
-        try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResource("mappings/recipes_1_18.json")) {
+        try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResource("mappings/recipes.json")) {
             items = GeyserImpl.JSON_MAPPER.readTree(stream);
         } catch (Exception e) {
             throw new AssertionError(GeyserLocale.getLocaleStringLog("geyser.toolbox.fail.runtime_java"), e);

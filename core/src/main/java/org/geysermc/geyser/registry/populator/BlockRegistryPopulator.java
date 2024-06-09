@@ -26,6 +26,7 @@
 package org.geysermc.geyser.registry.populator;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
@@ -34,6 +35,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.*;
 import org.cloudburstmc.nbt.*;
+import org.cloudburstmc.protocol.bedrock.codec.v407.serializer.ItemStackRequestSerializer_v407;
 import org.cloudburstmc.protocol.bedrock.codec.v503.Bedrock_v503;
 import org.cloudburstmc.protocol.bedrock.codec.v504.Bedrock_v504;
 import org.cloudburstmc.protocol.bedrock.codec.v527.Bedrock_v527;
@@ -264,14 +266,14 @@ public final class BlockRegistryPopulator {
         };
 
         ImmutableMap<ObjectIntPair<String>, BiFunction<String, NbtMapBuilder, String>> blockMappers = ImmutableMap.<ObjectIntPair<String>, BiFunction<String, NbtMapBuilder, String>>builder()
-                .put(ObjectIntPair.of("1_18_30", Bedrock_v504.CODEC.getProtocolVersion()), V503_MAPPER)
+//                .put(ObjectIntPair.of("1_18_30", Bedrock_v504.CODEC.getProtocolVersion()), V503_MAPPER)
 //                .put(ObjectIntPair.of("1_19_0", Bedrock_v527.CODEC.getProtocolVersion()), legacyMapper)
 //                .put(ObjectIntPair.of("1_19_20", Bedrock_v544.CODEC.getProtocolVersion()), legacyMapper)
 //                .put(ObjectIntPair.of("1_19_50", Bedrock_v560.CODEC.getProtocolVersion()), legacyMapper)
 //                .put(ObjectIntPair.of("1_19_60", Bedrock_v567.CODEC.getProtocolVersion()), legacyMapper)
 //                .put(ObjectIntPair.of("1_19_80", Bedrock_v582.CODEC.getProtocolVersion()), legacyMapper)
 //                .put(ObjectIntPair.of("1_20_0", Bedrock_v589.CODEC.getProtocolVersion()), emptyMapper)
-//                .put(ObjectIntPair.of("1_20_10", Bedrock_v594.CODEC.getProtocolVersion()), concreteAndShulkerBoxMapper)
+                .put(ObjectIntPair.of("1_20_10", Bedrock_v594.CODEC.getProtocolVersion()), concreteAndShulkerBoxMapper)
                 .build();
 
         // We can keep this strong as nothing should be garbage collected

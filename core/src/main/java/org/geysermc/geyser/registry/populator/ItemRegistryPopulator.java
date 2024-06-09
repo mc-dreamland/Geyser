@@ -114,9 +114,9 @@ public class ItemRegistryPopulator {
 
 
         List<PaletteVersion> paletteVersions = new ArrayList<>(2);
-        paletteVersions.add(new PaletteVersion("1_18_30", Bedrock_v504.CODEC.getProtocolVersion()));
+//        paletteVersions.add(new PaletteVersion("1_18_30", Bedrock_v504.CODEC.getProtocolVersion()));
 //        paletteVersions.add(new PaletteVersion("1_19_0", Bedrock_v527.CODEC.getProtocolVersion()));
-////        paletteVersions.add(new PaletteVersion("1_19_10", Bedrock_v534.CODEC.getProtocolVersion()));
+//        paletteVersions.add(new PaletteVersion("1_19_10", Bedrock_v534.CODEC.getProtocolVersion()));
 //        paletteVersions.add(new PaletteVersion("1_19_20", Bedrock_v544.CODEC.getProtocolVersion(), manualFallback, (item, mapping) -> {
 //            return mapping;
 //        }));
@@ -138,17 +138,17 @@ public class ItemRegistryPopulator {
 //            return mapping;
 //        }));
 //        paletteVersions.add(new PaletteVersion("1_20_0", Bedrock_v589.CODEC.getProtocolVersion()));
-//        paletteVersions.add(new PaletteVersion("1_20_10", Bedrock_v594.CODEC.getProtocolVersion(), Collections.emptyMap(), (item, mapping) -> {
-//            // Forward-map 1.20 mappings to 1.20.10
-//            // 1.20.10+ received parity for concrete and shulker boxes
-//            String id = item.javaIdentifier();
-//            if (id.endsWith("_concrete") || id.endsWith("_shulker_box")) {
-//                // the first underscore in "_shulker_box" accounts for ignoring "minecraft:shulker_box"
-//                // which is mapped to "minecraft:undyed_shulker_box"
-//                return mapping.withBedrockIdentifier(id);
-//            }
-//            return mapping;
-//        }));
+        paletteVersions.add(new PaletteVersion("1_20_10", Bedrock_v594.CODEC.getProtocolVersion(), Collections.emptyMap(), (item, mapping) -> {
+            // Forward-map 1.20 mappings to 1.20.10
+            // 1.20.10+ received parity for concrete and shulker boxes
+            String id = item.javaIdentifier();
+            if (id.endsWith("_concrete") || id.endsWith("_shulker_box")) {
+                // the first underscore in "_shulker_box" accounts for ignoring "minecraft:shulker_box"
+                // which is mapped to "minecraft:undyed_shulker_box"
+                return mapping.withBedrockIdentifier(id);
+            }
+            return mapping;
+        }));
 
         GeyserBootstrap bootstrap = GeyserImpl.getInstance().getBootstrap();
 
