@@ -102,9 +102,6 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (entry.isListed()) {
-                    PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
-                    toAdd.add(playerListEntry);
-
                     sendAddPlayerList(session, entity);
                 } else {
                     toRemove.add(new PlayerListPacket.Entry(entity.getTabListUuid()));
@@ -140,14 +137,18 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                     skinData.geometry()
             );
 
+            if (session.getCachedPlayerList().containsKey(entity.getUuid())) {
+                if (session.getCachedPlayerList().get(entity.getUuid()).equals(updatedEntry.getSkin().getFullSkinId())) {
+                    return;
+                }
+            }
+
             PlayerListPacket playerAddPacket = new PlayerListPacket();
             playerAddPacket.setAction(PlayerListPacket.Action.ADD);
             playerAddPacket.getEntries().add(updatedEntry);
             session.sendUpstreamPacket(playerAddPacket);
             //TODO 后续需修改此判断以正确的判断是否是玩家还是NPC
-            if (!entity.getUuid().toString().startsWith("00000000")) {
-                return;
-            }
+            session.getCachedPlayerList().put(entity.getUuid(), updatedEntry.getSkin().getFullSkinId());
 
             ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
             confirmSkinPacket.setSkinData(updatedEntry.getSkin().getSkinData().getImage());
@@ -155,7 +156,10 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
             confirmSkinPacket.setUuid(entity.getUuid());
             long uid = updatedEntry.getUid();
             if (uid == -1) {
-                return;
+                uid = entity.getUuid().toString().replace("-", "").hashCode();
+                if (uid < 0) {
+                    uid = -uid;
+                }
             }
             confirmSkinPacket.setUid(uid);
             session.sendUpstreamPacket(confirmSkinPacket);
