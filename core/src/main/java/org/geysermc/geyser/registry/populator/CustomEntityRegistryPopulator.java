@@ -82,7 +82,6 @@ public class CustomEntityRegistryPopulator {
         // Load custom items from mappings files
         mappingsConfigReader.loadEntityMappingsFromJson((key, item) -> {
             rid++;
-            System.out.println(rid);
             NbtMap entityNbt = NbtMap.builder().putInt("rid", rid)
                     .putString("id", key)
                     .putString("bid", "")

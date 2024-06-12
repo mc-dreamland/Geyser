@@ -100,11 +100,6 @@ public class ItemRegistryPopulator {
 
     public static void populate() {
         // Used for the 1.19.80 item palette
-        Map<Item, String> legacyJavaOnly = new HashMap<>();
-        legacyJavaOnly.put(Items.MUSIC_DISC_RELIC, "minecraft:music_disc_wait");
-        legacyJavaOnly.put(Items.PITCHER_PLANT, "minecraft:chorus_flower");
-        legacyJavaOnly.put(Items.PITCHER_POD, "minecraft:beetroot");
-        legacyJavaOnly.put(Items.SNIFFER_EGG, "minecraft:sniffer_spawn_egg"); // the BlockItem of the sniffer egg block
 
         Map<Item, String> manualFallback = new HashMap<>();
         manualFallback.put(Items.ENDER_DRAGON_SPAWN_EGG, "minecraft:enderman_spawn_egg");
@@ -114,7 +109,98 @@ public class ItemRegistryPopulator {
 
 
         List<PaletteVersion> paletteVersions = new ArrayList<>(2);
-//        paletteVersions.add(new PaletteVersion("1_18_30", Bedrock_v504.CODEC.getProtocolVersion()));
+        Remapper V503_MAPPER = (item, mapping) -> {
+            String id = item.javaIdentifier();
+            if (id.endsWith("wool")) {
+                return mapping.withBedrockIdentifier("minecraft:wool");
+            }
+            else if (id.endsWith(":bamboo_block")) {
+                return mapping.withBedrockIdentifier("minecraft:log");
+            }
+            else if (id.endsWith("_carpet") && !id.startsWith("minecraft:moss")) {
+                return mapping.withBedrockIdentifier("minecraft:carpet");
+            } else if (id.endsWith("bamboo_planks")) {
+                return mapping.withBedrockIdentifier("minecraft:planks");
+            } else if (id.endsWith(":oak_log") || id.endsWith(":spruce_log") || id.endsWith(":birch_log") || id.endsWith(":jungle_log")) {
+                return mapping.withBedrockIdentifier("minecraft:log");
+            }
+            else if (id.endsWith(":acacia_log") || id.endsWith(":dark_oak_log")) {
+                return mapping.withBedrockIdentifier("minecraft:log2");
+            }
+            else if (id.endsWith("_fence") && !id.contains("nether_brick") && !id.contains("warped_fence") && !id.contains("crimson_fence") && !id.contains("mangrove_fence") && !id.contains("cherry_fence")) {
+                return mapping.withBedrockIdentifier("minecraft:fence");
+            }
+            else if (id.endsWith("_coral")) {
+                return mapping.withBedrockIdentifier("minecraft:coral");
+            }
+            else if (id.endsWith("stripped_bamboo_block")) {
+                return mapping.withBedrockIdentifier("minecraft:planks");
+            }
+            else if (id.endsWith("bamboo_slab") || id.endsWith("bamboo_mosaic_slab")) {
+                return mapping.withBedrockIdentifier("minecraft:wooden_slab");
+            }
+            else if (id.equals("minecraft:stone_slab") || id.equals("minecraft:cut_sandstone_slab") || id.equals("minecraft:cut_red_sandstone_slab") || id.equals("minecraft:mossy_stone_brick_slab") || id.equals("minecraft:smooth_quartz_slab")) {
+                return mapping.withBedrockIdentifier("minecraft:double_stone_slab4");
+            }
+            else if (id.equals("minecraft:polished_granite_slab") || id.equals("minecraft:smooth_red_sandstone_slab")
+                    || id.equals("minecraft:polished_diorite_slab") || id.equals("minecraft:end_stone_brick_slab")
+                    || id.equals("minecraft:granite_slab") || id.equals("minecraft:andesite_slab")
+                    || id.equals("minecraft:polished_andesite_slab") || id.equals("minecraft:diorite_slab")
+            ) {
+                return mapping.withBedrockIdentifier("minecraft:double_stone_slab3");
+            }
+            else if (id.equals("minecraft:red_sandstone_slab") || id.equals("minecraft:purpur_slab")
+                    || id.equals("minecraft:prismarine_slab") || id.equals("minecraft:prismarine_brick_slab")
+                    || id.equals("minecraft:dark_prismarine_slab") || id.equals("minecraft:mossy_cobblestone_slab")
+                    || id.equals("minecraft:smooth_sandstone_slab") || id.equals("minecraft:red_nether_brick_slab")
+            ) {
+                return mapping.withBedrockIdentifier("minecraft:double_stone_slab2");
+            }
+            else if (id.equals("minecraft:smooth_stone_slab") || id.equals("minecraft:sandstone_slab")
+                    || id.equals("minecraft:petrified_oak_slab") || id.equals("minecraft:cobblestone_slab")
+                    || id.equals("minecraft:brick_slab") || id.equals("minecraft:stone_brick_slab")
+                    || id.equals("minecraft:nether_brick_slab") || id.equals("minecraft:quartz_slab")
+            ) {
+                return mapping.withBedrockIdentifier("minecraft:double_stone_slab");
+            }
+            else if (id.endsWith("chiseled_bookshelf")) {
+                return mapping.withBedrockIdentifier("minecraft:bookshelf");
+            }
+            else if (id.endsWith("bamboo_stairs") || id.endsWith("bamboo_mosaic_stairs")) {
+                return mapping.withBedrockIdentifier("minecraft:oak_stairs");
+            }
+            else if (id.endsWith("bamboo_button")) {
+                return mapping.withBedrockIdentifier("minecraft:wooden_button");
+            } else if (id.endsWith("bamboo_pressure_plate")) {
+                return mapping.withBedrockIdentifier("minecraft:wooden_pressure_plate");
+            } else if (id.endsWith("bamboo_door")) {
+                return mapping.withBedrockIdentifier("minecraft:wooden_door");
+            } else if (id.endsWith("bamboo_trapdoor")) {
+                return mapping.withBedrockIdentifier("minecraft:wooden_trapdoor");
+            } else if (id.endsWith("bamboo_fence_gate")) {
+                return mapping.withBedrockIdentifier("minecraft:wooden_fence_gate");
+            } else if (id.endsWith("bamboo_raft")) {
+                return mapping.withBedrockIdentifier("minecraft:oak_boat");
+            } else if (id.endsWith("bamboo_chest_raft")) {
+                return mapping.withBedrockIdentifier("minecraft:oak_chest_raft");
+            } else if (id.endsWith("bamboo_sign")) {
+                return mapping.withBedrockIdentifier("minecraft:oak_sign");
+            } else if (id.endsWith("_hanging_sign")) {
+                return mapping.withBedrockIdentifier(id.replace("hanging_sign", "sign"));
+            } else if (id.endsWith("camel_spawn_egg")) {
+                return mapping.withBedrockIdentifier("minecraft:llama_spawn_egg");
+            } else if (id.endsWith("ender_dragon_spawn_egg")) {
+                return mapping.withBedrockIdentifier("minecraft:enderman_spawn_egg");
+            } else if (id.endsWith("snow_golem_spawn_egg")) {
+                return mapping.withBedrockIdentifier("minecraft:polar_bear_spawn_egg");
+            } else if (id.endsWith("trader_llama_spawn_egg")) {
+                return mapping.withBedrockIdentifier("minecraft:llama_spawn_egg");
+            } else if (id.endsWith("wither_spawn_egg")) {
+                return mapping.withBedrockIdentifier("minecraft:wither_skeleton_spawn_egg");
+            }
+            return mapping;
+        };
+        paletteVersions.add(new PaletteVersion("1_18_30", Bedrock_v504.CODEC.getProtocolVersion(), Collections.emptyMap(), V503_MAPPER));
 //        paletteVersions.add(new PaletteVersion("1_19_0", Bedrock_v527.CODEC.getProtocolVersion()));
 //        paletteVersions.add(new PaletteVersion("1_19_10", Bedrock_v534.CODEC.getProtocolVersion()));
 //        paletteVersions.add(new PaletteVersion("1_19_20", Bedrock_v544.CODEC.getProtocolVersion(), manualFallback, (item, mapping) -> {

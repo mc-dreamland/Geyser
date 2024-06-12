@@ -113,6 +113,133 @@ public final class BlockRegistryPopulator {
             if (bedrockIdentifier.contains("stone_block_slab")) {
                 return bedrockIdentifier.replace("stone_block_slab", "stone_slab");
             }
+
+            if (bedrockIdentifier.endsWith(":bamboo_block")) {
+                statesBuilder.put("old_log_type", "oak");
+                return "minecraft:log";
+            }
+
+            if (bedrockIdentifier.endsWith(":stripped_bamboo_block")) {
+                return "minecraft:stripped_oak_log";
+            }
+
+            if (bedrockIdentifier.contains("chiseled_bookshelf")) {
+                return "minecraft:bookshelf";
+            }
+
+            if (bedrockIdentifier.contains("oak_hanging_sign") || bedrockIdentifier.contains("bamboo_hanging_sign")) {
+                statesBuilder.remove("attached_bit");
+                Byte hanging = (Byte) statesBuilder.remove("hanging");
+                statesBuilder.remove("facing_direction");
+                if (hanging == 1) {
+                    return "minecraft:standing_sign";
+                } else {
+                    return "minecraft:wall_sign";
+                }
+            }
+
+            if (bedrockIdentifier.contains("bamboo_standing_sign")) {
+                return "minecraft:standing_sign";
+            }
+
+            if (bedrockIdentifier.contains("bamboo_fence_gate")) {
+                return "minecraft:fence_gate";
+            }
+
+            if (bedrockIdentifier.contains("_fence") && !bedrockIdentifier.contains("nether_brick") && !bedrockIdentifier.contains("warped_fence") && !bedrockIdentifier.contains("crimson_fence") && !bedrockIdentifier.contains("mangrove_fence") && !bedrockIdentifier.contains("cherry_fence")) {
+                String type = bedrockIdentifier.split(":")[1].replace("_fence", "");
+                if (bedrockIdentifier.contains("bamboo_fence")) {
+                    type = "oak";
+                }
+                statesBuilder.putString("wood_type", type);
+
+                return "minecraft:fence";
+            }
+
+            if (bedrockIdentifier.contains("_hanging_sign")) {
+                statesBuilder.remove("attached_bit");
+                statesBuilder.remove("hanging");
+                statesBuilder.remove("facing_direction");
+                return bedrockIdentifier.replace("_hanging_sign", "_wall_sign");
+            }
+
+            if (bedrockIdentifier.endsWith("bamboo_planks") || bedrockIdentifier.endsWith("bamboo_mosaic")) {
+                statesBuilder.putString("wood_type", "oak");
+                return "minecraft:planks";
+            }
+
+            if (bedrockIdentifier.contains(":dark_oak_log")) {
+                statesBuilder.putString("new_log_type", "dark_oak");
+                return "minecraft:log2";
+            }
+
+            if (bedrockIdentifier.contains(":acacia_log")) {
+                statesBuilder.putString("new_log_type", "acacia");
+                return "minecraft:log2";
+            }
+
+            if (bedrockIdentifier.endsWith("_log") && !bedrockIdentifier.contains("stripped")) {
+                statesBuilder.putString("old_log_type", bedrockIdentifier.split(":")[1].replace("_log", ""));
+                return "minecraft:log";
+            }
+
+            if (bedrockIdentifier.endsWith("_wool")) {
+                String color = bedrockIdentifier.replace("minecraft:", "").replace("_wool", "");
+                if (color.equals("light_gray")) {
+                    color = "silver";
+                }
+                statesBuilder.putString("color", color);
+                return "minecraft:wool";
+            }
+
+            if (bedrockIdentifier.endsWith("_carpet") && !bedrockIdentifier.startsWith("minecraft:moss")) {
+                String color = bedrockIdentifier.replace("minecraft:", "").replace("_carpet", "");
+                if (color.equals("light_gray")) {
+                    color = "silver";
+                }
+                statesBuilder.putString("color", color);
+                return "minecraft:carpet";
+            }
+
+            if (bedrockIdentifier.endsWith("pumpkin")) {
+                String direction = statesBuilder.remove("minecraft:cardinal_direction").toString();
+                statesBuilder.putInt("direction", switch (direction) {
+                    case "north" -> 2;
+                    case "east" -> 3;
+                    case "west" -> 1;
+                    default -> 0; // south
+                });
+            }
+            if (bedrockIdentifier.endsWith("sculk_sensor")) {
+                int phase = (int) statesBuilder.remove("sculk_sensor_phase");
+                statesBuilder.putBoolean("powered_bit", phase != 0);
+            }
+            if (bedrockIdentifier.endsWith("tube_coral")) {
+                statesBuilder.putString("coral_color", "blue"); // all blue
+                statesBuilder.putBoolean("dead_bit", bedrockIdentifier.startsWith("minecraft:dead"));
+                return "minecraft:coral";
+            }
+            if (bedrockIdentifier.endsWith("brain_coral")) {
+                statesBuilder.putString("coral_color", "pink"); // all blue
+                statesBuilder.putBoolean("dead_bit", bedrockIdentifier.startsWith("minecraft:dead"));
+                return "minecraft:coral";
+            }
+            if (bedrockIdentifier.endsWith("bubble_coral")) {
+                statesBuilder.putString("coral_color", "purple"); // all blue
+                statesBuilder.putBoolean("dead_bit", bedrockIdentifier.startsWith("minecraft:dead"));
+                return "minecraft:coral";
+            }
+            if (bedrockIdentifier.endsWith("fire_coral")) {
+                statesBuilder.putString("coral_color", "red"); // all blue
+                statesBuilder.putBoolean("dead_bit", bedrockIdentifier.startsWith("minecraft:dead"));
+                return "minecraft:coral";
+            }
+            if (bedrockIdentifier.endsWith("horn_coral")) {
+                statesBuilder.putString("coral_color", "yellow"); // all blue
+                statesBuilder.putBoolean("dead_bit", bedrockIdentifier.startsWith("minecraft:dead"));
+                return "minecraft:coral";
+            }
+
             switch (bedrockIdentifier) {
                 case "minecraft:mangrove_planks" -> {
                     statesBuilder.putString("wood_type", "jungle");
@@ -124,6 +251,25 @@ public final class BlockRegistryPopulator {
                 }
                 case "minecraft:stripped_mangrove_log" -> {
                     return "minecraft:stripped_jungle_log";
+                }
+                case "minecraft:bamboo_door" -> {
+                    return "minecraft:wooden_door";
+                }
+                case "minecraft:bamboo_trapdoor" -> {
+                    return "minecraft:trapdoor";
+                }
+                case "minecraft:bamboo_fence_gate" -> {
+                    return "minecraft:fence_gate";
+                }
+                case "minecraft:bamboo_button" -> {
+                    return "minecraft:wooden_button";
+                }
+                case "minecraft:bamboo_stairs", "bamboo_mosaic_stairs" -> {
+                    return "minecraft:oak_stairs";
+                }
+                case "minecraft:bamboo_slab", "minecraft:bamboo_double_slab", "minecraft:bamboo_mosaic_slab", "minecraft:bamboo_mosaic_double_slab" -> {
+                    statesBuilder.putString("wood_type", "oak");
+                    return "minecraft:wooden_slab";
                 }
                 case "minecraft:mangrove_roots", "minecraft:muddy_mangrove_roots", "minecraft:mangrove_wood" -> {
                     statesBuilder.putString("wood_type", "jungle");
@@ -266,7 +412,7 @@ public final class BlockRegistryPopulator {
         };
 
         ImmutableMap<ObjectIntPair<String>, BiFunction<String, NbtMapBuilder, String>> blockMappers = ImmutableMap.<ObjectIntPair<String>, BiFunction<String, NbtMapBuilder, String>>builder()
-//                .put(ObjectIntPair.of("1_18_30", Bedrock_v504.CODEC.getProtocolVersion()), V503_MAPPER)
+                .put(ObjectIntPair.of("1_18_30", Bedrock_v504.CODEC.getProtocolVersion()), V503_MAPPER)
 //                .put(ObjectIntPair.of("1_19_0", Bedrock_v527.CODEC.getProtocolVersion()), legacyMapper)
 //                .put(ObjectIntPair.of("1_19_20", Bedrock_v544.CODEC.getProtocolVersion()), legacyMapper)
 //                .put(ObjectIntPair.of("1_19_50", Bedrock_v560.CODEC.getProtocolVersion()), legacyMapper)

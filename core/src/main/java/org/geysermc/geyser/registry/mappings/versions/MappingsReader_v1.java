@@ -135,7 +135,6 @@ public class MappingsReader_v1 extends MappingsReader {
                     try {
                         String identifier = Identifier.formalize(entry.getKey());
                         CustomEntityMapping customEntityMapping = this.readEntityMappingEntry(identifier, entry.getValue());
-                        System.out.println(customEntityMapping);
                         consumer.accept(identifier, customEntityMapping);
                     } catch (Exception e) {
                         GeyserImpl.getInstance().getLogger().error("Error in registering blocks for custom mapping file: " + file.toString());
