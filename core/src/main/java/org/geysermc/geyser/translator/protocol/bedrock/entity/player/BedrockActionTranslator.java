@@ -172,7 +172,10 @@ public class BedrockActionTranslator extends PacketTranslator<PlayerActionPacket
 
                     if (blockStateOverride == null) {
                         if (skull != null) {
-                            blockStateOverride = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(skull.getOwnerName().replace("heypixel:", "")).defaultBlockState();
+                            String ownerName = skull.getOwnerName();
+                            if (ownerName != null) {
+                                blockStateOverride = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(ownerName.replace("heypixel:", "")).defaultBlockState();
+                            }
                         }
                     }
                     session.setBlockBreakStartTime(0);
