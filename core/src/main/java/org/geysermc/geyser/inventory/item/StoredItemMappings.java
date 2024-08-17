@@ -50,6 +50,7 @@ public class StoredItemMappings {
     private final ItemMapping powderSnowBucket;
     private final ItemMapping egg;
     private final ItemMapping shield;
+    private final ItemMapping upgradeTemplate;
     private final ItemMapping wheat;
     private final ItemMapping writableBook;
 
@@ -64,6 +65,7 @@ public class StoredItemMappings {
         this.powderSnowBucket = load(itemMappings, Items.POWDER_SNOW_BUCKET);
         this.egg = load(itemMappings, Items.EGG);
         this.shield = load(itemMappings, Items.SHIELD);
+        this.upgradeTemplate = load(itemMappings, Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
         this.wheat = load(itemMappings, Items.WHEAT);
         this.writableBook = load(itemMappings, Items.WRITABLE_BOOK);
     }

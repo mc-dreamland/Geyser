@@ -154,42 +154,45 @@ public class BedrockActionTranslator extends PacketTranslator<PlayerActionPacket
                 ServerboundPlayerCommandPacket stopSleepingPacket = new ServerboundPlayerCommandPacket(entity.getEntityId(), PlayerState.LEAVE_BED);
                 session.sendDownstreamPacket(stopSleepingPacket);
                 break;
-            case START_BREAK:
+            case START_BREAK: {
+                // Ignore START_BREAK when the player is CREATIVE to avoid Spigot receiving 2 packets it interpets as block breaking. https://github.com/GeyserMC/Geyser/issues/4021
+
+                if (session.getGameMode() == GameMode.CREATIVE) {
+                    break;
+                }
                 // Start the block breaking animation
-                if (session.getGameMode() != GameMode.CREATIVE) {
-                    int blockState = session.getGeyser().getWorldManager().getBlockAt(session, vector);
-                    LevelEventPacket startBreak = new LevelEventPacket();
-                    startBreak.setType(LevelEvent.BLOCK_START_BREAK);
-                    startBreak.setPosition(vector.toFloat());
-                    double breakTime = BlockUtils.getSessionBreakTime(session, BlockRegistries.JAVA_BLOCKS.get(blockState)) * 20;
+                int blockState = session.getGeyser().getWorldManager().getBlockAt(session, vector);
+                LevelEventPacket startBreak = new LevelEventPacket();
+                startBreak.setType(LevelEvent.BLOCK_START_BREAK);
+                startBreak.setPosition(vector.toFloat());
+                double breakTime = BlockUtils.getSessionBreakTime(session, BlockRegistries.JAVA_BLOCKS.get(blockState)) * 20;
 
-                    // If the block is custom or the breaking item is custom, we must keep track of break time ourselves
-                    GeyserItemStack item = session.getPlayerInventory().getItemInHand();
-                    ItemMapping mapping = item.getMapping(session);
-                    ItemDefinition customItem = mapping.isTool() ? CustomItemTranslator.getCustomItem(item.getNbt(), mapping) : null;
-                    CustomBlockState blockStateOverride = BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get(blockState);
-                    SkullCache.Skull skull = session.getSkullCache().getSkulls().get(vector);
+                // If the block is custom or the breaking item is custom, we must keep track of break time ourselves
+                GeyserItemStack item = session.getPlayerInventory().getItemInHand();
+                ItemMapping mapping = item.getMapping(session);
+                ItemDefinition customItem = mapping.isTool() ? CustomItemTranslator.getCustomItem(item.getNbt(), mapping) : null;
+                CustomBlockState blockStateOverride = BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get(blockState);
+                SkullCache.Skull skull = session.getSkullCache().getSkulls().get(vector);
 
-                    if (blockStateOverride == null) {
-                        if (skull != null) {
-                            String ownerName = skull.getOwnerName();
-                            if (ownerName != null) {
-                                blockStateOverride = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(ownerName.replace("heypixel:", "")).defaultBlockState();
-                            }
+                if (blockStateOverride == null) {
+                    if (skull != null) {
+                        String ownerName = skull.getOwnerName();
+                        if (ownerName != null) {
+                            blockStateOverride = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(ownerName.replace("heypixel:", "")).defaultBlockState();
                         }
                     }
-                    session.setBlockBreakStartTime(0);
-                    if (blockStateOverride != null || customItem != null || (skull != null && skull.getBlockDefinition() != null)) {
-                        session.setBlockBreakStartTime(System.currentTimeMillis());
-                    }
-                    startBreak.setData((int) (65535 / breakTime));
-                    if (skull != null && blockStateOverride != null) {
-                        breakTime = blockStateOverride.block().components().destoryTime() * 20;
-                        session.setBreakingBlockTime(breakTime);
-                    }
-                    session.setBreakingBlock(skull != null ? skull.getBlockDefinition().getRuntimeId() : blockState);
-                    session.sendUpstreamPacket(startBreak);
                 }
+                session.setBlockBreakStartTime(0);
+                if (blockStateOverride != null || customItem != null || (skull != null && skull.getBlockDefinition() != null)) {
+                    session.setBlockBreakStartTime(System.currentTimeMillis());
+                }
+                startBreak.setData((int) (65535 / breakTime));
+                if (skull != null && blockStateOverride != null) {
+                    breakTime = blockStateOverride.block().components().destoryTime() * 20;
+                    session.setBreakingBlockTime(breakTime);
+                }
+                session.setBreakingBlock(skull != null ? skull.getBlockDefinition().getRuntimeId() : blockState);
+                session.sendUpstreamPacket(startBreak);
 
                 // Account for fire - the client likes to hit the block behind.
                 Vector3i fireBlockPos = BlockUtils.getBlockPosition(vector, packet.getFace());
@@ -208,6 +211,7 @@ public class BedrockActionTranslator extends PacketTranslator<PlayerActionPacket
                         vector, Direction.VALUES[packet.getFace()], session.getWorldCache().nextPredictionSequence());
                 session.sendDownstreamPacket(startBreakingPacket);
                 break;
+            }
             case CONTINUE_BREAK:
                 if (session.getGameMode() == GameMode.CREATIVE) {
                     break;

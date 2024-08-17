@@ -146,7 +146,7 @@ public final class BlockRegistryPopulator {
                 return "minecraft:fence_gate";
             }
 
-            if (bedrockIdentifier.contains("_fence") && !bedrockIdentifier.contains("nether_brick") && !bedrockIdentifier.contains("warped_fence") && !bedrockIdentifier.contains("crimson_fence") && !bedrockIdentifier.contains("mangrove_fence") && !bedrockIdentifier.contains("cherry_fence")) {
+            if (!bedrockIdentifier.contains("_fence_gate") && bedrockIdentifier.contains("_fence") && !bedrockIdentifier.contains("nether_brick") && !bedrockIdentifier.contains("warped_fence") && !bedrockIdentifier.contains("crimson_fence") && !bedrockIdentifier.contains("mangrove_fence") && !bedrockIdentifier.contains("cherry_fence")) {
                 String type = bedrockIdentifier.split(":")[1].replace("_fence", "");
                 if (bedrockIdentifier.contains("bamboo_fence")) {
                     type = "oak";
