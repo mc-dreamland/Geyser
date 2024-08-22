@@ -47,8 +47,12 @@ dependencyResolutionManagement {
 pluginManagement {
     repositories {
         gradlePluginPortal()
+        maven("https://repo.opencollab.dev/maven-snapshots/")
         maven("https://maven.fabricmc.net/")
-        maven("https://repo.opencollab.dev/maven-snapshots")
+        maven("https://maven.architectury.dev/")
+        maven("https://maven.neoforged.net/releases")
+        mavenCentral()
+        mavenLocal()
     }
     plugins {
         id("net.kyori.blossom") version "1.2.0"
