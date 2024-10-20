@@ -31,6 +31,7 @@ import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.protocol.bedrock.data.LevelEvent;
 import org.cloudburstmc.protocol.bedrock.data.LevelEventType;
 import org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.type.ItemMapping;
@@ -50,9 +51,13 @@ public class JavaBlockDestructionTranslator extends PacketTranslator<Clientbound
         Vector3i position = packet.getPosition();
         SkullCache.Skull skull = session.getSkullCache().getSkulls().get(position);
         if (skull != null) {
-            CustomBlockState customBlockState = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(skull.getOwnerName().replace("heypixel:", "")).defaultBlockState();
-            if (customBlockState != null) {
-                breakTime = (int) (customBlockState.block().components().destoryTime() * 20);
+            String ownerName = skull.getOwnerName();
+            if (ownerName != null) {
+                CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(ownerName.replace("heypixel:", ""));
+                if (customBlockData != null) {
+                    CustomBlockState customBlockState = customBlockData.defaultBlockState();
+                    breakTime = (int) (customBlockState.block().components().destoryTime() * 20);
+                }
             }
         }
 

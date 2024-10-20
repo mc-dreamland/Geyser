@@ -180,6 +180,11 @@ public class Entity implements GeyserEntity {
         addEntityPacket.getMetadata().putFlags(flags);
         // 修复投掷物看起来太大的问题
         EntityType eType = definition.entityType();
+        if (eType == null) {
+            session.getGeyser().getLogger().warning("警告！实体type为null！ -> " + this);
+            session.getGeyser().getLogger().warning(String.valueOf(this.definition) + " | ");
+            return;
+        }
         if (eType.equals(EntityType.SNOWBALL) || eType.equals(EntityType.FIREBALL) || eType.equals(EntityType.ENDER_PEARL)) {
             dirtyMetadata.put(EntityDataTypes.SCALE, 0.4F);
         }
