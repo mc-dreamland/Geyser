@@ -143,6 +143,7 @@ import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.ItemMappings;
 import org.geysermc.geyser.session.auth.AuthData;
 import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.geyser.session.auth.NeteaseAuthData;
 import org.geysermc.geyser.session.cache.*;
 import org.geysermc.geyser.skin.FloodgateSkinUploader;
 import org.geysermc.geyser.text.GeyserLocale;
@@ -179,6 +180,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private final EventLoop eventLoop;
     @Setter
     private AuthData authData;
+    private NeteaseAuthData neteaseData;
     @Setter
     private BedrockClientData clientData;
     /**
@@ -1431,6 +1433,10 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     public void setAuthenticationData(AuthData authData) {
         this.authData = authData;
+    }
+
+    public void setNeteaseExtraData(NeteaseAuthData neteaseExtraData) {
+        this.neteaseData = neteaseExtraData;
     }
 
     public void startSneaking() {

@@ -47,6 +47,7 @@ import org.geysermc.geyser.configuration.GeyserConfiguration;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.auth.AuthData;
 import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.geyser.session.auth.NeteaseAuthData;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.text.GeyserLocale;
 
@@ -54,6 +55,8 @@ import javax.crypto.SecretKey;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 
 public class LoginEncryptionUtils {
@@ -94,6 +97,17 @@ public class LoginEncryptionUtils {
 
             IdentityData extraData = result.identityClaims().extraData;
             session.setAuthenticationData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, extraData.uid));
+            Map<String, Object> neteaseExtraData = (Map<String, Object>) result.rawIdentityClaims().get("extraData");
+            try {
+                session.setNeteaseExtraData(decodeNeteaseAuthData(neteaseExtraData));
+            } catch (Throwable e) {
+                session.setNeteaseExtraData(new NeteaseAuthData(
+                        extraData.displayName, extraData.identity, extraData.xuid, extraData.uid,
+                        0, neteaseExtraData.toString(), e.getMessage(), "error", "error",
+                        "error", "error", "error", "error"
+                ));
+                geyser.getLogger().warning(String.format("Player %s has Error Auth Data -> " + neteaseExtraData.toString()));
+            }
             session.setCertChainData(certChainData);
 
             PublicKey identityPublicKey = result.identityClaims().parsedIdentityPublicKey();
@@ -122,6 +136,24 @@ public class LoginEncryptionUtils {
             session.disconnect("disconnectionScreen.internalError.cantConnect");
             throw new RuntimeException("Unable to complete login", ex);
         }
+    }
+
+    private static NeteaseAuthData decodeNeteaseAuthData(Map<String, Object> extraData) {
+        String xuid = (String) extraData.get("XUID");
+        UUID identity = UUID.fromString((String) extraData.get("identity"));
+        String displayName = (String) extraData.get("displayName");
+        long uid = (long) extraData.get("uid");
+        long version = (long) extraData.get("version");
+        String env = (String) extraData.get("env");
+        String platform = (String) extraData.get("platform");
+        String netease_sid = (String) extraData.get("netease_sid");
+        String game_type = (String) extraData.get("game_type");
+        String engineVersion = (String) extraData.get("engineVersion");
+        String patchVersion = (String) extraData.get("patchVersion");
+        String os_name = (String) extraData.get("os_name");
+        String bit = (String) extraData.get("bit");
+
+        return new NeteaseAuthData(displayName, identity, xuid, uid, version, env, platform, netease_sid, game_type, engineVersion, patchVersion, os_name, bit);
     }
 
     private static void startEncryptionHandshake(GeyserSession session, PublicKey key) throws Exception {
