@@ -100,9 +100,10 @@ public final class GeyserServer {
 
     public GeyserServer(GeyserImpl geyser, int threadCount) {
         this.geyser = geyser;
-        // bindCount = 1/2 of processors, and max to 20
-        // It's offers up to 20*250=5000 workload
-        this.listenCount = Bootstraps.isReusePortAvailable() ? Math.max(1, Math.min(20, threadCount / 4)) : 1;
+        // bindCount = 1/2 of processors, and max to 30
+        // It's offers up to 30*100=3000 workload
+        this.listenCount = Bootstraps.isReusePortAvailable() ? Math.max(1, Math.min(30, threadCount / 2)) : 1;
+        geyser.getLogger().warning("ChannelFuture 已使用线程数: " + this.listenCount);
         this.group = TRANSPORT.eventLoopGroupFactory().apply(listenCount);
         this.childGroup = TRANSPORT.eventLoopGroupFactory().apply(threadCount);
 
