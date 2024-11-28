@@ -979,7 +979,17 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                 if (uuid == null) {
                     // Set what our UUID *probably* is going to be
                     if (remoteServer.authType() == AuthType.FLOODGATE) {
-                        uuid = new UUID(0, Long.parseLong(authData.xuid()));
+                        //手动处理可能存在的UUID 异常问题
+                        if (authData.xuid().length() != 8) {
+                            uuid = authData.uuid();
+                        } else {
+                            uuid = UUID.fromString("00000000-0000-4000-8000-0000" + authData.xuid());
+                        }
+
+                        if (uuid.toString().equals("00000000-0000-4000-8000-000000000000")) {
+                            geyser.getLogger().warning("玩家: " + protocol.getProfile().getName() + " 登录异常，UUID 为空。authData.uuid: " + authData.uuid() + " XUid: " + authData.xuid());
+                        }
+//                        uuid = new UUID(0, Long.parseLong(authData.xuid()));
                     } else {
                         uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + protocol.getProfile().getName()).getBytes(StandardCharsets.UTF_8));
                     }

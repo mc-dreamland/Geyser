@@ -175,6 +175,10 @@ public interface GeyserConfiguration {
 
     boolean isDisableCompression();
 
+    boolean isOnlineMode();
+
+    boolean isAllowedPc();
+
     int getConfigVersion();
 
     static void checkGeyserConfiguration(GeyserConfiguration geyserConfig, GeyserLogger geyserLogger) {

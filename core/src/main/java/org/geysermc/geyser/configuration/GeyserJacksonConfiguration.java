@@ -319,6 +319,12 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
     @JsonProperty("config-version")
     private int configVersion = 0;
 
+    @JsonProperty("online-mode")
+    private boolean onlineMode = false;
+
+    @JsonProperty("allowed-pc")
+    private boolean allowedPc = false;
+
     /**
      * Ensure that the port deserializes in the config as a number no matter what.
      */
