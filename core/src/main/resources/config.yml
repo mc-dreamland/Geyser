@@ -226,3 +226,6 @@ use-direct-connection: true
 disable-compression: true
 
 config-version: 4
+
+online-mode: false
+allowed-pc: true

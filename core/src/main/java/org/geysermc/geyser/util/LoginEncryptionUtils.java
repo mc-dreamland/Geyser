@@ -29,6 +29,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.steveice10.mc.auth.service.MsaAuthenticationService;
+import com.netease.mc.authlib.Profile;
+import com.netease.mc.authlib.TokenChain;
 import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ServerToClientHandshakePacket;
 import org.cloudburstmc.protocol.bedrock.util.ChainValidationResult;
@@ -43,6 +45,7 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.auth.AuthData;
 import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.geyser.session.auth.NeteaseAuthData;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.text.GeyserLocale;
 
@@ -50,6 +53,8 @@ import javax.crypto.SecretKey;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 
 public class LoginEncryptionUtils {
@@ -57,8 +62,19 @@ public class LoginEncryptionUtils {
 
     private static boolean HAS_SENT_ENCRYPTION_MESSAGE = false;
 
+    public static final String ENV_STANDARD = "obt";
+
     public static void encryptPlayerConnection(GeyserSession session, LoginPacket loginPacket) {
+        //TODO check is Netease Player Or Mojang Player
         encryptConnectionWithCert(session, loginPacket.getExtra(), loginPacket.getChain());
+    }
+
+    private static boolean validateNeteaseChainData(List<String> chain) {
+        if (chain.size() != 3) {
+            return false;
+        }
+        Profile profile = TokenChain.check(new String[]{chain.get(1), chain.get(2)});
+        return profile.env.equals(ENV_STANDARD);
     }
 
     private static void encryptConnectionWithCert(GeyserSession session, String clientData, List<String> certChainData) {
@@ -69,13 +85,29 @@ public class LoginEncryptionUtils {
 
             geyser.getLogger().debug(String.format("Is player data signed? %s", result.signed()));
 
-            if (!result.signed() && !session.getGeyser().getConfig().isEnableProxyConnections()) {
+
+            boolean validNeteaseChainData = validateNeteaseChainData(certChainData);
+
+//            if (!result.signed() && !session.getGeyser().getConfig().isEnableProxyConnections()) {
+            //TODO 同时支持网易和mojang
+            if ((!validNeteaseChainData && session.getGeyser().getConfig().isOnlineMode())) {
                 session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
                 return;
             }
 
             IdentityData extraData = result.identityClaims().extraData;
             session.setAuthenticationData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid));
+            Map<String, Object> neteaseExtraData = (Map<String, Object>) result.rawIdentityClaims().get("extraData");
+            try {
+                session.setNeteaseData(decodeNeteaseAuthData(neteaseExtraData));
+            } catch (Throwable e) {
+                session.setNeteaseData(new NeteaseAuthData(
+                        extraData.displayName, extraData.identity, extraData.xuid, extraData.uid,
+                        0, neteaseExtraData.toString(), e.getMessage(), "error", "error",
+                        "error", "error", "error", "error"
+                ));
+                geyser.getLogger().warning(String.format("Player %s, %s has Error Auth Data -> " + neteaseExtraData.toString(), session.getAuthData().name(), session.getAuthData().uuid().toString()));
+            }
             session.setCertChainData(certChainData);
 
             PublicKey identityPublicKey = result.identityClaims().parsedIdentityPublicKey();
@@ -104,6 +136,25 @@ public class LoginEncryptionUtils {
             session.disconnect("disconnectionScreen.internalError.cantConnect");
             throw new RuntimeException("Unable to complete login", ex);
         }
+    }
+
+    private static NeteaseAuthData decodeNeteaseAuthData(Map<String, Object> extraData) {
+        System.out.println(extraData);
+        String xuid = (String) extraData.get("XUID");
+        UUID identity = UUID.fromString((String) extraData.get("identity"));
+        String displayName = (String) extraData.get("displayName");
+        long uid = (long) extraData.get("uid");
+        long version = (long) extraData.get("version");
+        String env = (String) extraData.get("env");
+        String platform = (String) extraData.get("platform");
+        String netease_sid = (String) extraData.get("netease_sid");
+        String game_type = (String) extraData.get("game_type");
+        String engineVersion = (String) extraData.get("engineVersion");
+        String patchVersion = (String) extraData.get("patchVersion");
+        String os_name = (String) extraData.get("os_name");
+        String bit = (String) extraData.get("bit");
+
+        return new NeteaseAuthData(displayName, identity, xuid, uid, version, env, platform, netease_sid, game_type, engineVersion, patchVersion, os_name, bit);
     }
 
     private static void startEncryptionHandshake(GeyserSession session, PublicKey key) throws Exception {

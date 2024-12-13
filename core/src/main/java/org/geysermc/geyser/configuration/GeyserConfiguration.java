@@ -177,6 +177,10 @@ public interface GeyserConfiguration {
 
     int getConfigVersion();
 
+    //Netease Only
+    boolean isOnlineMode();
+    boolean isAllowedPc();
+
     static void checkGeyserConfiguration(GeyserConfiguration geyserConfig, GeyserLogger geyserLogger) {
         if (geyserConfig.getConfigVersion() < CURRENT_CONFIG_VERSION) {
             geyserLogger.warning(GeyserLocale.getLocaleStringLog("geyser.bootstrap.config.outdated"));
