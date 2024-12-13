@@ -33,12 +33,13 @@ import com.google.common.collect.Interners;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.*;
-import org.cloudburstmc.blockstateupdater.BlockStateUpdater;
+import org.cloudburstmc.blockstateupdater.*;
 import org.cloudburstmc.blockstateupdater.util.tagupdater.CompoundTagUpdaterContext;
 import org.cloudburstmc.nbt.NBTInputStream;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
 import org.cloudburstmc.nbt.NbtType;
+import org.cloudburstmc.protocol.bedrock.codec.v594.Bedrock_v594;
 import org.cloudburstmc.protocol.bedrock.codec.v622.Bedrock_v622;
 import org.cloudburstmc.protocol.bedrock.codec.v630.Bedrock_v630;
 import org.cloudburstmc.protocol.bedrock.data.BlockPropertyData;
@@ -115,7 +116,9 @@ public final class BlockRegistryPopulator {
     }
 
     private static void registerBedrockBlocks() {
+
         var blockMappers = ImmutableMap.<ObjectIntPair<String>, Remapper>builder()
+                .put(ObjectIntPair.of("1_20_10", Bedrock_v594.CODEC.getProtocolVersion()), Conversion630_594::remapBlock)
                 .put(ObjectIntPair.of("1_20_40", Bedrock_v622.CODEC.getProtocolVersion()), Conversion630_622::remapBlock)
                 .put(ObjectIntPair.of("1_20_50", Bedrock_v630.CODEC.getProtocolVersion()), tag -> tag)
                 .build();

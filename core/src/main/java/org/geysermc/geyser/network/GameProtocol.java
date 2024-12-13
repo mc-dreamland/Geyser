@@ -29,6 +29,7 @@ import com.github.steveice10.mc.protocol.codec.MinecraftCodec;
 import com.github.steveice10.mc.protocol.codec.PacketCodec;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
+import org.cloudburstmc.protocol.bedrock.codec.v594.Bedrock_v594;
 import org.cloudburstmc.protocol.bedrock.codec.v622.Bedrock_v622;
 import org.cloudburstmc.protocol.bedrock.codec.v630.Bedrock_v630;
 import org.cloudburstmc.protocol.bedrock.netty.codec.packet.BedrockPacketCodec;
@@ -60,6 +61,9 @@ public final class GameProtocol {
     private static final PacketCodec DEFAULT_JAVA_CODEC = MinecraftCodec.CODEC;
 
     static {
+        SUPPORTED_BEDROCK_CODECS.add(Bedrock_v594.CODEC.toBuilder()
+                .minecraftVersion("1.20.10/1.20.15")
+                .build());
         SUPPORTED_BEDROCK_CODECS.add(Bedrock_v622.CODEC.toBuilder()
             .minecraftVersion("1.20.40/1.20.41")
             .build());
