@@ -85,6 +85,9 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
         }
 
         String newDimension = spawnInfo.getDimension();
+        if (!newDimension.contains("minecraft:")) {
+            newDimension = "minecraft:" + newDimension;
+        }
         if (!session.isQuickSwitchDimension()) {
             if (!session.getDimension().equals(newDimension) || !spawnInfo.getWorldName().equals(session.getWorldName())) {
                 // Switching to a new world (based off the world name change or new dimension); send a fake dimension change

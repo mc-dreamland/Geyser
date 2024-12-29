@@ -46,11 +46,18 @@ public class JavaRegistryDataTranslator extends PacketTranslator<ClientboundRegi
     public void translate(GeyserSession session, ClientboundRegistryDataPacket packet) {
         Map<String, JavaDimension> dimensions = session.getDimensions();
         dimensions.clear();
+
         JavaDimension.load(packet.getRegistry(), dimensions);
 
         Int2ObjectMap<TextDecoration> chatTypes = session.getChatTypes();
         chatTypes.clear();
-        for (CompoundTag tag : JavaCodecUtil.iterateAsTag(packet.getRegistry().get("minecraft:chat_type"))) {
+        CompoundTag chat_type = packet.getRegistry().get("minecraft:chat_type");
+
+        if (chat_type == null) {
+            chat_type = packet.getRegistry().get("chat_type");
+        }
+
+        for (CompoundTag tag : JavaCodecUtil.iterateAsTag(chat_type)) {
             // The ID is NOT ALWAYS THE SAME! ViaVersion as of 1.19 adds two registry entries that do NOT match vanilla.
             int id = ((IntTag) tag.get("id")).getValue();
             CompoundTag element = tag.get("element");

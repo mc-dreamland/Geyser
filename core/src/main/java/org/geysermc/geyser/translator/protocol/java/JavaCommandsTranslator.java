@@ -260,11 +260,11 @@ public class JavaCommandsTranslator extends PacketTranslator<ClientboundCommands
 
     private static Object handleResource(CommandBuilderContext context, String resource, boolean tags) {
         return switch (resource) {
-            case "minecraft:attribute" -> ATTRIBUTES;
-            case "minecraft:enchantment" -> Enchantment.JavaEnchantment.ALL_JAVA_IDENTIFIERS;
-            case "minecraft:entity_type" -> context.getEntityTypes();
-            case "minecraft:mob_effect" -> ALL_EFFECT_IDENTIFIERS;
-            case "minecraft:worldgen/biome" -> tags ? context.getBiomesWithTags() : context.getBiomes();
+            case "minecraft:attribute", "attribute" -> ATTRIBUTES;
+            case "minecraft:enchantment", "enchantment" -> Enchantment.JavaEnchantment.ALL_JAVA_IDENTIFIERS;
+            case "minecraft:entity_type", "entity_type" -> context.getEntityTypes();
+            case "minecraft:mob_effect", "mob_effect" -> ALL_EFFECT_IDENTIFIERS;
+            case "minecraft:worldgen/biome", "worldgen/biome" -> tags ? context.getBiomesWithTags() : context.getBiomes();
             default -> CommandParam.STRING;
         };
     }

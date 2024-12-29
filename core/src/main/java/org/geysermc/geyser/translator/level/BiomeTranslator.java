@@ -51,6 +51,10 @@ public class BiomeTranslator {
         Int2IntMap biomeTranslations = new Int2IntOpenHashMap();
 
         CompoundTag worldGen = codec.get("minecraft:worldgen/biome");
+        if (worldGen == null) {
+            worldGen = codec.get("worldgen/biome");
+        }
+
         ListTag serverBiomes = worldGen.get("value");
         session.setBiomeGlobalPalette(MathUtils.getGlobalPaletteForSize(serverBiomes.size()));
 

@@ -308,6 +308,12 @@ public class ChunkUtils {
      */
     public static void loadDimension(GeyserSession session) {
         JavaDimension dimension = session.getDimensions().get(session.getDimension());
+
+        // 因为Geyser 目前暂不支持1.20.6，做一下兼容适配
+        if (dimension == null && !session.getDimension().contains("minecraft:")) {
+            dimension = session.getDimensions().get("minecraft:" + session.getDimension());
+        }
+
         session.setDimensionType(dimension);
         int minY = dimension.minY();
         int maxY = dimension.maxY();
