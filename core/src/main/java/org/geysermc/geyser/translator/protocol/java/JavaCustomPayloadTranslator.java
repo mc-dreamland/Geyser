@@ -28,6 +28,7 @@ package org.geysermc.geyser.translator.protocol.java;
 import com.github.steveice10.mc.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
 import com.github.steveice10.mc.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
+import org.cloudburstmc.protocol.bedrock.packet.NeteasePythonRpcPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TransferPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UnknownPacket;
 import io.netty.buffer.ByteBuf;
@@ -45,6 +46,7 @@ import org.geysermc.geyser.GeyserLogger;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
+import org.geysermc.geyser.util.PluginMessageUtils;
 
 import java.nio.charset.StandardCharsets;
 
@@ -138,6 +140,27 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
 
                 session.sendUpstreamPacket(toSend);
             });
+        } else if (channel.equals(PluginMessageChannels.MOD_SDK)) {
+            byte[] data = packet.getData();
+            byte[] msgPackData = PluginMessageUtils.unGZipBytes(data);
+            NeteasePythonRpcPacket neteaseCustomPacket = new NeteasePythonRpcPacket(msgPackData);
+
+            session.sendUpstreamPacket(neteaseCustomPacket);
+        } else if (channel.equals(PluginMessageChannels.CUSTOM)) {
+            byte[] data = packet.getData();
+
+            // packet id, packet data
+            if (data.length < 2) {
+                throw new IllegalStateException("包异常，请检查");
+            }
+            ByteBuf buf = Unpooled.wrappedBuffer(packet.getData());
+            int customId = buf.readInt();
+            if (customId == 0) {
+                boolean b1 = buf.readBoolean();
+                boolean b2 = buf.readBoolean();
+                session.setQuickSwitchDimension(b1);
+                session.setNoUnloadChunk(b2);
+            }
         }
     }
 

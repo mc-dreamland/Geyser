@@ -63,6 +63,8 @@ public class JavaForgetLevelChunkTranslator extends PacketTranslator<Clientbound
             }
         }
 
-        ChunkUtils.sendEmptyChunk(session, packet.getX(), packet.getZ(), false);
+        if (!session.isNoUnloadChunk()) {
+            ChunkUtils.sendEmptyChunk(session, packet.getX(), packet.getZ(), false);
+        }
     }
 }

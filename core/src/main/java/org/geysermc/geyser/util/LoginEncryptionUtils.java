@@ -96,7 +96,7 @@ public class LoginEncryptionUtils {
             }
 
             IdentityData extraData = result.identityClaims().extraData;
-            session.setAuthenticationData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid));
+            session.setAuthenticationData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, extraData.uid));
             Map<String, Object> neteaseExtraData = (Map<String, Object>) result.rawIdentityClaims().get("extraData");
             try {
                 session.setNeteaseData(decodeNeteaseAuthData(neteaseExtraData));

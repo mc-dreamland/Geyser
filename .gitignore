@@ -247,8 +247,10 @@ key.pem
 locales/
 /cache/
 /packs/
+/packs/
 /dump.json
 /saved-refresh-tokens.json
+/custom_mappings_/
 /custom_mappings/
 /languages/
 /custom-skulls.yml

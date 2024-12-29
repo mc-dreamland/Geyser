@@ -63,8 +63,10 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         // If the player is already initialized and a join game packet is sent, they
         // are swapping servers
         if (session.isSpawned()) {
-            String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), spawnInfo.getDimension());
-            DimensionUtils.switchDimension(session, fakeDim);
+            if (!session.isQuickSwitchDimension()) {
+                String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), spawnInfo.getDimension());
+                DimensionUtils.switchDimension(session, fakeDim, true);
+            }
 
             session.getWorldCache().removeScoreboard();
 
@@ -125,7 +127,7 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
 
         session.setReducedDebugInfo(packet.isReducedDebugInfo());
 
-        session.setServerRenderDistance(packet.getViewDistance());
+        session.setServerRenderDistance(Math.min(packet.getViewDistance(), 10));
 
         // send this again now that we know the server render distance
         // as the bedrock client isn't required to send a render distance
@@ -135,8 +137,8 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
             session.sendDownstreamPacket(new ServerboundCustomPayloadPacket("minecraft:register", PluginMessageChannels.getFloodgateRegisterData()));
         }
 
-        if (!newDimension.equals(session.getDimension())) {
-            DimensionUtils.switchDimension(session, newDimension);
+        if (!newDimension.equals(session.getDimension()) && !session.isQuickSwitchDimension()) {
+            DimensionUtils.switchDimension(session, newDimension, true);
         } else if (DimensionUtils.isCustomBedrockNetherId() && newDimension.equalsIgnoreCase(DimensionUtils.NETHER)) {
             // If the player is spawning into the "fake" nether, send them some fog
             session.sendFog(DimensionUtils.BEDROCK_FOG_HELL);

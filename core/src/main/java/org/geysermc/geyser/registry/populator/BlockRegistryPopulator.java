@@ -44,6 +44,7 @@ import org.cloudburstmc.protocol.bedrock.codec.v622.Bedrock_v622;
 import org.cloudburstmc.protocol.bedrock.codec.v630.Bedrock_v630;
 import org.cloudburstmc.protocol.bedrock.data.BlockPropertyData;
 import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
+import org.cloudburstmc.protocol.common.Definition;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
@@ -54,6 +55,7 @@ import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.type.BlockMapping;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
+import org.geysermc.geyser.registry.type.NeteaseBedrockBlock;
 import org.geysermc.geyser.util.BlockUtils;
 
 import java.io.DataInputStream;
@@ -130,6 +132,7 @@ public final class BlockRegistryPopulator {
 
         for (ObjectIntPair<String> palette : blockMappers.keySet()) {
             int protocolVersion = palette.valueInt();
+            List<NeteaseBedrockBlock> customRuntimeIdList = new ArrayList<>();
             List<NbtMap> vanillaBlockStates;
             List<NbtMap> blockStates;
             try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResourceOrThrow(String.format("bedrock/block_palette.%s.nbt", palette.key()));
@@ -190,6 +193,15 @@ public final class BlockRegistryPopulator {
                     NbtMap tag = customBlockStates.get(i);
                     CustomBlockState blockState = customExtBlockStates.get(i);
                     GeyserBedrockBlock bedrockBlock = blockStateOrderedMap.get(tag);
+
+                    if (blockState.block().components() != null && blockState.block().components().neteaseFaceDirectional() != null && blockState.block().components().neteaseFaceDirectional() == 1) {
+                        int checkedId = bedrockBlock == null ? -1 : bedrockBlock.getRuntimeId();
+                        if (checkedId != -1) {
+                            customRuntimeIdList.add(new NeteaseBedrockBlock(bedrockBlock, true));
+                        }
+                    } else {
+                        customRuntimeIdList.add(new NeteaseBedrockBlock(bedrockBlock, false));
+                    }
                     customBlockStateDefinitions.put(blockState, bedrockBlock);
 
                     Set<Integer> extendedCollisionjavaIds = BlockRegistries.EXTENDED_COLLISION_BOXES.getOrDefault(blockState.block(), null);
@@ -359,6 +371,8 @@ public final class BlockRegistryPopulator {
                     .customBlockStateDefinitions(customBlockStateDefinitions)
                     .extendedCollisionBoxes(extendedCollisionBoxes)
                     .build());
+            customRuntimeIdList.sort(Comparator.comparingInt(GeyserBedrockBlock::getRuntimeId));
+            BlockRegistries.CUSTOM_BLOCK_RUNTIME_LIST.put(palette.valueInt(), customRuntimeIdList);
         }
     }
 
@@ -396,6 +410,8 @@ public final class BlockRegistryPopulator {
         int spawnerRuntimeId = -1;
         int uniqueJavaId = -1;
         int waterRuntimeId = -1;
+        int playerHeadRuntimeIdMin = -1;
+        int playerHeadRuntimeIdMax = -1;
         Iterator<Map.Entry<String, JsonNode>> blocksIterator = blocksJson.fields();
         while (blocksIterator.hasNext()) {
             javaRuntimeId++;
@@ -483,6 +499,19 @@ public final class BlockRegistryPopulator {
                 honeyBlockRuntimeId = javaRuntimeId;
             } else if (javaId.equals("minecraft:slime_block")) {
                 slimeBlockRuntimeId = javaRuntimeId;
+            } else if (javaId.contains("minecraft:player_head") || javaId.contains("minecraft:player_wall_head")) {
+                if (playerHeadRuntimeIdMin == -1) {
+                    playerHeadRuntimeIdMin = javaRuntimeId;
+                }
+                if (playerHeadRuntimeIdMax == -1) {
+                    playerHeadRuntimeIdMax = javaRuntimeId;
+                }
+                if (javaRuntimeId < playerHeadRuntimeIdMin) {
+                    playerHeadRuntimeIdMin = javaRuntimeId;
+                }
+                if (javaRuntimeId > playerHeadRuntimeIdMax) {
+                    playerHeadRuntimeIdMax = javaRuntimeId;
+                }
             }
         }
 
@@ -520,6 +549,12 @@ public final class BlockRegistryPopulator {
             throw new AssertionError("Unable to find Java water in palette");
         }
         BlockStateValues.JAVA_WATER_ID = waterRuntimeId;
+
+        if (playerHeadRuntimeIdMin == -1) {
+            throw new AssertionError("Unable to find Java Player Head in palette");
+        }
+        BlockStateValues.JAVA_PLAYER_HEAD_ID_MIN = playerHeadRuntimeIdMin;
+        BlockStateValues.JAVA_PLAYER_HEAD_ID_MAX = playerHeadRuntimeIdMax;
 
         if (!BlockRegistries.NON_VANILLA_BLOCK_STATE_OVERRIDES.get().isEmpty()) {
             Set<Integer> usedNonVanillaRuntimeIDs = new HashSet<>();
@@ -627,5 +662,27 @@ public final class BlockRegistryPopulator {
             hash ^= b;
         }
         return hash;
+    }
+
+    public static int manageCreativeItemsRuntimeId(List<NeteaseBedrockBlock> customIdList, int runtimeId) {
+        int i = 0;
+        for (NeteaseBedrockBlock neteaseBedrockBlock : customIdList) {
+            int j = 0;
+            if (neteaseBedrockBlock.getRuntimeId() - i >= runtimeId) {
+                j = i;
+            }
+            if (runtimeId + j >= neteaseBedrockBlock.getRuntimeId()) {
+                i++;
+            }
+        }
+        int ii = 0;
+
+
+        for (NeteaseBedrockBlock neteaseBedrockBlock : customIdList) {
+            if ((runtimeId + i) >= neteaseBedrockBlock.getRuntimeId()) {
+                ii++;
+            }
+        }
+        return ii;
     }
 }

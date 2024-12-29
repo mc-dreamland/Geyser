@@ -31,11 +31,13 @@ import com.github.steveice10.mc.protocol.data.game.PlayerListEntryAction;
 import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.skin.SkinManager;
+import org.geysermc.geyser.skin.SkinProvider;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 
@@ -113,8 +115,7 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (entry.isListed()) {
-                    PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
-                    toAdd.add(playerListEntry);
+                    sendAddPlayerList(session, entity);
                 } else {
                     toRemove.add(new PlayerListPacket.Entry(entity.getTabListUuid()));
                 }
@@ -133,5 +134,47 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 session.sendUpstreamPacket(tabListPacket);
             }
         }
+    }
+
+    private void sendAddPlayerList(GeyserSession session, PlayerEntity entity) {
+        SkinProvider.requestSkinData(entity).whenCompleteAsync((skinData, throwable) -> {
+
+            PlayerListPacket.Entry updatedEntry = SkinManager.buildEntryManually(
+                    session,
+                    entity.getUuid(),
+                    entity.getUsername(),
+                    entity.getGeyserId(),
+                    skinData.skin(),
+                    skinData.cape(),
+                    skinData.geometry()
+            );
+
+            if (session.getCachedPlayerList().containsKey(entity.getUuid())) {
+                if (session.getCachedPlayerList().get(entity.getUuid()).equals(updatedEntry.getSkin().getFullSkinId())) {
+                    return;
+                }
+            }
+
+            PlayerListPacket playerAddPacket = new PlayerListPacket();
+            playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+            playerAddPacket.getEntries().add(updatedEntry);
+            session.sendUpstreamPacket(playerAddPacket);
+            //TODO 后续需修改此判断以正确的判断是否是玩家还是NPC
+            session.getCachedPlayerList().put(entity.getUuid(), updatedEntry.getSkin().getFullSkinId());
+
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+            confirmSkinPacket.setSkinData(updatedEntry.getSkin().getSkinData().getImage());
+            confirmSkinPacket.setGeometry(updatedEntry.getSkin().getGeometryData());
+            confirmSkinPacket.setUuid(entity.getUuid());
+            long uid = updatedEntry.getUid();
+            if (uid == -1) {
+                uid = entity.getUuid().toString().replace("-", "").hashCode();
+                if (uid < 0) {
+                    uid = -uid;
+                }
+            }
+            confirmSkinPacket.setUid(uid);
+            session.sendUpstreamPacket(confirmSkinPacket);
+        });
     }
 }

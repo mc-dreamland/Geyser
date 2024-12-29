@@ -54,6 +54,8 @@ import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.api.pack.PackCodec;
 import org.geysermc.geyser.api.pack.ResourcePack;
 import org.geysermc.geyser.api.pack.ResourcePackManifest;
+import org.geysermc.geyser.event.type.SessionLoadBehaviorPacksEventImpl;
+import org.geysermc.geyser.event.type.SessionLoadOptionalResourcePacksEventImpl;
 import org.geysermc.geyser.event.type.SessionLoadResourcePacksEventImpl;
 import org.geysermc.geyser.pack.GeyserResourcePack;
 import org.geysermc.geyser.registry.BlockRegistries;
@@ -68,10 +70,11 @@ import org.geysermc.geyser.util.VersionCheckUtils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.OptionalInt;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
 
 public class UpstreamPacketHandler extends LoggingPacketHandler {
 
@@ -79,6 +82,8 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     private final Deque<String> packsToSent = new ArrayDeque<>();
 
     private SessionLoadResourcePacksEventImpl resourcePackLoadEvent;
+    private SessionLoadOptionalResourcePacksEventImpl optionalResourcePacksEvent;
+    private SessionLoadBehaviorPacksEventImpl behaviorPacksEvent;
 
     public UpstreamPacketHandler(GeyserImpl geyser, GeyserSession session) {
         super(geyser, session);
@@ -188,6 +193,8 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         this.resourcePackLoadEvent = new SessionLoadResourcePacksEventImpl(session, new HashMap<>(Registries.RESOURCE_PACKS.get()));
         this.geyser.eventBus().fire(this.resourcePackLoadEvent);
+        this.behaviorPacksEvent = new SessionLoadBehaviorPacksEventImpl(session, new HashMap<>(Registries.BEHAVIOR_PACKS.get()));
+        this.geyser.eventBus().fire(this.behaviorPacksEvent);
 
         ResourcePacksInfoPacket resourcePacksInfo = new ResourcePacksInfoPacket();
         for (ResourcePack pack : this.resourcePackLoadEvent.resourcePacks()) {
@@ -196,6 +203,55 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
                     header.uuid().toString(), header.version().toString(), codec.size(), pack.contentKey(),
                     "", header.uuid().toString(), false, false));
+        }
+        for (ResourcePack pack : this.behaviorPacksEvent.resourcePacks()) {
+            PackCodec codec = pack.codec();
+            ResourcePackManifest.Header header = pack.manifest().header();
+            resourcePacksInfo.getBehaviorPackInfos().add(new ResourcePacksInfoPacket.Entry(
+                    header.uuid().toString(), header.version().toString(), codec.size(), pack.contentKey(),
+                    "", header.uuid().toString(), false, false));
+        }
+        if (geyser.getConfig().getOptionalPacks().isEnableOptionalPacks()) {
+            this.optionalResourcePacksEvent = new SessionLoadOptionalResourcePacksEventImpl(session, new HashMap<>(Registries.OPTIONAL_RESOURCE_PACKS.get()));
+            this.geyser.eventBus().fire(this.optionalResourcePacksEvent);
+            try {
+                Connection connection = geyser.getDataSource().getConnection();
+                final PreparedStatement sql = connection.prepareStatement("select used_pack from hey_packs_player where player_uuid = ?");
+                sql.setString(1, session.getAuthData().uuid().toString());
+                final ResultSet set = sql.executeQuery();
+                if (set.next()) {
+                    String usedPacks = set.getString("used_pack");
+                    if (usedPacks != null && !usedPacks.equals("")) {
+                        String[] split = usedPacks.replace(" ", "").split(",");
+                        if (split.length >= 1) {
+                            List<String> packsUUID = new ArrayList<>();
+                            for (String splitPackId : split) {
+
+                                String getPackUUID = geyser.getOptionalPacks().getOrDefault(Integer.parseInt(splitPackId), null);
+                                for (ResourcePack pack : this.optionalResourcePacksEvent.resourcePacks()) {
+
+                                    PackCodec codec = pack.codec();
+                                    ResourcePackManifest.Header header = pack.manifest().header();
+
+                                    if (getPackUUID.equals(header.uuid().toString())) {
+                                        packsUUID.add(getPackUUID);
+                                        resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
+                                                header.uuid().toString(), header.version().toString(), codec.size(), pack.contentKey(),
+                                                "", header.uuid().toString(), false, false));
+                                    }
+                                }
+                            }
+                            session.setOptionPacksUuid(packsUUID);
+                        }
+                    }
+                }
+                sql.close();
+                set.close();
+                connection.close();
+            } catch (SQLException e) {
+                geyser.getLogger().error("§c获取玩家自选材质包列表失败！请检查数据库连接是否正常！");
+                e.printStackTrace();
+            }
         }
         resourcePacksInfo.setForcedToAccept(GeyserImpl.getInstance().getConfig().isForceResourcePacks());
         session.sendUpstreamPacket(resourcePacksInfo);
@@ -225,21 +281,42 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             case HAVE_ALL_PACKS:
                 ResourcePackStackPacket stackPacket = new ResourcePackStackPacket();
                 stackPacket.setExperimentsPreviouslyToggled(false);
-                stackPacket.setForcedToAccept(false); // Leaving this as false allows the player to choose to download or not
+                stackPacket.setForcedToAccept(true); // Leaving this as false allows the player to choose to download or not
                 stackPacket.setGameVersion(session.getClientData().getGameVersion());
+
+                for (ResourcePack pack : this.behaviorPacksEvent.resourcePacks()) {
+                    ResourcePackManifest.Header header = pack.manifest().header();
+                    stackPacket.getBehaviorPacks().add(new ResourcePackStackPacket.Entry(header.uuid().toString(), header.version().toString(), ""));
+                }
 
                 for (ResourcePack pack : this.resourcePackLoadEvent.resourcePacks()) {
                     ResourcePackManifest.Header header = pack.manifest().header();
                     stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.uuid().toString(), header.version().toString(), ""));
                 }
 
+                if (geyser.getConfig().getOptionalPacks().isEnableOptionalPacks()) {
+                    for (String packUuid : session.getOptionPacksUuid()) {
+                        for (ResourcePack pack : this.optionalResourcePacksEvent.resourcePacks()) {
+                            ResourcePackManifest.Header header = pack.manifest().header();
+                            if (packUuid.equals(header.uuid().toString())) {
+                                stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.uuid().toString(), header.version().toString(), ""));
+                            }
+                        }
+                    }
+                }
+
                 if (GeyserImpl.getInstance().getConfig().isAddNonBedrockItems()) {
                     // Allow custom items to work
+                    stackPacket.getExperiments().add(new ExperimentData("vanilla_experiments", true));
                     stackPacket.getExperiments().add(new ExperimentData("data_driven_items", true));
+                    stackPacket.getExperiments().add(new ExperimentData("upcoming_creator_features", true));
+                    stackPacket.getExperiments().add(new ExperimentData("experimental_molang_features", true));
                 }
 
                 // Required for experimental 1.21 features
                 stackPacket.getExperiments().add(new ExperimentData("updateAnnouncedLive2023", true));
+                stackPacket.getExperiments().add(new ExperimentData("next_major_update", true));
+                stackPacket.getExperiments().add(new ExperimentData("sniffer", true));
 
                 session.sendUpstreamPacket(stackPacket);
                 break;
@@ -295,7 +372,22 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     @Override
     public PacketSignal handle(ResourcePackChunkRequestPacket packet) {
         ResourcePackChunkDataPacket data = new ResourcePackChunkDataPacket();
-        ResourcePack pack = this.resourcePackLoadEvent.getPacks().get(packet.getPackId().toString());
+        ResourcePack pack;
+        ResourcePack resourcePack = this.resourcePackLoadEvent.getPacks().get(packet.getPackId().toString());
+        ResourcePack behaviorPack = this.behaviorPacksEvent.getPacks().get(packet.getPackId().toString());
+        ResourcePack optionalPack = null;
+
+        if (geyser.getConfig().getOptionalPacks().isEnableOptionalPacks()) {
+            optionalPack = this.optionalResourcePacksEvent.getPacks().get(packet.getPackId().toString());
+        }
+
+        if (optionalPack != null) {
+            pack = optionalPack;
+        } else if (behaviorPack != null) {
+            pack = behaviorPack;
+        } else {
+            pack = resourcePack;
+        }
         PackCodec codec = pack.codec();
 
         data.setChunkIndex(packet.getChunkIndex());
@@ -329,7 +421,17 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     private void sendPackDataInfo(String id) {
         ResourcePackDataInfoPacket data = new ResourcePackDataInfoPacket();
         String[] packID = id.split("_");
-        ResourcePack pack = this.resourcePackLoadEvent.getPacks().get(packID[0]);
+        ResourcePack pack;
+        if (this.resourcePackLoadEvent.getPacks().get(packID[0]) != null) {
+            pack = this.resourcePackLoadEvent.getPacks().get(packID[0]);
+            data.setType(ResourcePackType.RESOURCES);
+        } else if (geyser.getConfig().getOptionalPacks().isEnableOptionalPacks() && this.optionalResourcePacksEvent.getPacks().get(packID[0]) != null) {
+            pack = this.optionalResourcePacksEvent.getPacks().get(packID[0]);
+            data.setType(ResourcePackType.RESOURCES);
+        } else {
+            pack = this.behaviorPacksEvent.getPacks().get(packID[0]);
+            data.setType(ResourcePackType.DATA_ADD_ON);
+        }
         PackCodec codec = pack.codec();
         ResourcePackManifest.Header header = pack.manifest().header();
 
@@ -341,7 +443,6 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         data.setHash(codec.sha256());
         data.setPackVersion(packID[1]);
         data.setPremium(false);
-        data.setType(ResourcePackType.RESOURCES);
 
         session.sendUpstreamPacket(data);
     }

@@ -86,8 +86,23 @@ public class FakeHeadProvider {
                     // Don't tie it to a player - that player *can* change skins in-game
                     String skinKey = "customPlayerHead_" + fakeHeadEntry.getFakeHeadSkinUrl() + "_" + skin.getTextureUrl();
                     byte[] targetSkinData = SkinProvider.bufferedImageToImageData(originalSkinImage);
-                    SkinProvider.Skin mergedSkin = new SkinProvider.Skin(fakeHeadEntry.getEntity().getUuid(), skinKey, targetSkinData, System.currentTimeMillis(), false, false);
-
+                    SkinProvider.Skin mergedSkin;
+                    if (GeyserImpl.getInstance().getSessionManager().getSessions().containsKey(fakeHeadEntry.getEntity().getUuid())) {
+                        long uid = GeyserImpl.getInstance().getSessionManager().getSessions().get(fakeHeadEntry.getEntity().getUuid()).getAuthData().uid();
+                        mergedSkin = new SkinProvider.Skin(fakeHeadEntry.getEntity().getUuid(), skinKey, targetSkinData, System.currentTimeMillis(), false, false,
+                                uid
+                        );
+                    } else {
+                        if (!fakeHeadEntry.getEntity().getUuid().toString().startsWith("000000")) {
+                            int uid = fakeHeadEntry.getEntity().getUuid().toString().replace("-", "").hashCode();
+                            if (uid < 0) {
+                                uid = -uid;
+                            }
+                            mergedSkin = new SkinProvider.Skin(fakeHeadEntry.getEntity().getUuid(), skinKey, targetSkinData, System.currentTimeMillis(), false, false, uid);
+                        } else {
+                            mergedSkin = new SkinProvider.Skin(fakeHeadEntry.getEntity().getUuid(), skinKey, targetSkinData, System.currentTimeMillis(), false, false);
+                        }
+                    }
                     // Avoiding memory leak
                     fakeHeadEntry.setEntity(null);
 

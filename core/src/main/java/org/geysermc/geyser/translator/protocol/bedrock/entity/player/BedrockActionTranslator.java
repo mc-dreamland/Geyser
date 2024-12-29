@@ -171,6 +171,15 @@ public class BedrockActionTranslator extends PacketTranslator<PlayerActionPacket
                 CustomBlockState blockStateOverride = BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get(blockState);
                 SkullCache.Skull skull = session.getSkullCache().getSkulls().get(vector);
 
+                if (blockStateOverride == null) {
+                    if (skull != null) {
+                        String ownerName = skull.getOwnerName();
+                        if (ownerName != null) {
+                            blockStateOverride = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(ownerName.replace("heypixel:", "")).defaultBlockState();
+                        }
+                    }
+                }
+
                 session.setBlockBreakStartTime(0);
                 if (blockStateOverride != null || customItem != null || (skull != null && skull.getBlockDefinition() != null)) {
                     session.setBlockBreakStartTime(System.currentTimeMillis());

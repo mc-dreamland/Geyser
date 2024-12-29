@@ -85,14 +85,22 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
         }
 
         String newDimension = spawnInfo.getDimension();
-        if (!session.getDimension().equals(newDimension) || !spawnInfo.getWorldName().equals(session.getWorldName())) {
-            // Switching to a new world (based off the world name change or new dimension); send a fake dimension change
-            if (DimensionUtils.javaToBedrock(session.getDimension()) == DimensionUtils.javaToBedrock(newDimension)) {
-                String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), newDimension);
-                DimensionUtils.switchDimension(session, fakeDim);
+        if (!session.isQuickSwitchDimension()) {
+            if (!session.getDimension().equals(newDimension) || !spawnInfo.getWorldName().equals(session.getWorldName())) {
+                // Switching to a new world (based off the world name change or new dimension); send a fake dimension change
+                if (DimensionUtils.javaToBedrock(session.getDimension()) == DimensionUtils.javaToBedrock(newDimension)) {
+                    String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), newDimension);
+                    DimensionUtils.switchDimension(session, fakeDim, true);
+                }
+                session.setWorldName(spawnInfo.getWorldName());
+                DimensionUtils.switchDimension(session, newDimension, true);
+
+                ChunkUtils.loadDimension(session);
             }
+        } else {
+            boolean changeDimension = !session.getDimension().equals(newDimension);
             session.setWorldName(spawnInfo.getWorldName());
-            DimensionUtils.switchDimension(session, newDimension);
+            DimensionUtils.switchDimension(session, newDimension, changeDimension);
 
             ChunkUtils.loadDimension(session);
         }

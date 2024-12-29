@@ -60,7 +60,7 @@ public class DimensionUtils {
      */
     public static final String THE_END = "minecraft:the_end";
 
-    public static void switchDimension(GeyserSession session, String javaDimension) {
+    public static void switchDimension(GeyserSession session, String javaDimension, boolean changeDimension) {
         int bedrockDimension = javaToBedrock(javaDimension); // new bedrock dimension
         String previousDimension = session.getDimension(); // previous java dimension
 
@@ -76,7 +76,7 @@ public class DimensionUtils {
         session.getPistonCache().clear();
         session.getSkullCache().clear();
 
-        if (session.getServerRenderDistance() > 32 && !session.isEmulatePost1_13Logic()) {
+        if (session.getServerRenderDistance() > 16 && !session.isEmulatePost1_13Logic()) {
             // The server-sided view distance wasn't a thing until Minecraft Java 1.14
             // So ViaVersion compensates by sending a "view distance" of 64
             // That's fine, except when the actual view distance sent from the server is five chunks
@@ -86,21 +86,24 @@ public class DimensionUtils {
             session.getGeyser().getLogger().debug("Applying dimension switching workaround for Bedrock render distance of "
                     + session.getServerRenderDistance());
             ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
-            chunkRadiusUpdatedPacket.setRadius(32);
+            chunkRadiusUpdatedPacket.setRadius(16);
             session.sendUpstreamPacket(chunkRadiusUpdatedPacket);
             // Will be re-adjusted on spawn
         }
 
         Vector3f pos = Vector3f.from(0, Short.MAX_VALUE, 0);
 
-        ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
-        changeDimensionPacket.setDimension(bedrockDimension);
-        changeDimensionPacket.setRespawn(true);
-        changeDimensionPacket.setPosition(pos);
-        session.sendUpstreamPacket(changeDimensionPacket);
 
-        session.setDimension(javaDimension);
-        setBedrockDimension(session, javaDimension);
+        if (!session.isQuickSwitchDimension() || changeDimension) {
+            ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
+            changeDimensionPacket.setDimension(bedrockDimension);
+            changeDimensionPacket.setRespawn(true);
+            changeDimensionPacket.setPosition(pos);
+            session.sendUpstreamPacket(changeDimensionPacket);
+
+            session.setDimension(javaDimension);
+            setBedrockDimension(session, javaDimension);
+        }
 
         player.setPosition(pos);
         session.setSpawned(false);
@@ -134,18 +137,20 @@ public class DimensionUtils {
         ackPacket.setFace(0);
         session.sendUpstreamPacket(ackPacket);
 
-        // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
-        // The client wants sections sent to it before it can successfully respawn.
-        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+        if (!session.isQuickSwitchDimension() || changeDimension) {
+            // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
+            // The client wants sections sent to it before it can successfully respawn.
+            ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
 
-        // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
-        // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
-        // thinks they are in the end dimension.
-        if (isCustomBedrockNetherId()) {
-            if (NETHER.equals(javaDimension)) {
-                session.sendFog(BEDROCK_FOG_HELL);
-            } else if (NETHER.equals(previousDimension)) {
-                session.removeFog(BEDROCK_FOG_HELL);
+            // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
+            // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
+            // thinks they are in the end dimension.
+            if (isCustomBedrockNetherId()) {
+                if (NETHER.equals(javaDimension)) {
+                    session.sendFog(BEDROCK_FOG_HELL);
+                } else if (NETHER.equals(previousDimension)) {
+                    session.removeFog(BEDROCK_FOG_HELL);
+                }
             }
         }
     }

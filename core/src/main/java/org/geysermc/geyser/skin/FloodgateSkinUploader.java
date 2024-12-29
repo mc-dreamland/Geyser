@@ -31,12 +31,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.floodgate.util.WebsocketEventType;
 import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.GeyserLogger;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.geyser.util.PluginMessageUtils;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -45,9 +48,7 @@ import javax.net.ssl.SSLException;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -140,10 +141,20 @@ public final class FloodgateSkinUploader {
                             }
                             break;
                         case NEWS_ADDED:
-                            //todo
+                            UUID uuid = UUID.fromString(node.get("uuid").asText());
+                            String textures = node.get("skin_data").asText();
+                            byte[] skin_data = PluginMessageUtils.unGZipBytes(Base64.getDecoder().decode(textures));
+                            String skinHash = node.get("skin_hash").asText();
+                            String skinUrl = String.format(GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/%s?%s?pe", uuid, skinHash);
+                            SkinProvider.Skin skin = new SkinProvider.Skin(uuid, skinUrl, skin_data, System.currentTimeMillis(), true, false);
+                            SkinProvider.storeEarSkin(skin);
+                            SkinProvider.storeCustomSkin(uuid, uuid.toString(), skin_data);
+                            SkinProvider.saveCustomSkin(uuid, textures);
+                            logger.debug("update skin for " + uuid + " success");
+                            break;
                     }
                 } catch (Exception e) {
-                    logger.error("Error while receiving a message", e);
+                    logger.error("Error while receiving a message: " + message, e);
                 }
             }
 
@@ -190,16 +201,33 @@ public final class FloodgateSkinUploader {
         };
     }
 
-    public void uploadSkin(List<String> chainData, String clientData) {
-        if (chainData == null || clientData == null) {
+    @SneakyThrows
+    public void syncSkin(GeyserSession session, BedrockClientData clientData) {
+        List<String> chainData = session.getCertChainData();
+        if (chainData == null || chainData.isEmpty()) {
             return;
         }
+//        logger.debug(session.getAuthData().name() + " syncSkin " + clientData.getOriginalString());
 
         ObjectNode node = JACKSON.createObjectNode();
-        ArrayNode chainDataNode = JACKSON.createArrayNode();
-        chainData.forEach(chainDataNode::add);
-        node.set("chain_data", chainDataNode);
-        node.put("client_data", clientData);
+//        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
+        byte[] skinData = clientData.getSkinData().getBytes(StandardCharsets.UTF_8);
+        SkinProvider.Skin skin = SkinProvider.CUSTOM_SKINS.getIfPresent(session.javaUuid().toString());
+        if (skin != null) {
+            // skin data byte[]
+            node.put("skin_data", Base64.getEncoder().encodeToString(PluginMessageUtils.gZipBytes(skin.getSkinData())));
+        }else{
+            // client data base64 String
+            node.put("skin_data", Base64.getEncoder().encodeToString(PluginMessageUtils.gZipBytes(Base64.getDecoder().decode(skinData))));
+        }
+        node.put("hash", PluginMessageUtils.hash(clientData.getSkinData()));
+        node.put("geometry_data", clientData.getGeometryData());
+//        node.put("geometry_data",MathUtils.gZipBytes(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8)));
+        node.put("geometry_name", clientData.getGeometryName());
+        node.put("skin_id", clientData.getSkinId());
+        node.put("uuid", session.getAuthData().uuid().toString());
+        node.put("xuid", session.getAuthData().xuid());
+        node.put("uid", session.getAuthData().uid());
 
         // The reason why I don't like Jackson
         String jsonString;
@@ -210,11 +238,23 @@ public final class FloodgateSkinUploader {
             return;
         }
 
+        logger.debug(session.getAuthData().name() + "syncSkin Json: " + jsonString);
+
         if (client.isOpen()) {
             client.send(jsonString);
             return;
         }
         skinQueue.add(jsonString);
+    }
+
+    @SneakyThrows
+    public void websocketSend(Object o) {
+        String json = JACKSON.writeValueAsString(o);
+        if (client.isOpen()) {
+            client.send(json);
+            return;
+        }
+        skinQueue.add(json);
     }
 
     private void reconnectLater(GeyserImpl geyser) {

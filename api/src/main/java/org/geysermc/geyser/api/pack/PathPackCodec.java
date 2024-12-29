@@ -42,4 +42,6 @@ public abstract class PathPackCodec extends PackCodec {
      */
     @NonNull
     public abstract Path path();
+
+    protected abstract @NonNull ResourcePack createOptionalResourcePack();
 }

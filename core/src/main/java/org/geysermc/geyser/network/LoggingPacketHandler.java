@@ -876,4 +876,9 @@ public class LoggingPacketHandler implements BedrockPacketHandler {
     public PacketSignal handle(ToggleCrafterSlotRequestPacket packet) {
         return defaultHandler(packet);
     }
+
+    @Override
+    public PacketSignal handle(NeteasePythonRpcPacket packet) {
+        return defaultHandler(packet);
+    }
 }

@@ -27,10 +27,23 @@ package org.geysermc.geyser.util;
 
 import com.github.steveice10.mc.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
+import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.session.GeyserSession;
 
+import javax.annotation.Nonnull;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public class PluginMessageUtils {
     private static final byte[] GEYSER_BRAND_DATA;
@@ -83,5 +96,88 @@ public class PluginMessageUtils {
             return 4;
         }
         return 5;
+    }
+
+    @SneakyThrows
+    public static byte[] syncSkinData(GeyserSession geyserSession){
+        Map<String,Object> map = new LinkedHashMap<>(2);
+        map.put("pe",true);
+        map.put("alex",geyserSession.getClientData().getSkinId().contains("Slim") ?"true":"false");
+        map.put("data",GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/"
+                +geyserSession.getAuthData().uuid()+"?"+
+                hash(geyserSession.getClientData().getSkinData())+"?pe");
+        // 114514 魔法值 无作用
+        return (Base64.getEncoder().encodeToString(GeyserImpl.JSON_MAPPER.writeValueAsBytes(map))+ '\0'+"114514").getBytes(StandardCharsets.UTF_8);
+    }
+
+    public static String getSkinUrl(String uuid) {
+        return GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid + "?pe";
+    }
+
+    public static byte[] gZipBytes(byte[] data) {
+        byte[] gZipByte = null;
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            GZIPOutputStream gzip = new GZIPOutputStream(bos);
+            gzip.write(data);
+            gzip.finish();
+            gzip.close();
+            gZipByte = bos.toByteArray();
+            bos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return gZipByte;
+    }
+
+    public static byte[] unGZipBytes(byte[] data) {
+        byte[] b = null;
+        try {
+            ByteArrayInputStream bis = new ByteArrayInputStream(data);
+            GZIPInputStream gzip = new GZIPInputStream(bis);
+            byte[] buf = new byte[1024];
+            int num = -1;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            while ((num = gzip.read(buf, 0, buf.length)) != -1) {
+                baos.write(buf, 0, num);
+            }
+            b = baos.toByteArray();
+            baos.flush();
+            baos.close();
+            gzip.close();
+            bis.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return b;
+    }
+    public static byte[] decompress(@Nonnull byte[] compressedData) {
+        ByteArrayInputStream bais = new ByteArrayInputStream(compressedData);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (GZIPInputStream gzis = new GZIPInputStream(bais)) {
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = gzis.read(buffer)) != -1) {
+                baos.write(buffer, 0, len);
+            }
+        } catch (IOException e) {
+            return compressedData;
+        }
+        return baos.toByteArray();
+    }
+
+    public static String hash(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] messageDigest = md.digest(input.getBytes());
+            BigInteger number = new BigInteger (1, messageDigest);
+            String hashtext = number.toString(16);
+            while (hashtext.length()<32) {
+                hashtext = "0" + hashtext;
+            }
+            return hashtext;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -36,7 +36,9 @@ import org.cloudburstmc.protocol.bedrock.packet.UpdateBlockPacket;
 import org.geysermc.geyser.GeyserImpl;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.nbt.NbtMapBuilder;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.level.block.BlockStateValues;
+import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.skin.SkinProvider;
@@ -102,6 +104,20 @@ public class SkullBlockEntityTranslator extends BlockEntityTranslator implements
 
     public static @Nullable BlockDefinition translateSkull(GeyserSession session, CompoundTag tag, Vector3i blockPosition, int blockState) {
         CompoundTag owner = tag.get("SkullOwner");
+
+        String customSkullBlockName = SkullCache.getCustomSkullBlockName(tag);
+
+        if (customSkullBlockName != null) {
+
+            CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(customSkullBlockName);
+            if (customBlockData == null) {
+                return null;
+            }
+
+            SkullCache.Skull skull = session.getSkullCache().putSkull(blockPosition, "heypixel:" + customSkullBlockName, blockState);
+            return skull.getBlockDefinition();
+        }
+
         if (owner == null) {
             session.getSkullCache().removeSkull(blockPosition);
             return null;

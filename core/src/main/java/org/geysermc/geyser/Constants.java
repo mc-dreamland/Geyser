@@ -41,15 +41,19 @@ public final class Constants {
 
     static final String SAVED_REFRESH_TOKEN_FILE = "saved-refresh-tokens.json";
 
-    public static final String GEYSER_CUSTOM_NAMESPACE = "geyser_custom";
+    public static final String GEYSER_CUSTOM_NAMESPACE = "heypixel";
 
     public static final String MINECRAFT_SKIN_SERVER_URL = "https://textures.minecraft.net/texture/";
 
     static {
         URI wsUri = null;
         try {
-            wsUri = new URI("wss://api.geysermc.org/ws");
+            wsUri = new URI("ws://"+GeyserImpl.getInstance().getConfig().getService().getSkinurl()
+                    .replace("http://","")
+                    .replace("https://","") + "/geyser");
         } catch (URISyntaxException e) {
+            GeyserImpl.getInstance().getLogger().error("Unable to resolve api.geysermc.org! Check your internet connection.");
+
             e.printStackTrace();
         }
         GLOBAL_API_WS_URI = wsUri;

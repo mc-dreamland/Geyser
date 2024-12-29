@@ -112,6 +112,8 @@ public final class Registries {
      */
     public static final SimpleMappedRegistry<EntityType, EntityDefinition<?>> ENTITY_DEFINITIONS = SimpleMappedRegistry.create(RegistryLoaders.empty(() -> new EnumMap<>(EntityType.class)));
 
+    public static final HashMap<String, EntityDefinition<?>> CUSTOM_ENTITY_DEFINITIONS = new HashMap<>();
+
     /**
      * A map containing all Java entity identifiers and their respective Geyser definitions
      */
@@ -157,7 +159,9 @@ public final class Registries {
     /**
      * A mapped registry holding {@link ResourcePack}'s with the pack uuid as keys.
      */
-    public static final DeferredRegistry<Map<String, ResourcePack>> RESOURCE_PACKS = DeferredRegistry.create(GeyserImpl.getInstance().packDirectory(), SimpleMappedRegistry::create, RegistryLoaders.RESOURCE_PACKS);
+    public static final DeferredRegistry<Map<String, ResourcePack>> RESOURCE_PACKS = DeferredRegistry.create(GeyserImpl.getInstance().resourcePackDirectory(), SimpleMappedRegistry::create, RegistryLoaders.RESOURCE_PACKS);
+    public static final DeferredRegistry<Map<String, ResourcePack>> OPTIONAL_RESOURCE_PACKS = DeferredRegistry.create(GeyserImpl.getInstance().optionalResourcePackDirectory(), SimpleMappedRegistry::create, RegistryLoaders.OPTIONAL_RESOURCE_PACKS);
+    public static final DeferredRegistry<Map<String, ResourcePack>> BEHAVIOR_PACKS = DeferredRegistry.create(GeyserImpl.getInstance().behaviorPackDirectory(), SimpleMappedRegistry::create, RegistryLoaders.BEHAVIOR_PACKS);
 
     /**
      * A mapped registry holding sound identifiers to their corresponding {@link SoundMapping}.

@@ -44,7 +44,7 @@ import org.geysermc.geyser.translator.protocol.Translator;
 
 @Translator(packet = ClientboundSetScorePacket.class)
 public class JavaSetScoreTranslator extends PacketTranslator<ClientboundSetScorePacket> {
-    private static final boolean SHOW_SCOREBOARD_LOGS = Boolean.parseBoolean(System.getProperty("Geyser.ShowScoreboardLogs", "true"));
+    private static final boolean SHOW_SCOREBOARD_LOGS = Boolean.parseBoolean(System.getProperty("Geyser.ShowScoreboardLogs", "false"));
 
     private final GeyserLogger logger;
 

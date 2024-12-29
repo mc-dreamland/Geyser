@@ -30,6 +30,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.pack.PathPackCodec;
 import org.geysermc.geyser.api.pack.ResourcePack;
+import org.geysermc.geyser.registry.loader.BehaviorPackLoader;
+import org.geysermc.geyser.registry.loader.OptionalResourcePackLoader;
 import org.geysermc.geyser.registry.loader.ResourcePackLoader;
 import org.geysermc.geyser.util.FileUtils;
 
@@ -84,8 +86,18 @@ public class GeyserPathPackCodec extends PathPackCodec {
     }
 
     @Override
-    protected @NonNull ResourcePack create() {
+    protected @NonNull ResourcePack createResourcePack() {
         return ResourcePackLoader.readPack(this.path);
+    }
+
+    @Override
+    protected @NonNull ResourcePack createOptionalResourcePack() {
+        return OptionalResourcePackLoader.readPack(this.path);
+    }
+
+    @Override
+    protected @NonNull ResourcePack createBehaviorPack() {
+        return BehaviorPackLoader.readPack(this.path);
     }
 
     private void checkLastModified() {

@@ -124,6 +124,22 @@ public class PlayerEntity extends LivingEntity implements GeyserPlayerEntity {
 
         // Update in case this entity has been despawned, then respawned
         this.nametag = this.username;
+        this.nametag = this.nametag.replace("\\n", "\n");
+        if (this.nametag.contains("@size_")) {
+            int start = nametag.indexOf("@size_");
+            int end = nametag.indexOf("@", start + 6);
+            if (start != -1 && end != -1) {
+                String size = nametag.substring(start + 6, end);
+                try {
+                    float scale = Float.parseFloat(size);
+                    dirtyMetadata.put(EntityDataTypes.SCALE, scale);
+                    dirtyMetadata.put(EntityDataTypes.NAME, nametag.replace("@size_" + size + "@", ""));
+                    this.nametag = nametag.replace("@size_" + size + "@", "");
+                } catch (NumberFormatException ignored) {
+                    System.out.println("");
+                }
+            }
+        }
         // The name can't be updated later (the entity metadata for it is ignored), so we need to check for this now
         updateDisplayName(session.getWorldCache().getScoreboard().getTeamFor(username));
 

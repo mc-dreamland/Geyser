@@ -67,7 +67,15 @@ public abstract class PackCodec {
      * @return the new resource pack
      */
     @NonNull
-    protected abstract ResourcePack create();
+    protected abstract ResourcePack createResourcePack();
+
+    /**
+     * Creates a new behavior pack from this codec.
+     *
+     * @return the new resource pack
+     */
+    @NonNull
+    protected abstract ResourcePack createBehaviorPack();
 
     /**
      * Creates a new pack provider from the given path.

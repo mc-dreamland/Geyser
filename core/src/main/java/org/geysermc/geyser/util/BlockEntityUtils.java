@@ -39,6 +39,7 @@ import org.geysermc.geyser.translator.level.block.entity.FlowerPotBlockEntityTra
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class BlockEntityUtils {
     /**
@@ -88,5 +89,15 @@ public class BlockEntityUtils {
         blockEntityPacket.setBlockPosition(position);
         blockEntityPacket.setData(blockEntity);
         session.sendUpstreamPacket(blockEntityPacket);
+
+        // 延迟200毫秒，更新自定义头颅实体对应的模型。适配网易自定义方块的client entity功能。后续使用原版geometry
+        if (blockEntity.containsKey("SkullType")) {
+            if (blockEntity.getByte("SkullType") == (byte) 3) {
+                session.scheduleInEventLoop(() -> {
+                    session.sendUpstreamPacket(blockEntityPacket);
+                }, 200L, TimeUnit.MILLISECONDS);
+                return;
+            }
+        }
     }
 }

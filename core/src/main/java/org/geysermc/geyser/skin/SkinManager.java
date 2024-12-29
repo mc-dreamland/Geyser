@@ -72,7 +72,8 @@ public class SkinManager {
             // Otherwise, grab the default player skin
             SkinProvider.SkinData fallbackSkinData = SkinProvider.determineFallbackSkinData(playerEntity.getUuid());
             if (skin == null) {
-                skin = fallbackSkinData.skin();
+//                skin = fallbackSkinData.skin();
+                skin = ProvidedSkins.getSteveSkin().getData();
                 geometry = fallbackSkinData.geometry();
             }
             if (cape == null) {
@@ -98,7 +99,10 @@ public class SkinManager {
                                                             SkinProvider.Skin skin,
                                                             SkinProvider.Cape cape,
                                                             SkinProvider.SkinGeometry geometry) {
-        SerializedSkin serializedSkin = getSkin(skin.getTextureUrl(), skin, cape, geometry);
+        if (skin.textureUrl == null || skin.textureUrl.isEmpty()) {
+            skin.textureUrl = "steve";
+        }
+        SerializedSkin serializedSkin = getSkin(skin, cape, geometry, false);
 
         // This attempts to find the XUID of the player so profile images show up for Xbox accounts
         String xuid = "";
@@ -125,7 +129,69 @@ public class SkinManager {
         entry.setPlatformChatId("");
         entry.setTeacher(false);
         entry.setTrustedSkin(true);
+        entry.setUid(skin.getUid());
         return entry;
+    }
+
+    /**
+     * With all the information needed, build a Bedrock player entry with translated skin information.
+     */
+    public static PlayerListPacket.Entry buildPersonalEntryManually(GeyserSession session, UUID uuid, String username, long geyserId,
+                                                                    SkinProvider.Skin skin,
+                                                                    SkinProvider.Cape cape,
+                                                                    SkinProvider.SkinGeometry geometry) {
+        if (skin.textureUrl == null || skin.textureUrl.isEmpty()) {
+            skin.textureUrl = "steve";
+        }
+        SerializedSkin serializedSkin = getSkin(skin, cape, geometry, true);
+
+        // This attempts to find the XUID of the player so profile images show up for Xbox accounts
+        String xuid = "";
+        GeyserSession playerSession = GeyserImpl.getInstance().connectionByUuid(uuid);
+
+        if (playerSession != null) {
+            xuid = playerSession.getAuthData().xuid();
+        }
+
+        PlayerListPacket.Entry entry;
+
+        // If we are building a PlayerListEntry for our own session we use our AuthData UUID instead of the Java UUID
+        // as Bedrock expects to get back its own provided UUID
+        if (session.getPlayerEntity().getUuid().equals(uuid)) {
+            entry = new PlayerListPacket.Entry(session.getAuthData().uuid());
+        } else {
+            entry = new PlayerListPacket.Entry(uuid);
+        }
+
+        entry.setName(username);
+        entry.setEntityId(geyserId);
+        entry.setSkin(serializedSkin);
+        entry.setXuid(xuid);
+        entry.setPlatformChatId("");
+        entry.setTeacher(false);
+        entry.setTrustedSkin(true);
+        entry.setUid(skin.getUid());
+        return entry;
+    }
+
+    public static void sendWhenLoginDone(GeyserSession session, PlayerEntity entity, SkinProvider.SkinData skinData) {
+        SkinProvider.Skin skin = skinData.skin();
+        SkinProvider.Cape cape = skinData.cape();
+        SkinProvider.SkinGeometry geometry = skinData.geometry();
+        PlayerListPacket.Entry updatedEntry = buildPersonalEntryManually(
+                session,
+                entity.getUuid(),
+                entity.getUsername(),
+                entity.getGeyserId(),
+                skin,
+                cape,
+                geometry
+        );
+
+        PlayerListPacket playerAddPacket = new PlayerListPacket();
+        playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+        playerAddPacket.getEntries().add(updatedEntry);
+//        session.sendUpstreamPacket(playerAddPacket);
     }
 
     public static void sendSkinPacket(GeyserSession session, PlayerEntity entity, SkinProvider.SkinData skinData) {
@@ -135,7 +201,7 @@ public class SkinManager {
 
         if (entity.getUuid().equals(session.getPlayerEntity().getUuid())) {
             // TODO is this special behavior needed?
-            PlayerListPacket.Entry updatedEntry = buildEntryManually(
+            PlayerListPacket.Entry updatedEntry = buildPersonalEntryManually(
                     session,
                     entity.getUuid(),
                     entity.getUsername(),
@@ -154,17 +220,18 @@ public class SkinManager {
             packet.setUuid(entity.getUuid());
             packet.setOldSkinName("");
             packet.setNewSkinName(skin.getTextureUrl());
-            packet.setSkin(getSkin(skin.getTextureUrl(), skin, cape, geometry));
+            packet.setSkin(getSkin(skin, cape, geometry, false));
             packet.setTrustedSkin(true);
             session.sendUpstreamPacket(packet);
         }
     }
 
-    private static SerializedSkin getSkin(String skinId, SkinProvider.Skin skin, SkinProvider.Cape cape, SkinProvider.SkinGeometry geometry) {
+    private static SerializedSkin getSkin(SkinProvider.Skin skin, SkinProvider.Cape cape, SkinProvider.SkinGeometry geometry, boolean persona) {
+        String skinId = skin.getTextureUrl();
         return SerializedSkin.of(skinId, "", geometry.geometryName(),
                 ImageData.of(skin.getSkinData()), Collections.emptyList(),
                 ImageData.of(cape.capeData()), geometry.geometryData(),
-                "", true, false, false, cape.capeId(), skinId);
+                "", true, persona, false, cape.capeId(), skinId);
     }
 
     public static void requestAndHandleSkinAndCape(PlayerEntity entity, GeyserSession session,
@@ -277,7 +344,7 @@ public class SkinManager {
             return null;
         }
 
-        public static @Nullable GameProfileData loadFromJson(String encodedJson) throws IOException, IllegalArgumentException {
+        public static GameProfileData loadFromJson(String encodedJson) throws IOException, IllegalArgumentException {
             JsonNode skinObject;
             try {
                 skinObject = GeyserImpl.JSON_MAPPER.readTree(new String(Base64.getDecoder().decode(encodedJson), StandardCharsets.UTF_8));
@@ -287,6 +354,16 @@ public class SkinManager {
             }
 
             JsonNode textures = skinObject.get("textures");
+
+            if (skinObject.hasNonNull("pe")) {
+                String skinUrl = skinObject.get("data").asText();
+                if (skinObject.get("pe").asBoolean()) { // load PE
+                    GeyserImpl.getInstance().getLogger().debug("loadFromJson PE " + skinUrl);
+                } else { // load PC
+                    GeyserImpl.getInstance().getLogger().debug("loadFromJson PC " + skinUrl);
+                }
+                return new GameProfileData(skinUrl, SkinProvider.EMPTY_CAPE.textureUrl(), skinObject.get("alex").asBoolean());
+            }
 
             if (textures == null) {
                 return null;

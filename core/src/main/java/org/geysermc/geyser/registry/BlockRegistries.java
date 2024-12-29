@@ -42,10 +42,13 @@ import org.geysermc.geyser.registry.populator.CustomSkullRegistryPopulator;
 import org.geysermc.geyser.registry.type.BlockMapping;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.CustomSkull;
+import org.geysermc.geyser.registry.type.NeteaseBedrockBlock;
 import org.geysermc.geyser.translator.collision.BlockCollision;
 
 import java.util.BitSet;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -57,6 +60,8 @@ public class BlockRegistries {
      * primarily Bedrock version-specific data.
      */
     public static final VersionedRegistry<BlockMappings> BLOCKS = VersionedRegistry.create(RegistryLoaders.empty(Int2ObjectOpenHashMap::new));
+    public static final HashMap<Integer, List<NeteaseBedrockBlock>> CUSTOM_BLOCK_RUNTIME_LIST = new HashMap<Integer, List<NeteaseBedrockBlock>>();
+
 
     /**
      * A mapped registry which stores Java to Bedrock block identifiers.
@@ -109,7 +114,6 @@ public class BlockRegistries {
      * A registry which stores Java Ids and the custom block state it should be replaced with.
      */
     public static final MappedRegistry<Integer, CustomBlockState, Int2ObjectMap<CustomBlockState>> CUSTOM_BLOCK_STATE_OVERRIDES = MappedRegistry.create(RegistryLoaders.empty(Int2ObjectOpenHashMap::new));
-
     /**
      * A registry which stores non vanilla java blockstates and the custom block state it should be replaced with.
      */
@@ -119,6 +123,7 @@ public class BlockRegistries {
      * A registry which stores clean Java Ids and the custom block it should be replaced with in the context of items.
      */
     public static final SimpleMappedRegistry<String, CustomBlockData> CUSTOM_BLOCK_ITEM_OVERRIDES = SimpleMappedRegistry.create(RegistryLoaders.empty(Object2ObjectOpenHashMap::new));
+    public static final SimpleMappedRegistry<String, CustomBlockData> CUSTOM_BLOCK_HEAD_OVERRIDES = SimpleMappedRegistry.create(RegistryLoaders.empty(Object2ObjectOpenHashMap::new));
 
     /**
      * A registry which stores Custom Block Data for extended collision boxes and the Java IDs of blocks that will have said extended collision boxes placed above them.
