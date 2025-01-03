@@ -142,6 +142,7 @@ import org.geysermc.geyser.level.WorldManager;
 import org.geysermc.geyser.level.physics.CollisionManager;
 import org.geysermc.geyser.network.netty.GeyserServer;
 import org.geysermc.geyser.network.netty.LocalSession;
+import org.geysermc.geyser.network.netty.handler.RakConnectionRequestHandler;
 import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.ItemMappings;
@@ -955,12 +956,10 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                                 bedrockAddress = bedrockAddress.substring(0, ipv6ScopeIndex);
                             }
 
-                            System.out.println("bedrockAddress -> " + bedrockAddress);
                             // 在此处处理网易proxy 代理，获取玩家真实IP
 
-//                            GeyserImpl.getInstance().getGeyserServer()
-//
-//                            UdpRealIp.getRealIp()
+                            int port = upstream.getAddress().getPort();
+                            String s = UdpRealIp.IP_PORT_WITH_RealIP.get(bedrockAddress + ":" + port);
 
                             encryptedData = cipher.encryptFromString(BedrockData.of(
                                     clientData.getGameVersion(),
@@ -970,7 +969,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                                     clientData.getLanguageCode(),
                                     clientData.getUiProfile().ordinal(),
                                     clientData.getCurrentInputMode().ordinal(),
-                                    bedrockAddress,
+                                    s == null ? bedrockAddress : s,
                                     skinUploader.getId(),
                                     skinUploader.getVerifyCode()
                             ).toString());

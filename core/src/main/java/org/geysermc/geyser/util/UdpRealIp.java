@@ -12,6 +12,7 @@ import java.net.DatagramSocketImpl;
 import java.net.InetAddress;
 import java.nio.channels.DatagramChannel;
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class UdpRealIp {
     /*
@@ -99,7 +100,8 @@ public class UdpRealIp {
             }
             return null;
         } catch (Exception e) {
-            throw new RuntimeException("get RealIp failure", e);
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -108,33 +110,31 @@ public class UdpRealIp {
      * NIO 场景下获取真实客户端IP
      */
 
-    public static String getRealIp(Channel nettyChannel, String clientAddress, int clientPort) {
+    public static HashMap<String, String> IP_PORT_WITH_RealIP = new HashMap<>();
+    public static void getRealIp(Channel nettyChannel, String clientAddress, int clientPort) {
+        String key = clientAddress + ":" + clientPort;
+        if (IP_PORT_WITH_RealIP.containsKey(key)) {
+            return;
+        }
         try {
-
             int fd = getFDFromRakServerChannel(nettyChannel);
-
-
             // 使用 JNI 获取真实 IP
             Uoa uoa = new Uoa();
             UoaUtils.UoaResult result = uoa.getsockoptNative(fd, clientAddress, clientPort, "7.33.128.43", 19133);
 
-            System.out.println("Received packet from IP: " + result);
             if (result != null) {
-                return result.getRealSourceIp();
+                result.getRealSourceIp();
+                IP_PORT_WITH_RealIP.put(key, result.getRealSourceIp());
             }
-            return null;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get real IP", e);
+            e.printStackTrace();
         }
     }
 
     public static int getFDFromRakServerChannel(Channel rakServerChannel) throws Exception {
-        // 通过反射获取底层的 FileDescriptor
-        Field channelField = RakServerChannel.class.getSuperclass().getDeclaredField("channel"); // 假设内部有一个 channel 字段
+        Field channelField = RakServerChannel.class.getSuperclass().getDeclaredField("channel");
         channelField.setAccessible(true);
         Object channel = channelField.get(rakServerChannel);
-
-        System.out.println("??????????????" + channel.getClass() + " - " + Arrays.toString(channel.getClass().getClasses()));
 
         UnixChannel epollDatagramChannel = (UnixChannel) channel;
 

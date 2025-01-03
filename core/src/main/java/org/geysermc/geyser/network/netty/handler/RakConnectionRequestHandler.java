@@ -39,6 +39,7 @@ import org.geysermc.geyser.network.netty.GeyserServer;
 import org.geysermc.geyser.util.UdpRealIp;
 
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 
 import static org.cloudburstmc.netty.channel.raknet.RakConstants.ID_CONNECTION_BANNED;
 import static org.cloudburstmc.netty.channel.raknet.RakConstants.ID_OPEN_CONNECTION_REQUEST_1;
@@ -61,25 +62,16 @@ public class RakConnectionRequestHandler extends ChannelInboundHandlerAdapter {
         if (!buf.isReadable()) {
             return; // No packet ID
         }
-//
-//        // 获取客户端的 IP 和端口
-//        InetSocketAddress sender = packet.sender();
-//        String clientIp = sender.getAddress().getHostAddress();
-//        int clientPort = sender.getPort();
-//
-//        // 使用 JNI 工具类获取真实源 IP
+
 //        try {
+//            // 获取客户端的 IP 和端口
+//            InetSocketAddress sender = packet.sender();
+//            String clientIp = sender.getAddress().getHostAddress();
+//            int clientPort = sender.getPort();
+//            // 使用 JNI 工具类获取真实源 IP
 //            Channel channel = ctx.channel();
-//
-//            String realIp = UdpRealIp.getRealIp(channel, clientIp, clientPort);
-//            if (realIp != null) {
-//                System.out.println("Real Source IP: " + realIp);
-//                // 你可以选择将 realIp 替换 sender 地址，用于后续逻辑
-//                // 或者仅作为日志记录，方便排查问题
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            System.err.println("Failed to get real source IP: " + e.getMessage());
+//            UdpRealIp.getRealIp(channel, clientIp, clientPort);
+//        } catch (Exception ignored) {
 //        }
 
         boolean readableMagic = true;
