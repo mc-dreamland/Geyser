@@ -204,5 +204,6 @@ public interface GeyserConfiguration {
         String getMysqlUrl();
         String getMysqlUser();
         String getMysqlPass();
+        String getRedisURL();
     }
 }

@@ -164,6 +164,7 @@ public class GeyserImpl implements GeyserApi {
 
     private static GeyserImpl instance;
     private static HikariDataSource dataSource;
+    private static JedisPool jedisPool;
     private static HashMap<Integer, String> optionalPacks = new HashMap<>();
 
     private GeyserImpl(PlatformType platformType, GeyserBootstrap bootstrap) {
@@ -245,25 +246,28 @@ public class GeyserImpl implements GeyserApi {
             dataSource.setJdbcUrl(config.getOptionalPacks().getMysqlUrl());
             dataSource.setUsername(config.getOptionalPacks().getMysqlUser());
             dataSource.setPassword(config.getOptionalPacks().getMysqlPass());
-            dataSource.setMaximumPoolSize(60);
-            try {
-                Connection connection = dataSource.getConnection();
-                final PreparedStatement sql = connection.prepareStatement("select * from hey_packs");
-                final ResultSet set = sql.executeQuery();
-                while (set.next()) {
-                    int packId = set.getInt("id");
-                    String packUUID = set.getString("pack_uuid");
-                    this.getOptionalPacks().put(packId, packUUID);
-                    logger.info("资源包已加载 -> " + packId + " : " + packUUID);
+            dataSource.setMaximumPoolSize(10);
+            // load all packs from database
+            try (Connection connection = dataSource.getConnection()){
+                try (PreparedStatement sql = connection.prepareStatement("select * from hey_packs")){
+                    final ResultSet set = sql.executeQuery();
+                    while (set.next()) {
+                        int packId = set.getInt("id");
+                        String packUUID = set.getString("pack_uuid");
+                        this.getOptionalPacks().put(packId, packUUID);
+                        logger.info("资源包已加载 -> " + packId + " : " + packUUID);
+                    }
+                    logger.info("数据库加载成功, 资源包自选功能已开启");
                 }
-
-                connection.close();
-                logger.info("数据库加载成功, 资源包自选功能已开启");
             } catch (SQLException throwables) {
-                logger.info("数据库加载异常，若未本地无数据库，请关闭OptionalPacks");
+                logger.warning("数据库加载异常，若未本地无数据库，请关闭OptionalPacks");
                 throwables.printStackTrace();
             }
+            // load customskin?
             SkinProvider.loadCustomSkins();
+            // init jedis
+            JedisPoolConfig poolConfig = new JedisPoolConfig();
+            jedisPool = new JedisPool(poolConfig, new URI(config.getOptionalPacks().getRedisURL()));
         }
     }
 
@@ -777,6 +781,10 @@ public class GeyserImpl implements GeyserApi {
 
     public HikariDataSource getDataSource() {
         return dataSource;
+    }
+
+    public Jedis getJedis() {
+        return jedisPool.getResource();
     }
 
     public WorldManager getWorldManager() {

@@ -214,43 +214,24 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         if (geyser.getConfig().getOptionalPacks().isEnableOptionalPacks()) {
             this.optionalResourcePacksEvent = new SessionLoadOptionalResourcePacksEventImpl(session, new HashMap<>(Registries.OPTIONAL_RESOURCE_PACKS.get()));
             this.geyser.eventBus().fire(this.optionalResourcePacksEvent);
-            try {
-                Connection connection = geyser.getDataSource().getConnection();
-                final PreparedStatement sql = connection.prepareStatement("select used_pack from hey_packs_player where player_uuid = ?");
-                sql.setString(1, session.getAuthData().uuid().toString());
-                final ResultSet set = sql.executeQuery();
-                if (set.next()) {
-                    String usedPacks = set.getString("used_pack");
-                    if (usedPacks != null && !usedPacks.equals("")) {
-                        String[] split = usedPacks.replace(" ", "").split(",");
-                        if (split.length >= 1) {
-                            List<String> packsUUID = new ArrayList<>();
-                            for (String splitPackId : split) {
 
-                                String getPackUUID = geyser.getOptionalPacks().getOrDefault(Integer.parseInt(splitPackId), null);
-                                for (ResourcePack pack : this.optionalResourcePacksEvent.resourcePacks()) {
+            String packs = geyser.getJedis().get("HeyCore:Resource:" + session.getAuthData().uuid().toString());
 
-                                    PackCodec codec = pack.codec();
-                                    ResourcePackManifest.Header header = pack.manifest().header();
-
-                                    if (getPackUUID.equals(header.uuid().toString())) {
-                                        packsUUID.add(getPackUUID);
-                                        resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
-                                                header.uuid().toString(), header.version().toString(), codec.size(), pack.contentKey(),
-                                                "", header.uuid().toString(), false, false));
-                                    }
-                                }
-                            }
-                            session.setOptionPacksUuid(packsUUID);
-                        }
+            if (packs != null){
+                String[] packSplit = packs.split(",");
+                List<String> packsUUID = new ArrayList<>();
+                for (String packId : packSplit) {
+                    ResourcePack pack = this.optionalResourcePacksEvent.getPacks().get(packId);
+                    if (pack != null) {
+                        PackCodec codec = pack.codec();
+                        ResourcePackManifest.Header header = pack.manifest().header();
+                        resourcePacksInfo.getResourcePackInfos().add(new ResourcePacksInfoPacket.Entry(
+                                header.uuid().toString(), header.version().toString(), codec.size(), pack.contentKey(),
+                                "", header.uuid().toString(), false, false));
+                        packsUUID.add(getPackUUID);
                     }
                 }
-                sql.close();
-                set.close();
-                connection.close();
-            } catch (SQLException e) {
-                geyser.getLogger().error("§c获取玩家自选材质包列表失败！请检查数据库连接是否正常！");
-                e.printStackTrace();
+                session.setOptionPacksUuid(packsUUID);
             }
         }
         resourcePacksInfo.setForcedToAccept(GeyserImpl.getInstance().getConfig().isForceResourcePacks());
