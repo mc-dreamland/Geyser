@@ -176,6 +176,14 @@ public class JavaLevelParticlesTranslator extends PacketTranslator<ClientboundLe
                     return packet;
                 };
             }
+            case FIREWORK -> { //TODO
+                return (position) -> {
+                    LevelEventPacket packet = new LevelEventPacket();
+                    packet.setType(ParticleType.FIREWORKS);
+                    packet.setPosition(position);
+                    return packet;
+                };
+            }
             default -> {
                 ParticleMapping particleMapping = Registries.PARTICLES.get(particle.getType());
                 if (particleMapping == null) { //TODO ensure no particle can be null
