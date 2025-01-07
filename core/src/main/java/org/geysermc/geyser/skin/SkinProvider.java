@@ -439,9 +439,12 @@ public class SkinProvider {
             try {
                 String os = System.getProperty("os.name").toLowerCase();
                 if (os.contains("win")) {
-                    return WebUtils.getJson(textureUrl.replace("skinsync.bjd-mc.com", "42.186.61.180").replace("10.191.171.36", "42.186.61.180"));
+                    String replace = textureUrl.replace("skinsync.bjd-mc.com", "42.186.61.161").replace("10.191.171.36", "42.186.61.161");
+                    JsonNode json = WebUtils.getJson(replace);
+                    return json;
                 } else {
-                    return WebUtils.getJson(textureUrl);
+                    JsonNode json = WebUtils.getJson(textureUrl);
+                    return json;
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);

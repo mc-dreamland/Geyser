@@ -139,7 +139,6 @@ public class LoginEncryptionUtils {
     }
 
     private static NeteaseAuthData decodeNeteaseAuthData(Map<String, Object> extraData) {
-        System.out.println(extraData);
         String xuid = (String) extraData.get("XUID");
         UUID identity = UUID.fromString((String) extraData.get("identity"));
         String displayName = (String) extraData.get("displayName");

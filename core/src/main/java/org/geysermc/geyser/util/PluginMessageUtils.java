@@ -27,6 +27,8 @@ package org.geysermc.geyser.util;
 
 import com.github.steveice10.mc.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
 import com.google.common.base.Charsets;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import lombok.SneakyThrows;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.session.GeyserSession;
@@ -146,22 +148,47 @@ public class PluginMessageUtils {
             baos.close();
             gzip.close();
             bis.close();
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (Exception ignored) {
+            GeyserImpl.getInstance().getLogger().warning("解包gzip异常，疑似PCskin 压缩问题!");
+            ByteBuf byteBuf = Unpooled.wrappedBuffer(data);
+            byteBuf.readInt();
+            byteBuf.readInt();
+            // 获取剩余的 byte[]
+            int readableBytes = byteBuf.readableBytes();
+            byte[] remainingBytes = new byte[readableBytes];
+            byteBuf.readBytes(remainingBytes);
+            return decompress(remainingBytes);
         }
         return b;
     }
-    public static byte[] decompress(@Nonnull byte[] compressedData) {
-        ByteArrayInputStream bais = new ByteArrayInputStream(compressedData);
+
+    public static byte[] decompressB(@Nonnull byte[] compressedData) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (GZIPInputStream gzis = new GZIPInputStream(bais)) {
+        try (GZIPInputStream gzis = new GZIPInputStream(new ByteArrayInputStream(compressedData))) {
             byte[] buffer = new byte[1024];
             int len;
             while ((len = gzis.read(buffer)) != -1) {
                 baos.write(buffer, 0, len);
             }
         } catch (IOException e) {
-            return compressedData;
+            GeyserImpl.getInstance().getLogger().warning("Error! decompress byte[] failed #1! -> " + e);
+        }
+        return compressedData;
+    }
+
+    public static byte[] decompress(@Nonnull byte[] data) {
+
+        ByteArrayInputStream bais = new ByteArrayInputStream(data);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (GZIPInputStream gzis = new GZIPInputStream(bais)) {
+            byte[] buffer = new byte[4096];
+            int len;
+            while ((len = gzis.read(buffer)) != -1) {
+                baos.write(buffer, 0, len);
+            }
+        } catch (IOException e) {
+            GeyserImpl.getInstance().getLogger().warning("Error! decompress byte[] failed #2! -> " + e);
+            return data;
         }
         return baos.toByteArray();
     }
