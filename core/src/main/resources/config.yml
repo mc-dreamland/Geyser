@@ -229,3 +229,15 @@ config-version: 4
 
 online-mode: false
 allowed-pc: true
+
+optional-packs:
+  enable-optional-packs: true
+  mysql-url: jdbc:mysql://mysql-01.bjd-mc.com/main_core?autoReconnect=true
+  mysql-user: root
+  mysql-pass: msj
+
+service:
+  url: http://10.191.171.19:12451/api/server/list/online
+  skinurl: http://skinsync.bjd-mc.com:12455
+  token: eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxMTQ1MTQifQ.2xux8sGax4fVfku3wWEhBDgSWc0zJBCxwzHteUUK1gZ6A0Ssf07YoF4sjtGM4WkrKY_rjeO7yItcgualYsnz4A
+  multiple: 1.0
