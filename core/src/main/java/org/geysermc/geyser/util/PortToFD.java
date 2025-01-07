@@ -33,7 +33,6 @@ public class PortToFD {
                 // 解析有效的行
                 String[] parts = line.split("\\s+");
                 if (parts.length > 8) { // 确保行结构正确
-                    System.out.println("parts -> " + parts);
                     String fdString = parts[3]; // 获取 FD 字段
                     if (fdString.endsWith("u")) { // 只解析正常的 FD
                         try {

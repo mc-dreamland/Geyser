@@ -30,7 +30,6 @@ public class UdpRealIp {
             implField.setAccessible(true);
             DatagramSocketImpl impl = (DatagramSocketImpl)implField.get(socket);
             // 打印实现类以确认实际使用的类
-            System.out.println("Actual implementation class: " + impl.getClass());
 
             // 尝试从父类获取 'fd' 字段
             Field fdField = null;
@@ -48,7 +47,6 @@ public class UdpRealIp {
 
             if (fdField != null) {
                 FileDescriptor fdes = (FileDescriptor) fdField.get(impl);
-                System.out.println("FileDescriptor: " + fdes);
 
                 // 获取 FileDescriptor 的私有 'fd' 字段的值
                 Field fdValueField = FileDescriptor.class.getDeclaredField("fd");
@@ -57,7 +55,6 @@ public class UdpRealIp {
 
                 Uoa uoa = new Uoa();
                 UoaUtils.UoaResult result = uoa.getsockoptNative(fd,clientAddress,clientPort,serverAddress.getHostAddress(),serverPort);
-                System.out.println("Received packet from IP: " + result);
                 if (result != null) {
                     return result.getRealSourceIp();
                 }
@@ -111,7 +108,8 @@ public class UdpRealIp {
      */
 
     public static HashMap<String, String> IP_PORT_WITH_RealIP = new HashMap<>();
-    public static void getRealIp(Channel nettyChannel, String clientAddress, int clientPort) {
+//    private static Uoa uoa = new Uoa();
+    public static void getRealIp(Channel nettyChannel, String clientAddress, int clientPort, String serverIp, int serverPort) {
         String key = clientAddress + ":" + clientPort;
         if (IP_PORT_WITH_RealIP.containsKey(key)) {
             return;
@@ -120,11 +118,11 @@ public class UdpRealIp {
             int fd = getFDFromRakServerChannel(nettyChannel);
             // 使用 JNI 获取真实 IP
             Uoa uoa = new Uoa();
-            UoaUtils.UoaResult result = uoa.getsockoptNative(fd, clientAddress, clientPort, "7.33.128.43", 19133);
+            UoaUtils.UoaResult result = uoa.getsockoptNative(fd, clientAddress, clientPort, serverIp, serverPort);
 
             if (result != null) {
-                result.getRealSourceIp();
-                IP_PORT_WITH_RealIP.put(key, result.getRealSourceIp());
+                String realSourceIp = result.getRealSourceIp();
+                IP_PORT_WITH_RealIP.put(key, realSourceIp);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -139,7 +137,6 @@ public class UdpRealIp {
         UnixChannel epollDatagramChannel = (UnixChannel) channel;
 
         int i = epollDatagramChannel.fd().intValue();
-        System.out.println("get fd: " + i);
         return i;
     }
 }
