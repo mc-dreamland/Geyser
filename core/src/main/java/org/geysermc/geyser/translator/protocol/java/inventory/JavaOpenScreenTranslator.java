@@ -55,7 +55,7 @@ public class JavaOpenScreenTranslator extends PacketTranslator<ClientboundOpenSc
         Inventory openInventory = session.getOpenInventory();
 
         // Hack: ViaVersion translates the old (pre 1.20) smithing table to a furnace (does not work for Bedrock). We can detect this and translate it back to a smithing table.
-        if (session.isOldSmithingTable() && packet.getType() == ContainerType.FURNACE && packet.getTitle().equals(SMITHING_TABLE_COMPONENT)) {
+        if (session.isOldSmithingTable() && packet.getTitle().equals(SMITHING_TABLE_COMPONENT)) {
             newTranslator = OldSmithingTableTranslator.INSTANCE;
         } else if (packet.getType() == ContainerType.CRAFTER_3x3 && GameProtocol.isPre1_20_50(session)) {
             // Hack 2: Crafters are only supported by 1.20.50 and above. If 1.20.40 tries to open one, they'll get locked out of all inventories.
