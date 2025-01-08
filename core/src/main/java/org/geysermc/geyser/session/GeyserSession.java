@@ -1673,48 +1673,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                 System.out.println(blockProperty);
             }
         }
-
-    }
-    public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, StartGamePacket packet) {
-        packet.setUniqueEntityId(VarInts.readLong(buffer));
-        packet.setRuntimeEntityId(VarInts.readUnsignedLong(buffer));
-        packet.setPlayerGameType(GameType.from(VarInts.readInt(buffer)));
-        packet.setPlayerPosition(helper.readVector3f(buffer));
-        packet.setRotation(helper.readVector2f(buffer));
-
-        this.readLevelSettings(buffer, helper, packet);
-
-        packet.setLevelId(helper.readString(buffer));
-        packet.setLevelName(helper.readString(buffer));
-        packet.setPremiumWorldTemplateId(helper.readString(buffer));
-        packet.setTrial(buffer.readBoolean());
-        readSyncedPlayerMovementSettings(buffer, packet); // new for v428
-        packet.setCurrentTick(buffer.readLongLE());
-        packet.setEnchantmentSeed(VarInts.readInt(buffer));
-
-        helper.readArray(buffer, packet.getBlockProperties(), (buf, packetHelper) -> {
-            String name = packetHelper.readString(buf);
-            NbtMap properties = packetHelper.readTag(buf, NbtMap.class);
-            return new BlockPropertyData(name, properties);
-        });
-
-        helper.readArray(buffer, packet.getItemDefinitions(), (buf, packetHelper) -> {
-            String identifier = packetHelper.readString(buf);
-            short id = buf.readShortLE();
-            boolean componentBased = buf.readBoolean();
-            return new SimpleItemDefinition(identifier, id, componentBased);
-        });
-
-        packet.setMultiplayerCorrelationId(helper.readString(buffer));
-        packet.setInventoriesServerAuthoritative(buffer.readBoolean());
-
-        packet.setServerEngine(helper.readString(buffer));
-
-        packet.setPlayerPropertyData(helper.readTag(buffer, NbtMap.class));
-        packet.setBlockRegistryChecksum(buffer.readLongLE());
-        packet.setWorldTemplateId(helper.readUuid(buffer));
-        packet.setClientSideGenerationEnabled(buffer.readBoolean());
-        packet.setNetworkPermissions(this.readNetworkPermissions(buffer, helper));
     }
 
     protected NetworkPermissions readNetworkPermissions(ByteBuf buffer, BedrockCodecHelper helper) {

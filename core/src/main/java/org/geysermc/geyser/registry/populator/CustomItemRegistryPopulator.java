@@ -102,7 +102,7 @@ public class CustomItemRegistryPopulator {
         if (customItemName.contains("furnace")) {
             itemDefinition = new SimpleItemDefinition(customItemName, bedrockId, true);
         } else {
-            itemDefinition = new SimpleItemDefinition(customItemName, bedrockId, true);
+            itemDefinition = new SimpleItemDefinition(customItemName, bedrockId, false);
         }
 
         NbtMapBuilder builder = createComponentNbt(customItemData, javaItem, mapping, customItemName, bedrockId);
@@ -146,7 +146,7 @@ public class CustomItemRegistryPopulator {
         Items.register(item, customItemData.javaId());
 
         ItemMapping customItemMapping = ItemMapping.builder()
-                .bedrockDefinition(new SimpleItemDefinition(customIdentifier, customItemId, true))
+                .bedrockDefinition(new SimpleItemDefinition(customIdentifier, customItemId, false))
                 .bedrockData(0)
                 .bedrockBlockDefinition(null)
                 .toolType(customItemData.toolType())
