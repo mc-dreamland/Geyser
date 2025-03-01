@@ -298,7 +298,8 @@ public class MessageTranslator {
         textPacket.setPlatformChatId("");
         textPacket.setSourceName("");
         textPacket.setXuid(session.getAuthData().xuid());
-        textPacket.setType(TextPacket.Type.CHAT);
+//        textPacket.setType(TextPacket.Type.CHAT);
+        textPacket.setType(TextPacket.Type.SYSTEM);
 
         textPacket.setNeedsTranslation(false);
 
@@ -328,6 +329,10 @@ public class MessageTranslator {
                 Thread.dumpStack();
             }
             textPacket.setMessage(MessageTranslator.convertMessage(message, session.locale()));
+        }
+
+        if (true) {
+            session.getGeyser().getLogger().warning("强制玩家发送消息 -> " + textPacket.getMessage());
         }
 
         session.sendUpstreamPacket(textPacket);
