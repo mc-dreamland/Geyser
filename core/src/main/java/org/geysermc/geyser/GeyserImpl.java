@@ -250,22 +250,23 @@ public class GeyserImpl implements GeyserApi {
             dataSource.setJdbcUrl(config.getOptionalPacks().getMysqlUrl());
             dataSource.setUsername(config.getOptionalPacks().getMysqlUser());
             dataSource.setPassword(config.getOptionalPacks().getMysqlPass());
-            dataSource.setMaximumPoolSize(60);
-            try {
-                Connection connection = dataSource.getConnection();
-                final PreparedStatement sql = connection.prepareStatement("select * from hey_packs");
-                final ResultSet set = sql.executeQuery();
-                while (set.next()) {
-                    int packId = set.getInt("id");
-                    String packUUID = set.getString("pack_uuid");
-                    this.getOptionalPacks().put(packId, packUUID);
-                    logger.info("资源包已加载 -> " + packId + " : " + packUUID);
-                }
+            dataSource.setMaximumPoolSize(10);
+            dataSource.setMinimumIdle(1);
 
-                connection.close();
+            try (Connection connection = dataSource.getConnection()){
+                try (PreparedStatement sql = connection.prepareStatement("select * from hey_packs")){
+                    try (ResultSet set = sql.executeQuery()){
+                        while (set.next()) {
+                            int packId = set.getInt("id");
+                            String packUUID = set.getString("pack_uuid");
+                            this.getOptionalPacks().put(packId, packUUID);
+                            logger.info("资源包已加载 -> " + packId + " : " + packUUID);
+                        }
+                    }
+                }
                 logger.info("数据库加载成功, 资源包自选功能已开启");
             } catch (SQLException throwables) {
-                logger.info("数据库加载异常，若未本地无数据库，请关闭OptionalPacks");
+                logger.warning("数据库加载异常! OptionalPacks 与 CustomSkins 功能将失效.");
                 throwables.printStackTrace();
             }
             SkinProvider.loadCustomSkins();
