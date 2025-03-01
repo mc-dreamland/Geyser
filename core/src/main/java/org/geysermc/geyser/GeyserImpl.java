@@ -40,6 +40,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -84,6 +85,8 @@ import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.text.MinecraftLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.util.*;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -164,6 +167,8 @@ public class GeyserImpl implements GeyserApi {
 
     private static GeyserImpl instance;
     private static HikariDataSource dataSource;
+    @Getter
+    private static JedisPool pool;
     private static HashMap<Integer, String> optionalPacks = new HashMap<>();
 
     private GeyserImpl(PlatformType platformType, GeyserBootstrap bootstrap) {
@@ -265,6 +270,24 @@ public class GeyserImpl implements GeyserApi {
             }
             SkinProvider.loadCustomSkins();
         }
+
+        initJedis();
+    }
+
+    private void initJedis() {
+        GeyserConfiguration geyserConfig = bootstrap.getGeyserConfig();
+        // 配置连接池
+        GenericObjectPoolConfig<Jedis> config = new GenericObjectPoolConfig<>();
+        config.setMaxTotal(20);
+        config.setMaxIdle(20);
+        config.setMinIdle(2);
+        config.setMaxWaitMillis(3000);
+        config.setTestWhileIdle(true);
+        config.setTimeBetweenEvictionRunsMillis(30000);
+        config.setMinEvictableIdleTimeMillis(60000);
+        config.setNumTestsPerEvictionRun(-1);
+
+        pool = new JedisPool(config, geyserConfig.getRedis().getUrl(), geyserConfig.getRedis().getPort());
     }
 
     private void startInstance() {

@@ -157,6 +157,7 @@ import org.geysermc.geyser.text.TextDecoration;
 import org.geysermc.geyser.translator.inventory.InventoryTranslator;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.util.*;
+import redis.clients.jedis.Jedis;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -961,6 +962,27 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                             int port = upstream.getAddress().getPort();
                             String s = UdpRealIp.IP_PORT_WITH_RealIP.get(bedrockAddress + ":" + port);
 
+                            String serverIp = GeyserImpl.getInstance().getConfig().getBedrock().address();
+                            if ((!serverIp.equals("127.0.0.1") && !serverIp.equals("0.0.0.0"))) {
+                                try (Jedis resource = GeyserImpl.getPool().getResource();){
+                                    resource.select(12);
+                                    if (s == null) {
+                                        Map<String, String> infos = resource.hgetAll("UoaIp:" + authData.uuid());
+                                        if (infos.containsKey(bedrockAddress + ":" + port)) {
+                                            s = infos.get(bedrockAddress + ":" + port);
+                                            if (s != null) {
+                                                UdpRealIp.IP_PORT_WITH_RealIP.put(bedrockAddress + ":" + port, s);
+                                            }
+                                        }
+                                    } else {
+                                        resource.hset("UoaIp:" + authData.uuid(), bedrockAddress + ":" + port, s);
+                                        resource.expire("UoaIp:" + authData.uuid(), 60 * 60 *24);
+                                    }
+                                } catch (Throwable e) {
+
+                                }
+                            }
+
                             encryptedData = cipher.encryptFromString(BedrockData.of(
                                     clientData.getGameVersion(),
                                     authData.name(),
@@ -1455,7 +1477,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         textPacket.setPlatformChatId("");
         textPacket.setSourceName("");
         textPacket.setXuid("");
-        textPacket.setType(TextPacket.Type.CHAT);
+//        textPacket.setType(TextPacket.Type.CHAT);
+        textPacket.setType(TextPacket.Type.SYSTEM);
         textPacket.setNeedsTranslation(false);
         textPacket.setMessage(message);
 

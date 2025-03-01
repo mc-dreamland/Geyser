@@ -183,6 +183,7 @@ public interface GeyserConfiguration {
 
     IServiceConfiguration getService();
     IOptionalPacks getOptionalPacks();
+    IOptionalRedis getRedis();
 
     static void checkGeyserConfiguration(GeyserConfiguration geyserConfig, GeyserLogger geyserLogger) {
         if (geyserConfig.getConfigVersion() < CURRENT_CONFIG_VERSION) {
@@ -204,5 +205,10 @@ public interface GeyserConfiguration {
         String getMysqlUrl();
         String getMysqlUser();
         String getMysqlPass();
+    }
+
+    interface IOptionalRedis {
+        String getUrl();
+        int getPort();
     }
 }

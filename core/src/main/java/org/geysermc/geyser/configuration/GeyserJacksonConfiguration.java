@@ -64,6 +64,9 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
     @JsonProperty("optional-packs")
     private OptionalPacks optionalPacks = new OptionalPacks();
 
+    @JsonProperty("redis")
+    private OptionalRedis redis = new OptionalRedis();
+
     @JsonProperty("saved-user-logins")
     private List<String> savedUserLogins = Collections.emptyList();
 
@@ -332,6 +335,16 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
         private String mysqlUser = "";
         @JsonProperty("mysql-pass")
         private String mysqlPass = "";
+    }
+
+    @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class OptionalRedis implements IOptionalRedis {
+
+        @JsonProperty("url")
+        private String url = "redis-02.bjd-mc.com";
+        @JsonProperty("port")
+        private int port = 6379;
     }
 
 
