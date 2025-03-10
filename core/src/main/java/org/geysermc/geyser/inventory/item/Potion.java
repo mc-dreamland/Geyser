@@ -25,10 +25,12 @@
 
 package org.geysermc.geyser.inventory.item;
 
+import com.google.common.collect.Maps;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Locale;
+import java.util.Map;
 
 @Getter
 public enum Potion {
@@ -75,10 +77,21 @@ public enum Potion {
     SLOW_FALLING(40),
     LONG_SLOW_FALLING(41);
 
-    public static final Potion[] VALUES = values();
+    public static final Potion[] VALUES;
+    public static final Map<String, Potion> BY_NAME;
 
     private final String javaIdentifier;
     private final short bedrockId;
+
+    static {
+        VALUES = values();
+        BY_NAME = Maps.newHashMap();
+        for (Potion value : VALUES) {
+            String lowerName = value.name().toLowerCase(Locale.ENGLISH);
+            BY_NAME.put(lowerName, value);
+            BY_NAME.put("minecraft:" + lowerName, value);
+        }
+    }
 
     Potion(int bedrockId) {
         this.javaIdentifier = "minecraft:" + this.name().toLowerCase(Locale.ENGLISH);
@@ -86,12 +99,7 @@ public enum Potion {
     }
 
     public static @Nullable Potion getByJavaIdentifier(String javaIdentifier) {
-        for (Potion potion : VALUES) {
-            if (potion.javaIdentifier.equals(javaIdentifier)) {
-                return potion;
-            }
-        }
-        return null;
+        return BY_NAME.get(javaIdentifier);
     }
 
     public static @Nullable Potion getByBedrockId(int bedrockId) {
