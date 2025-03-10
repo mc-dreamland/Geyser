@@ -45,6 +45,7 @@ import java.util.Objects;
 public class WebUtils {
 
     public static int online = -1;
+    public static long lastUpdate = -1;
 
     /**
      * Makes a web request to the given URL and returns the body as a string
@@ -96,7 +97,13 @@ public class WebUtils {
             return ONLINE = GeyserImpl.JSON_MAPPER.readTree(body).get("data").asInt();
         }catch (Exception ignored){}
 
-        return Math.max(ONLINE, online);
+        if (lastUpdate == -1) return ONLINE;
+
+        if (System.currentTimeMillis() - lastUpdate > 60 * 60 * 1000) {
+            return ONLINE;
+        }
+
+        return online;
     }
 
     /**
