@@ -151,6 +151,8 @@ public interface CustomBlockComponents {
 
     Integer neteaseFaceDirectional();
 
+    boolean rotatable();
+
     List<NeteaseBoxComponent> neteaseAabbCollision();
 
     List<NeteaseBoxComponent> neteaseAabbClip();
@@ -201,6 +203,8 @@ public interface CustomBlockComponents {
 
         Builder tags(@Nullable Set<String> tags);
 
+
+        Builder rotatable(boolean rotatable);
 
         Builder neteaseFaceDirectional(int netease_face_directional);
 

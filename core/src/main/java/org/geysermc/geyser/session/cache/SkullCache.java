@@ -319,12 +319,43 @@ public class SkullCache {
         return null;
     }
 
+    private static final String BITS_A_PROPERTY = "geyser_skull:bits_a";
+    private static final String BITS_B_PROPERTY = "geyser_skull:bits_b";
     private BlockDefinition translateCustomSkull(Skull skull, int blockState) {
         CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(getCustomSkullBlockName(skull));
         if (customBlockData != null) {
             byte rotation = BlockStateValues.getSkullRotation(blockState);
             int rotation1 = getRotation(blockState, rotation);
-            GeyserBedrockBlock orDefault = session.getBlockMappings().getCustomBlockStateDefinitions().getOrDefault(customBlockData.defaultBlockState(), null);
+            CustomBlockState key = customBlockData.defaultBlockState();
+            if (customBlockData.components().rotatable()) {
+                CustomBlockState build;
+                if (rotation == -1) {
+                    int wallR = BlockStateValues.getSkullWallDirections().get(blockState);
+                    int r = switch (wallR) {
+                        case 0 -> 2; // South
+                        case 90 -> 3; // West
+                        case 180 -> 0; // North
+                        case 270 -> 1; // East
+                        default -> throw new IllegalArgumentException("Unknown skull wall direction: " + wallR);
+                    };
+
+                    build = customBlockData.blockStateBuilder()
+                            .intProperty(BITS_A_PROPERTY, r + 1)
+                            .intProperty(BITS_B_PROPERTY, 0)
+                            .build();
+                } else {
+                    build = customBlockData.blockStateBuilder()
+                            .intProperty(BITS_A_PROPERTY, (5 + rotation) % 7)
+                            .intProperty(BITS_B_PROPERTY, (5 + rotation) / 7)
+                            .build();
+                }
+                GeyserBedrockBlock geyserBedrockBlock = session.getBlockMappings().getCustomBlockStateDefinitions().get(build);
+                if (geyserBedrockBlock != null) {
+                    return geyserBedrockBlock;
+                }
+            }
+
+            GeyserBedrockBlock orDefault = session.getBlockMappings().getCustomBlockStateDefinitions().getOrDefault(key, null);
 
             if (orDefault == null) {
                 return () -> -1;
@@ -343,13 +374,15 @@ public class SkullCache {
 
         if (rotation == -1) {
             int wallR = BlockStateValues.getSkullWallDirections().get(blockState);
-            return switch (wallR) {
+            int rot =  switch (wallR) {
                 case 0 -> 0; // South
                 case 90 -> 1; // West
                 case 180 -> 2; // North
                 case 270 -> 3; // East
                 default -> 0;
             };
+
+            return rot;
         } else {
 //            // 地面头颅朝向
 //            if (rotation == 15) {

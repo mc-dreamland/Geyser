@@ -42,6 +42,7 @@ import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.api.item.custom.CustomItemOptions;
 import org.geysermc.geyser.api.util.CreativeCategory;
 import org.geysermc.geyser.item.exception.InvalidCustomMappingsFileException;
+import org.geysermc.geyser.level.block.GeyserCustomBlockComponents;
 import org.geysermc.geyser.level.block.GeyserCustomBlockComponents.CustomBlockComponentsBuilder;
 import org.geysermc.geyser.level.block.GeyserCustomBlockData.CustomBlockDataBuilder;
 import org.geysermc.geyser.level.block.GeyserGeometryComponent.GeometryComponentBuilder;
@@ -59,11 +60,18 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * A class responsible for reading custom item and block mappings from a JSON file
  */
 public class MappingsReader_v1 extends MappingsReader {
+
+
+    private static final int[] ROTATIONS = {0, -90, 180, 90};
+    private static final String BITS_A_PROPERTY = "geyser_skull:bits_a";
+    private static final String BITS_B_PROPERTY = "geyser_skull:bits_b";
+
     @Override
     public void readItemMappings(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomItemData> consumer) {
         this.readItemMappingsV1(file, mappingsRoot, consumer);
@@ -71,10 +79,10 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Read item block from a JSON node
-     * 
-     * @param file The path to the file
+     *
+     * @param file         The path to the file
      * @param mappingsRoot The {@link JsonNode} containing the mappings
-     * @param consumer The consumer to accept the mappings
+     * @param consumer     The consumer to accept the mappings
      * @see #readBlockMappingsV1(Path, JsonNode, BiConsumer)
      */
     @Override
@@ -108,10 +116,10 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Read block mappings from a JSON node
-     * 
-     * @param file The path to the file
+     *
+     * @param file         The path to the file
      * @param mappingsRoot The {@link JsonNode} containing the mappings
-     * @param consumer The consumer to accept the mappings
+     * @param consumer     The consumer to accept the mappings
      * @see #readBlockMappings(Path, JsonNode, BiConsumer)
      */
     public void readBlockMappingsV1(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomBlockMapping> consumer) {
@@ -158,7 +166,6 @@ public class MappingsReader_v1 extends MappingsReader {
                     try {
                         String identifier = Identifier.formalize(entry.getKey());
                         CustomEntityMapping customEntityMapping = this.readEntityMappingEntry(identifier, entry.getValue());
-                        System.out.println(customEntityMapping);
                         consumer.accept(identifier, customEntityMapping);
                     } catch (Exception e) {
                         GeyserImpl.getInstance().getLogger().error("Error in registering blocks for custom mapping file: " + file.toString());
@@ -248,9 +255,9 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Read a block mapping entry from a JSON node and Java identifier
-     * 
+     *
      * @param identifier The Java identifier of the block
-     * @param node The {@link JsonNode} containing the block mapping entry
+     * @param node       The {@link JsonNode} containing the block mapping entry
      * @return The {@link CustomBlockMapping} record to be read by {@link org.geysermc.geyser.registry.populator.CustomBlockRegistryPopulator}
      * @throws InvalidCustomMappingsFileException If the JSON node is invalid
      */
@@ -380,17 +387,17 @@ public class MappingsReader_v1 extends MappingsReader {
                 .build();
         // Build CustomBlockStates for each Java block state we wish to override
         Map<String, CustomBlockStateMapping> states = blockStateBuilders.entrySet().stream()
-            .collect(Collectors.toMap(Map.Entry::getKey, e -> new CustomBlockStateMapping(e.getValue().builder().apply(customBlockData.blockStateBuilder()), e.getValue().extendedCollisionBox())));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> new CustomBlockStateMapping(e.getValue().builder().apply(customBlockData.blockStateBuilder()), e.getValue().extendedCollisionBox())));
 
         return new CustomBlockMapping(customBlockData, states, identifier, overrideItem, false);
     }
 
     /**
      * Creates a {@link CustomBlockComponents} object for the passed state override or base block node, Java block state identifier, and custom block name
-     * 
-     * @param node the state override or base block {@link JsonNode}
+     *
+     * @param node     the state override or base block {@link JsonNode}
      * @param stateKey the Java block state identifier
-     * @param name the name of the custom block
+     * @param name     the name of the custom block
      * @return the {@link CustomBlockComponents} object
      */
     private CustomBlockComponentsMapping createCustomBlockComponentsMapping(JsonNode node, String stateKey, String name) {
@@ -482,35 +489,7 @@ public class MappingsReader_v1 extends MappingsReader {
         if (node.has("transformation")) {
             JsonNode transformation = node.get("transformation");
 
-            int rotationX = 0;
-            int rotationY = 0;
-            int rotationZ = 0;
-            float scaleX = 1;
-            float scaleY = 1;
-            float scaleZ = 1;
-            float transformX = 0;
-            float transformY = 0;
-            float transformZ = 0;
-
-            if (transformation.has("rotation")) {
-                JsonNode rotation = transformation.get("rotation");
-                rotationX = rotation.get(0).asInt();
-                rotationY = rotation.get(1).asInt();
-                rotationZ = rotation.get(2).asInt();
-            }
-            if (transformation.has("scale")) {
-                JsonNode scale = transformation.get("scale");
-                scaleX = scale.get(0).floatValue();
-                scaleY = scale.get(1).floatValue();
-                scaleZ = scale.get(2).floatValue();
-            }
-            if (transformation.has("translation")) {
-                JsonNode translation = transformation.get("translation");
-                transformX = translation.get(0).floatValue();
-                transformY = translation.get(1).floatValue();
-                transformZ = translation.get(2).floatValue();
-            }
-            builder.transformation(new TransformationComponent(rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ, transformX, transformY, transformZ));
+            builder.transformation(readTransFormation(transformation));
         }
 
         if (node.has("unit_cube")) {
@@ -555,6 +534,10 @@ public class MappingsReader_v1 extends MappingsReader {
             builder.tags(tagsSet);
         }
 
+        if (node.has("rotatable")) {
+            builder.rotatable(node.get("rotatable").asBoolean());
+        }
+
         if (node.has("netease_face_directional")) {
             builder.neteaseFaceDirectional(node.get("netease_face_directional").asInt());
         }
@@ -589,10 +572,43 @@ public class MappingsReader_v1 extends MappingsReader {
         return new CustomBlockComponentsMapping(builder.build(), extendedBoxComponent);
     }
 
+    public TransformationComponent readTransFormation(JsonNode transformation) {
+        int rotationX = 0;
+        int rotationY = 0;
+        int rotationZ = 0;
+        float scaleX = 1;
+        float scaleY = 1;
+        float scaleZ = 1;
+        float transformX = 0;
+        float transformY = 0;
+        float transformZ = 0;
+
+        if (transformation.has("rotation")) {
+            JsonNode rotation = transformation.get("rotation");
+            rotationX = rotation.get(0).asInt();
+            rotationY = rotation.get(1).asInt();
+            rotationZ = rotation.get(2).asInt();
+        }
+        if (transformation.has("scale")) {
+            JsonNode scale = transformation.get("scale");
+            scaleX = scale.get(0).floatValue();
+            scaleY = scale.get(1).floatValue();
+            scaleZ = scale.get(2).floatValue();
+        }
+        if (transformation.has("translation")) {
+            JsonNode translation = transformation.get("translation");
+            transformX = translation.get(0).floatValue();
+            transformY = translation.get(1).floatValue();
+            transformZ = translation.get(2).floatValue();
+        }
+        return new TransformationComponent(rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ, transformX, transformY, transformZ);
+    }
+
     /**
      * Read a block mapping entry from a JSON node and Java identifier
+     *
      * @param identifier The Java identifier of the block
-     * @param node The {@link JsonNode} containing the block mapping entry
+     * @param node       The {@link JsonNode} containing the block mapping entry
      * @return The {@link CustomBlockMapping} record to be read by {@link org.geysermc.geyser.registry.populator.CustomBlockRegistryPopulator#populate}
      * @throws InvalidCustomMappingsFileException If the JSON node is invalid
      */
@@ -621,6 +637,7 @@ public class MappingsReader_v1 extends MappingsReader {
             }
         }
 
+
         // If this is true, we will only register the states the user has specified rather than all the possible block states
         boolean onlyOverrideStates = node.has("only_override_states") && node.get("only_override_states").asBoolean();
 
@@ -636,17 +653,76 @@ public class MappingsReader_v1 extends MappingsReader {
             throw new InvalidCustomMappingsFileException("Skull block entry for " + identifier + " is a java block, please rename.");
         }
         CustomBlockComponentsMapping componentsMapping = createCustomBlockComponentsMapping(node, identifier, name);
-        CustomBlockData blockData = customBlockDataBuilder
-                .components(componentsMapping.components())
+
+        CustomBlockData.Builder builder = customBlockDataBuilder
+                .components(componentsMapping.components());
+        if (node.has("rotatable") && node.get("rotatable").asBoolean()) {
+
+            List<CustomBlockPermutation> permutations = new ArrayList<>();
+            addDefaultPermutation(permutations, componentsMapping.components().geometry(), componentsMapping.components().selectionBox(), componentsMapping.components().collisionBox());
+            addFloorPermutations(permutations, componentsMapping.components().geometry(), componentsMapping.components().selectionBox(), componentsMapping.components().collisionBox());
+            addWallPermutations(permutations, componentsMapping.components().geometry(), componentsMapping.components().selectionBox(), componentsMapping.components().collisionBox());
+            builder.intProperty(BITS_A_PROPERTY, IntStream.rangeClosed(0, 6).boxed().toList()) // This gives us exactly 21 block states
+                    .intProperty(BITS_B_PROPERTY, IntStream.rangeClosed(0, 2).boxed().toList())
+                    .permutations(permutations);
+        }
+
+        CustomBlockData blockData = builder
                 .build();
         return new CustomBlockMapping(blockData, Map.of(identifier, new CustomBlockStateMapping(blockData.defaultBlockState(), componentsMapping.extendedCollisionBox())), identifier, !onlyOverrideStates, true);
+    }
+
+    private void addDefaultPermutation(List<CustomBlockPermutation> permutations, GeometryComponent geometry, BoxComponent selectBox, BoxComponent collisionBox) {
+        CustomBlockComponents components = new GeyserCustomBlockComponents.CustomBlockComponentsBuilder()
+                .geometry(geometry)
+                .transformation(new TransformationComponent(0, 180, 0))
+                .build();
+
+        String condition = String.format("query.block_property('%s') == 0 && query.block_property('%s') == 0", BITS_A_PROPERTY, BITS_B_PROPERTY);
+        permutations.add(new CustomBlockPermutation(components, condition));
+    }
+
+    private void addFloorPermutations(List<CustomBlockPermutation> permutations, GeometryComponent geometry, BoxComponent selectBox, BoxComponent collisionBox) {
+        String[] quadrantNames = {"a", "b", "c", "d"};
+
+        for (int quadrant = 0; quadrant < 4; quadrant++) {
+            for (int i = 0; i < 4; i++) {
+                int floorRotation = 4 * quadrant + i;
+                CustomBlockComponents components = new GeyserCustomBlockComponents.CustomBlockComponentsBuilder()
+                        .selectionBox(selectBox)
+                        .collisionBox(collisionBox)
+                        .geometry(geometry)
+                        .transformation(new TransformationComponent(0, ROTATIONS[quadrant], 0))
+                        .build();
+
+                int bitsA = (5 + floorRotation) % 7;
+                int bitsB = (5 + floorRotation) / 7;
+                String condition = String.format("query.block_property('%s') == %d && query.block_property('%s') == %d", BITS_A_PROPERTY, bitsA, BITS_B_PROPERTY, bitsB);
+                permutations.add(new CustomBlockPermutation(components, condition));
+            }
+        }
+    }
+
+    private void addWallPermutations(List<CustomBlockPermutation> permutations, GeometryComponent geometry, BoxComponent selectBox, BoxComponent collisionBox) {
+        for (int i = 0; i < 4; i++) {
+            CustomBlockComponents components = new GeyserCustomBlockComponents.CustomBlockComponentsBuilder()
+                    .selectionBox(selectBox)
+                    .collisionBox(collisionBox)
+                    .geometry(geometry)
+                    .transformation(new TransformationComponent(0, ROTATIONS[i], 0))
+                    .build();
+
+            String condition = String.format("query.block_property('%s') == %d && query.block_property('%s') == %d", BITS_A_PROPERTY, i + 1, BITS_B_PROPERTY, 0);
+            permutations.add(new CustomBlockPermutation(components, condition));
+        }
     }
 
 
     /**
      * Read a entity mapping entry from a JSON
+     *
      * @param identifier The identifier of the entity
-     * @param node The {@link JsonNode} containing the block mapping entry
+     * @param node       The {@link JsonNode} containing the block mapping entry
      * @return The {@link CustomEntityMapping} record to be read by {@link org.geysermc.geyser.registry.populator.CustomEntityRegistryPopulator}
      * @throws InvalidCustomMappingsFileException If the JSON node is invalid
      */
@@ -674,8 +750,8 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Creates a {@link BoxComponent} based on a Java block's collision with provided bounds and offsets
-     * 
-     * @param javaId the block's Java ID
+     *
+     * @param javaId            the block's Java ID
      * @param heightTranslation the height translation of the box
      * @return the {@link BoxComponent}
      */
@@ -724,7 +800,7 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Creates a {@link BoxComponent} based on a Java block's collision
-     * 
+     *
      * @param javaId the block's Java ID
      * @return the {@link BoxComponent}
      */
@@ -734,6 +810,7 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Creates a {@link BoxComponent} from a JSON Node
+     *
      * @param node the JSON node
      * @return the {@link BoxComponent}
      */
@@ -786,7 +863,7 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Creates the {@link BoxComponent} for an extended collision box based on a Java block's collision
-     * 
+     *
      * @param javaId the block's Java ID
      * @return the {@link BoxComponent} or null if the block's collision box would not exceed 16 y units
      */
@@ -806,7 +883,7 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Creates a {@link BoxComponent} from a JSON Node
-     * 
+     *
      * @param node the JSON node
      * @return the {@link BoxComponent}
      */
@@ -832,7 +909,7 @@ public class MappingsReader_v1 extends MappingsReader {
     /**
      * Creates the {@link MaterialInstance} for the passed material instance node and custom block name
      * The name is used as a fallback if no texture is provided by the node
-     * 
+     *
      * @param node the material instance node
      * @return the {@link MaterialInstance}
      */
@@ -868,7 +945,7 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Creates the list of {@link PlacementConditions} for the passed conditions node
-     * 
+     *
      * @param node the conditions node
      * @return the list of {@link PlacementConditions}
      */
@@ -911,7 +988,7 @@ public class MappingsReader_v1 extends MappingsReader {
 
     /**
      * Splits the given java state identifier into an array of property=value pairs
-     * 
+     *
      * @param state the java state identifier
      * @return the array of property=value pairs
      */

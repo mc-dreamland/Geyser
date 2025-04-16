@@ -57,6 +57,9 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
     boolean placeAir;
     Set<String> tags;
 
+    //是否支持转向
+    boolean rotatable;
+
     //Netease 自定义方块属性
     Integer neteaseFaceDirectional;
     List<NeteaseBoxComponent> neteaseAabbCollision;
@@ -89,6 +92,8 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         } else {
             this.tags = Set.copyOf(builder.tags);
         }
+
+        this.rotatable = builder.rotatable;
 
         this.neteaseFaceDirectional = builder.neteaseFaceDirectional;
         this.neteaseAabbCollision = builder.neteaseAabbCollision;
@@ -173,6 +178,10 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
     public Integer neteaseFaceDirectional() {
         return neteaseFaceDirectional;
     }
+    @Override
+    public boolean rotatable() {
+        return rotatable;
+    }
 
     @Override
     public List<NeteaseBoxComponent> neteaseAabbCollision() {
@@ -219,6 +228,8 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         protected boolean unitCube = false;
         protected boolean placeAir = false;
         protected Set<String> tags = new HashSet<>();
+
+        protected boolean rotatable = false;
 
         protected Integer neteaseFaceDirectional;
         protected List<NeteaseBoxComponent> neteaseAabbCollision;
@@ -366,6 +377,12 @@ public class GeyserCustomBlockComponents implements CustomBlockComponents {
         @Override
         public Builder tags(@Nullable Set<String> tags) {
             this.tags = Objects.requireNonNullElseGet(tags, Set::of);
+            return this;
+        }
+
+        @Override
+        public Builder rotatable(boolean rotatable) {
+            this.rotatable = rotatable;
             return this;
         }
 
