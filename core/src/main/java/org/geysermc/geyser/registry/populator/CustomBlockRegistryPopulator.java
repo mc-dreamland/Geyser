@@ -317,13 +317,17 @@ public class CustomBlockRegistryPopulator {
         CreativeCategory creativeCategory = customBlock.creativeCategory() != null ? customBlock.creativeCategory() : CreativeCategory.NONE;
         String creativeGroup = customBlock.creativeGroup() != null ? customBlock.creativeGroup() : "";
         NbtMap components = CustomBlockRegistryPopulator.convertComponents(customBlock.components(), protocolVersion);
-        if (components.containsKey("netease:face_directional")) {
-            if (components.getCompound("netease:face_directional").getByte("direction") == (byte) 1) {
-                properties.add(NbtMap.builder().putString("name", "minecraft:direction").build());
-            } else {
-                properties.add(NbtMap.builder().putString("name", "netease:face_direction").build());
-            }
-        }
+//  会导致方块注册时保存说properties 下项目的eum不存在
+//        if (components.containsKey("netease:face_directional")) {
+//            if (components.getCompound("netease:face_directional").getByte("direction") == (byte) 1) {
+//                NbtMapBuilder name = NbtMap.builder()
+//                        .putString("name", "minecraft:direction")
+//                        .putByteArray("enum", new byte[]{0, 1, 2, 3});
+//                properties.add(name.build());
+//            } else {
+//                properties.add(NbtMap.builder().putString("name", "netease:face_direction").build());
+//            }
+//        }
         NbtMap propertyTag = NbtMap.builder()
                 .putCompound("components", components)
                 // this is required or the client will crash
@@ -361,14 +365,6 @@ public class CustomBlockRegistryPopulator {
             builder.putCompound("minecraft:display_name", NbtMap.builder()
                     .putString("value", components.displayName())
                     .build());
-        }
-
-        if (components.selectionBox() != null) {
-            builder.putCompound("minecraft:selection_box", convertBox(components.selectionBox()));
-        }
-
-        if (components.collisionBox() != null) {
-            builder.putCompound("minecraft:collision_box", convertBox(components.collisionBox()));
         }
 
         if (components.geometry() != null) {
@@ -498,6 +494,14 @@ public class CustomBlockRegistryPopulator {
             }
             endMap.putList("clip", NbtType.COMPOUND, clipNbtList).putList("collision", NbtType.COMPOUND, collisionNbtList);
             builder.putCompound("netease:aabb", endMap.build());
+        } else {
+            if (components.selectionBox() != null) {
+                builder.putCompound("minecraft:selection_box", convertBox(components.selectionBox()));
+            }
+
+            if (components.collisionBox() != null) {
+                builder.putCompound("minecraft:collision_box", convertBox(components.collisionBox()));
+            }
         }
 
         if (components.neteaseBlockEntity()) {
