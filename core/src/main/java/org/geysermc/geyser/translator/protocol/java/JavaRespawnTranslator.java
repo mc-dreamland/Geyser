@@ -88,6 +88,7 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
         if (!newDimension.contains("minecraft:")) {
             newDimension = "minecraft:" + newDimension;
         }
+
         if (!session.isQuickSwitchDimension()) {
             if (!session.getDimension().equals(newDimension) || !spawnInfo.getWorldName().equals(session.getWorldName())) {
                 // Switching to a new world (based off the world name change or new dimension); send a fake dimension change
@@ -101,7 +102,9 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
                 ChunkUtils.loadDimension(session);
             }
         } else {
-            boolean changeDimension = !session.getDimension().equals(newDimension);
+            String dimension = session.getDimension();
+            dimension = dimension.replace("minecraft:", "");
+            boolean changeDimension = !dimension.equals(newDimension.replace("minecraft:", ""));
             session.setWorldName(spawnInfo.getWorldName());
             DimensionUtils.switchDimension(session, newDimension, changeDimension);
 

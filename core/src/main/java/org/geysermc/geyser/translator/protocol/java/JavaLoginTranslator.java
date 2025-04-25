@@ -137,7 +137,10 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
             session.sendDownstreamPacket(new ServerboundCustomPayloadPacket("minecraft:register", PluginMessageChannels.getFloodgateRegisterData()));
         }
 
-        if (!newDimension.equals(session.getDimension()) && !session.isQuickSwitchDimension()) {
+        String dimension = session.getDimension();
+
+        dimension = dimension.replace("minecraft:", "");
+        if (!newDimension.replace("minecraft:", "").equals(dimension) && !session.isQuickSwitchDimension()) {
             DimensionUtils.switchDimension(session, newDimension, true);
         } else if (DimensionUtils.isCustomBedrockNetherId() && newDimension.equalsIgnoreCase(DimensionUtils.NETHER)) {
             // If the player is spawning into the "fake" nether, send them some fog
