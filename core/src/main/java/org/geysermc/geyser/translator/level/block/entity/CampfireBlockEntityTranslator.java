@@ -51,9 +51,10 @@ public class CampfireBlockEntityTranslator extends BlockEntityTranslator {
     protected NbtMap getItem(CompoundTag tag) {
         // TODO: Version independent mappings
         ItemMapping mapping = Registries.ITEMS.forVersion(GameProtocol.DEFAULT_BEDROCK_CODEC.getProtocolVersion()).getMapping((String) tag.get("id").getValue());
+        Tag count = tag.get("Count");
         NbtMapBuilder tagBuilder = NbtMap.builder()
                 .putString("Name", mapping.getBedrockIdentifier())
-                .putByte("Count", (byte) tag.get("Count").getValue())
+                .putByte("Count", count == null ? 0 : (byte) count.getValue())
                 .putShort("Damage", (short) mapping.getBedrockData());
         tagBuilder.put("tag", NbtMap.builder().build());
         return tagBuilder.build();
