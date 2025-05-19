@@ -105,6 +105,10 @@ public class Entity implements GeyserEntity {
     @Setter(AccessLevel.NONE)
     protected String nametag = "";
     @Setter(AccessLevel.NONE)
+    protected String basedNameTag = "";
+    @Setter(AccessLevel.NONE)
+    protected float customEntityScale = -1;
+    @Setter(AccessLevel.NONE)
     protected boolean silent = false;
     /* Metadata end */
 
@@ -466,6 +470,7 @@ public class Entity implements GeyserEntity {
         Optional<Component> name = entityMetadata.getValue();
         if (name.isPresent()) {
             nametag = MessageTranslator.convertMessage(name.get(), session.locale());
+            basedNameTag = nametag;
             nametag = nametag.replace("\\n", "\n");
 
             if (nametag.contains("@cet")) {
@@ -497,6 +502,10 @@ public class Entity implements GeyserEntity {
                     } catch (NumberFormatException ignored) {
                         System.out.println("");
                     }
+                }
+            } else {
+                if (this.customEntityScale != -1) {
+                    dirtyMetadata.put(EntityDataTypes.SCALE, this.customEntityScale);
                 }
             }
 

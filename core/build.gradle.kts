@@ -33,6 +33,7 @@ dependencies {
     api("com.netease.mc.pe:authlib-test:1.2")
     api("org.msgpack:msgpack:0.6.12")
     api("com.zaxxer", "HikariCP", "4.0.3")
+    implementation("org.mariadb.jdbc:mariadb-java-client:3.4.1")
     api("redis.clients", "jedis", "4.4.8")
 
     implementation(libs.raknet) {

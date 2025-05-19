@@ -247,6 +247,7 @@ public class GeyserImpl implements GeyserApi {
         if (config.getOptionalPacks().isEnableOptionalPacks()) {
             dataSource = new HikariDataSource();
 
+            dataSource.setDriverClassName("org.mariadb.jdbc.Driver");
             dataSource.setJdbcUrl(config.getOptionalPacks().getMysqlUrl());
             dataSource.setUsername(config.getOptionalPacks().getMysqlUser());
             dataSource.setPassword(config.getOptionalPacks().getMysqlPass());
