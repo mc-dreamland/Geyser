@@ -341,6 +341,60 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
     @JsonProperty("config-version")
     private int configVersion = 0;
 
+    //Netease Only
+    @JsonProperty("online-mode")
+    private boolean onlineMode = false;
+
+    @JsonProperty("allowed-pc")
+    private boolean allowedPc = false;
+
+    private ServiceConfiguration service = new ServiceConfiguration();
+
+    @JsonProperty("optional-packs")
+    private OptionalPacks optionalPacks = new OptionalPacks();
+
+    @JsonProperty("redis")
+    private OptionalRedis redis = new OptionalRedis();
+
+    @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ServiceConfiguration implements IServiceConfiguration {
+
+        @JsonProperty("url")
+        private String url = "http://localhost:8081/api";
+        @JsonProperty("skinurl")
+        private String skinurl = "http://skinsync.bjd-mc.com:12455";
+
+        @JsonProperty("token")
+        private String token = "114514";
+    }
+
+    @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class OptionalPacks implements IOptionalPacks {
+
+        @JsonProperty("enable-optional-packs")
+        private boolean enableOptionalPacks = false;
+
+        @JsonProperty("mysql-url")
+        private String mysqlUrl = "";
+        @JsonProperty("mysql-user")
+        private String mysqlUser = "";
+        @JsonProperty("mysql-pass")
+        private String mysqlPass = "";
+    }
+
+    @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class OptionalRedis implements IOptionalRedis {
+
+        @JsonProperty("url")
+        private String url = "redis-02.bjd-mc.com";
+        @JsonProperty("port")
+        private int port = 6379;
+    }
+
+
     /**
      * Ensure that the port deserializes in the config as a number no matter what.
      */

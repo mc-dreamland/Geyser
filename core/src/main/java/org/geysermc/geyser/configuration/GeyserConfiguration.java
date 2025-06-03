@@ -181,11 +181,38 @@ public interface GeyserConfiguration {
 
     int getConfigVersion();
 
+    //Netease Only
+    boolean isOnlineMode();
+    boolean isAllowedPc();
+
+    IServiceConfiguration getService();
+    IOptionalPacks getOptionalPacks();
+    IOptionalRedis getRedis();
+
     static void checkGeyserConfiguration(GeyserConfiguration geyserConfig, GeyserLogger geyserLogger) {
         if (geyserConfig.getConfigVersion() < CURRENT_CONFIG_VERSION) {
             geyserLogger.warning(GeyserLocale.getLocaleStringLog("geyser.bootstrap.config.outdated"));
         } else if (geyserConfig.getConfigVersion() > CURRENT_CONFIG_VERSION) {
             geyserLogger.warning(GeyserLocale.getLocaleStringLog("geyser.bootstrap.config.too_new"));
         }
+    }
+
+
+    interface IServiceConfiguration {
+        String getUrl();
+        String getSkinurl();
+        String getToken();
+    }
+
+    interface IOptionalPacks {
+        boolean isEnableOptionalPacks();
+        String getMysqlUrl();
+        String getMysqlUser();
+        String getMysqlPass();
+    }
+
+    interface IOptionalRedis {
+        String getUrl();
+        int getPort();
     }
 }
