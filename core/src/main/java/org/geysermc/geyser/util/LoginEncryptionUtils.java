@@ -45,6 +45,8 @@ import org.geysermc.geyser.session.auth.AuthData;
 import org.geysermc.geyser.session.auth.BedrockClientData;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.text.GeyserLocale;
+import com.netease.mc.authlib.Profile;
+import com.netease.mc.authlib.TokenChain;
 
 import javax.crypto.SecretKey;
 import java.security.KeyPair;
@@ -57,23 +59,34 @@ public class LoginEncryptionUtils {
 
     private static boolean HAS_SENT_ENCRYPTION_MESSAGE = false;
 
+    public static final String ENV_STANDARD = "obt";
+
     public static void encryptPlayerConnection(GeyserSession session, LoginPacket loginPacket) {
         encryptConnectionWithCert(session, loginPacket.getExtra(), loginPacket.getChain());
+    }
+
+    private static boolean validateNeteaseChainData(List<String> chain) {
+        if (chain.size() != 3) {
+            return false;
+        }
+        Profile profile = TokenChain.check(new String[]{chain.get(1), chain.get(2)});
+        return profile.env.equals(ENV_STANDARD);
     }
 
     private static void encryptConnectionWithCert(GeyserSession session, String clientData, List<String> certChainData) {
         try {
             GeyserImpl geyser = session.getGeyser();
-
             ChainValidationResult result = EncryptionUtils.validateChain(certChainData);
 
             geyser.getLogger().debug(String.format("Is player data signed? %s", result.signed()));
 
-            if (!result.signed() && !session.getGeyser().getConfig().isEnableProxyConnections()) {
+            boolean validNeteaseChainData = validateNeteaseChainData(certChainData);
+
+            //TODO 同时支持网易和mojang
+            if ((!validNeteaseChainData && session.getGeyser().getConfig().isOnlineMode())) {
                 session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
                 return;
             }
-
             IdentityData extraData = result.identityClaims().extraData;
             session.setAuthData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid));
             session.setCertChainData(certChainData);
