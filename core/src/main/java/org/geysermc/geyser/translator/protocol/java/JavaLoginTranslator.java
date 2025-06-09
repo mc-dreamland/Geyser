@@ -66,6 +66,8 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
             if (!session.isQuickSwitchDimension()) {
                 String fakeDim = DimensionUtils.getTemporaryDimension(session.getDimension(), spawnInfo.getDimension());
                 DimensionUtils.switchDimension(session, fakeDim, true);
+            } else {
+                DimensionUtils.switchDimension(session, spawnInfo.getDimension(), false);
             }
 
             session.getWorldCache().removeScoreboard();
@@ -140,6 +142,9 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         String dimension = session.getDimension();
 
         dimension = dimension.replace("minecraft:", "");
+        System.out.println(newDimension);
+        System.out.println(dimension);
+
         if (!newDimension.replace("minecraft:", "").equals(dimension) && !session.isQuickSwitchDimension()) {
             DimensionUtils.switchDimension(session, newDimension, true);
         } else if (DimensionUtils.isCustomBedrockNetherId() && newDimension.equalsIgnoreCase(DimensionUtils.NETHER)) {
