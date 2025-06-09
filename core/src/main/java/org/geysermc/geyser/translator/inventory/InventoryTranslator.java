@@ -339,9 +339,9 @@ public abstract class InventoryTranslator<Type extends Inventory> {
                         }
                     }
 
-                    if (shouldRejectItemPlace(session, inventory, transferAction.getSource().getContainerName().getContainer(),
+                    if (shouldRejectItemPlace(session, inventory, transferAction.getSource().getContainer(),
                             isSourceCursor ? -1 : sourceSlot,
-                            transferAction.getDestination().getContainerName().getContainer(), isDestCursor ? -1 : destSlot)) {
+                            transferAction.getDestination().getContainer(), isDestCursor ? -1 : destSlot)) {
                         // This item would not be here in Java
                         return rejectRequest(request, false);
                     }
@@ -490,14 +490,14 @@ public abstract class InventoryTranslator<Type extends Inventory> {
                     boolean isSourceCursor = isCursor(source);
                     boolean isDestCursor = isCursor(destination);
 
-                    if (shouldRejectItemPlace(session, inventory, source.getContainerName().getContainer(),
+                    if (shouldRejectItemPlace(session, inventory, source.getContainer(),
                             isSourceCursor ? -1 : sourceSlot,
-                            destination.getContainerName().getContainer(), isDestCursor ? -1 : destSlot)) {
+                            destination.getContainer(), isDestCursor ? -1 : destSlot)) {
                         // This item would not be here in Java
                         return rejectRequest(request, false);
                     }
 
-                    if (!isSourceCursor && destination.getContainerName().getContainer() == ContainerSlotType.HOTBAR || destination.getContainerName().getContainer() == ContainerSlotType.HOTBAR_AND_INVENTORY) {
+                    if (!isSourceCursor && destination.getContainer() == ContainerSlotType.HOTBAR || destination.getContainer() == ContainerSlotType.HOTBAR_AND_INVENTORY) {
                         // Tell the server we're pressing one of the hotbar keys to save clicks
                         Click click = InventoryUtils.getClickForHotbarSwap(destination.getSlot());
                         if (click != null) {
@@ -672,7 +672,7 @@ public abstract class InventoryTranslator<Type extends Inventory> {
                     }
                     craftState = CraftState.TRANSFER;
 
-                    if (transferAction.getSource().getContainerName().getContainer() != ContainerSlotType.CREATED_OUTPUT) {
+                    if (transferAction.getSource().getContainer() != ContainerSlotType.CREATED_OUTPUT) {
                         return rejectRequest(request);
                     }
                     if (transferAction.getCount() <= 0) {
@@ -865,7 +865,7 @@ public abstract class InventoryTranslator<Type extends Inventory> {
                     }
                     craftState = CraftState.TRANSFER;
 
-                    if (transferAction.getSource().getContainerName().getContainer() != ContainerSlotType.CREATED_OUTPUT) {
+                    if (transferAction.getSource().getContainer() != ContainerSlotType.CREATED_OUTPUT) {
                         return rejectRequest(request);
                     }
                     if (transferAction.getCount() <= 0) {
@@ -1123,7 +1123,7 @@ public abstract class InventoryTranslator<Type extends Inventory> {
     }
 
     protected static boolean isCursor(ItemStackRequestSlotData slotInfoData) {
-        return slotInfoData.getContainerName().getContainer() == ContainerSlotType.CURSOR;
+        return slotInfoData.getContainer() == ContainerSlotType.CURSOR;
     }
 
     /**

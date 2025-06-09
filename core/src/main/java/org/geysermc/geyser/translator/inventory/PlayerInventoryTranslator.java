@@ -190,7 +190,7 @@ public class PlayerInventoryTranslator extends InventoryTranslator<PlayerInvento
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
         int slotnum = slotInfoData.getSlot();
-        switch (slotInfoData.getContainerName().getContainer()) {
+        switch (slotInfoData.getContainer()) {
             case HOTBAR_AND_INVENTORY:
             case HOTBAR:
             case INVENTORY:
@@ -488,7 +488,7 @@ public class PlayerInventoryTranslator extends InventoryTranslator<PlayerInvento
                     }
                     craftState = CraftState.TRANSFER;
 
-                    if (transferAction.getSource().getContainerName().getContainer() != ContainerSlotType.CREATED_OUTPUT) {
+                    if (transferAction.getSource().getContainer() != ContainerSlotType.CREATED_OUTPUT) {
                         return rejectRequest(request);
                     }
 
@@ -525,7 +525,7 @@ public class PlayerInventoryTranslator extends InventoryTranslator<PlayerInvento
                     }
 
                     DropAction dropAction = (DropAction) action;
-                    if (dropAction.getSource().getContainerName().getContainer() != ContainerSlotType.CREATED_OUTPUT || dropAction.getSource().getSlot() != 50) {
+                    if (dropAction.getSource().getContainer() != ContainerSlotType.CREATED_OUTPUT || dropAction.getSource().getSlot() != 50) {
                         return rejectRequest(request);
                     }
 
@@ -566,7 +566,7 @@ public class PlayerInventoryTranslator extends InventoryTranslator<PlayerInvento
     }
 
     private static boolean isCraftingGrid(ItemStackRequestSlotData slotInfoData) {
-        return slotInfoData.getContainerName().getContainer() == ContainerSlotType.CRAFTING_INPUT;
+        return slotInfoData.getContainer() == ContainerSlotType.CRAFTING_INPUT;
     }
 
     @Override

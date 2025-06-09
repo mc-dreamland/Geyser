@@ -26,6 +26,8 @@
 package org.geysermc.geyser.network;
 
 import io.netty.buffer.ByteBuf;
+import org.cloudburstmc.math.vector.Vector2f;
+import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketSerializer;
@@ -39,12 +41,15 @@ import org.cloudburstmc.protocol.bedrock.codec.v407.serializer.InventorySlotSeri
 import org.cloudburstmc.protocol.bedrock.codec.v419.serializer.MovePlayerSerializer_v419;
 import org.cloudburstmc.protocol.bedrock.codec.v486.serializer.BossEventSerializer_v486;
 import org.cloudburstmc.protocol.bedrock.codec.v557.serializer.SetEntityDataSerializer_v557;
+import org.cloudburstmc.protocol.bedrock.codec.v662.serializer.PlayerAuthInputSerializer_v662;
 import org.cloudburstmc.protocol.bedrock.codec.v662.serializer.SetEntityMotionSerializer_v662;
+import org.cloudburstmc.protocol.bedrock.codec.v685.serializer.TextSerializer_v685;
 import org.cloudburstmc.protocol.bedrock.codec.v712.serializer.MobArmorEquipmentSerializer_v712;
 import org.cloudburstmc.protocol.bedrock.codec.v748.serializer.InventoryContentSerializer_v748;
 import org.cloudburstmc.protocol.bedrock.codec.v748.serializer.InventorySlotSerializer_v748;
 import org.cloudburstmc.protocol.bedrock.codec.v776.serializer.BossEventSerializer_v776;
-import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerSlotType;
+import org.cloudburstmc.protocol.bedrock.data.ClientPlayMode;
+import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
 import org.cloudburstmc.protocol.bedrock.packet.AnvilDamagePacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BossEventPacket;
@@ -72,6 +77,7 @@ import org.cloudburstmc.protocol.bedrock.packet.MultiplayerSettingsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.NpcRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PhotoInfoRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PhotoTransferPacket;
+import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerHotbarPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerInputPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
@@ -86,8 +92,10 @@ import org.cloudburstmc.protocol.bedrock.packet.SettingsCommandPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SimpleEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SubChunkRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SubClientLoginPacket;
-import org.cloudburstmc.protocol.common.util.TypeMap;
+import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
 import org.cloudburstmc.protocol.common.util.VarInts;
+
+import java.util.Set;
 
 /**
  * Processes the Bedrock codec to remove or modify unused or unsafe packets and fields.
@@ -155,6 +163,159 @@ class CodecProcessor {
         @Override
         public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, InventorySlotPacket packet) {
             throw new IllegalArgumentException("Client cannot send InventorySlotPacket in server-auth inventory environment!");
+        }
+    };
+    private static final BedrockPacketSerializer<TextPacket> TEXT_SERIALIZER_NETEASE = new TextSerializer_v685() {
+        @Override
+        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, TextPacket packet) {
+            //V554
+
+            TextPacket.Type type = packet.getType();
+            // 网易客户端收到聊天包会掉线，目前将所有聊天都视作系统命令
+            if (type.equals(TextPacket.Type.CHAT)) {
+                type = TextPacket.Type.SYSTEM;
+            }
+            buffer.writeByte(type.ordinal());
+            buffer.writeBoolean(packet.isNeedsTranslation());
+
+            switch (type) {
+                case WHISPER:
+                case ANNOUNCEMENT:
+                    helper.writeString(buffer, packet.getSourceName());
+                case CHAT:
+                case RAW:
+                case TIP:
+                case SYSTEM:
+                case JSON:
+                case WHISPER_JSON:
+                case ANNOUNCEMENT_JSON:
+                    helper.writeString(buffer, packet.getMessage());
+                    break;
+                case TRANSLATION:
+                case POPUP:
+                case JUKEBOX_POPUP:
+                    helper.writeString(buffer, packet.getMessage());
+                    helper.writeArray(buffer, packet.getParameters(), helper::writeString);
+                    break;
+                default:
+                    throw new UnsupportedOperationException("Unsupported TextType " + type);
+            }
+
+            helper.writeString(buffer, packet.getXuid());
+            helper.writeString(buffer, packet.getPlatformChatId());
+
+            //V685
+            helper.writeString(buffer, packet.getFilteredMessage());
+        }
+
+        @Override
+        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, TextPacket packet) {
+            //V554
+            TextPacket.Type type = TextPacket.Type.values()[buffer.readUnsignedByte()];
+            packet.setType(type);
+            packet.setNeedsTranslation(buffer.readBoolean());
+
+            switch (type) {
+                case CHAT:
+                case WHISPER:
+                case ANNOUNCEMENT:
+                    packet.setSourceName(helper.readString(buffer));
+                case RAW:
+                case TIP:
+                case SYSTEM:
+                case JSON:
+                case WHISPER_JSON:
+                case ANNOUNCEMENT_JSON:
+                    packet.setMessage(helper.readString(buffer));
+                    break;
+                case TRANSLATION:
+                case POPUP:
+                case JUKEBOX_POPUP:
+                    packet.setMessage(helper.readString(buffer));
+                    helper.readArray(buffer, packet.getParameters(), helper::readString);
+                    break;
+                default:
+                    throw new UnsupportedOperationException("Unsupported TextType " + type);
+            }
+
+            packet.setXuid(helper.readString(buffer));
+            packet.setPlatformChatId(helper.readString(buffer));
+
+            //V685
+            packet.setFilteredMessage(helper.readString(buffer));
+
+            System.out.println("packet -> " + packet);
+        }
+    };
+
+
+
+    private static final BedrockPacketSerializer<PlayerAuthInputPacket> PLAYER_AUTH_INPUT_NETEASE = new PlayerAuthInputSerializer_v662() {
+        @Override
+        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
+            super.serialize(buffer, helper, packet);
+        }
+
+        @Override
+        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
+            //v388
+            float x = buffer.readFloatLE();
+            float y = buffer.readFloatLE();
+            packet.setPosition(helper.readVector3f(buffer));
+            packet.setMotion(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
+            float z = buffer.readFloatLE();
+            packet.setRotation(Vector3f.from(x, y, z));
+            long flagValue = VarInts.readUnsignedLong(buffer);
+            Set<PlayerAuthInputData> flags = packet.getInputData();
+            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
+                if ((flagValue & (1L << flag.ordinal())) != 0) {
+                    flags.add(flag);
+                }
+            }
+            packet.setInputMode(INPUT_MODES[VarInts.readUnsignedInt(buffer)]);
+            packet.setPlayMode(CLIENT_PLAY_MODES[VarInts.readUnsignedInt(buffer)]);
+            readInteractionModel(buffer, helper, packet);
+
+            if (packet.getPlayMode() == ClientPlayMode.REALITY) {
+                packet.setVrGazeDirection(helper.readVector3f(buffer));
+            }
+
+            //v419
+            packet.setTick(VarInts.readUnsignedLong(buffer));
+            packet.setDelta(helper.readVector3f(buffer));
+
+            //v428
+            //Netease Only Start
+            packet.setCameraDeparted(buffer.readBoolean());
+            //Netease Only End
+
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_INTERACTION)) {
+                packet.setItemUseTransaction(this.readItemUseTransaction(buffer, helper));
+            }
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_STACK_REQUEST)) {
+                packet.setItemStackRequest(helper.readItemStackRequest(buffer));
+            }
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_BLOCK_ACTIONS)) {
+                helper.readArray(buffer, packet.getPlayerActions(), VarInts::readInt, this::readPlayerBlockActionData, 32); // 32 is more than enough
+            }
+
+            //v662
+            if (packet.getInputData().contains(PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE)) {
+                packet.setVehicleRotation(helper.readVector2f(buffer));
+                packet.setPredictedVehicle(VarInts.readLong(buffer));
+            }
+            packet.setAnalogMoveVector(helper.readVector2f(buffer));
+
+            //Netease Only Start
+            packet.setThirdPersonPerspective(buffer.readBoolean());
+            packet.setPlayerRotationToCamera(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
+            packet.setReadyPosDetalDirty(buffer.readBoolean());
+            packet.setOnGround(buffer.readBoolean());
+            packet.setResetPosition(buffer.readByte());
+            //Netease Only End
         }
     };
 
@@ -333,6 +494,14 @@ class CodecProcessor {
             codecBuilder
                 .updateSerializer(RiderJumpPacket.class, ILLEGAL_SERIALIZER)
                 .updateSerializer(PlayerInputPacket.class, ILLEGAL_SERIALIZER);
+        }
+
+        if (codec.getProtocolVersion() == 685 || codec.getProtocolVersion() == 686) {
+            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE);
+            codecBuilder.updateSerializer(TextPacket.class, TEXT_SERIALIZER_NETEASE);
+        }
+        if (codec.getProtocolVersion() < 685) {
+            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, ILLEGAL_SERIALIZER);
         }
 
             return codecBuilder.build();

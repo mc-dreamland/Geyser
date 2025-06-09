@@ -32,6 +32,7 @@ import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
 import org.geysermc.geyser.level.physics.CollisionResult;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.mcprotocollib.network.packet.Packet;
@@ -105,6 +106,10 @@ final class BedrockMovePlayer {
             isOnGround = false;
         } else {
             isOnGround = packet.getInputData().contains(PlayerAuthInputData.VERTICAL_COLLISION) && entity.getLastTickEndVelocity().getY() < 0;
+        }
+
+        if (GameProtocol.is1_20_0orLower(session)) {
+            isOnGround = packet.getInputData().contains(PlayerAuthInputData.HORIZONTAL_COLLISION) && entity.getLastTickEndVelocity().getY() < 0;
         }
 
         entity.setLastTickEndVelocity(packet.getDelta());

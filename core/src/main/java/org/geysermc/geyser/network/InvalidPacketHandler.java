@@ -55,6 +55,7 @@ public class InvalidPacketHandler extends ChannelInboundHandlerAdapter {
             session.disconnect("An internal error occurred!");
             return;
         }
+        cause.printStackTrace();
 
         // Kick users that try to send illegal packets
         logger.warning("Illegal packet from " + session.bedrockUsername() + ": " + rootCause.getMessage());

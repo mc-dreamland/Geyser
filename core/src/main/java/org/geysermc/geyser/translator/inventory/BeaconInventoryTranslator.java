@@ -119,7 +119,7 @@ public class BeaconInventoryTranslator extends AbstractBlockInventoryTranslator<
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        if (slotInfoData.getContainerName().getContainer() == ContainerSlotType.BEACON_PAYMENT) {
+        if (slotInfoData.getContainer() == ContainerSlotType.BEACON_PAYMENT) {
             return 0;
         }
         return super.bedrockSlotToJava(slotInfoData);

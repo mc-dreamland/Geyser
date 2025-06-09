@@ -37,7 +37,7 @@ public class HorseInventoryTranslator extends AbstractHorseInventoryTranslator {
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        if (slotInfoData.getContainerName().getContainer() == ContainerSlotType.HORSE_EQUIP) {
+        if (slotInfoData.getContainer() == ContainerSlotType.HORSE_EQUIP) {
             return slotInfoData.getSlot();
         }
         return super.bedrockSlotToJava(slotInfoData);
