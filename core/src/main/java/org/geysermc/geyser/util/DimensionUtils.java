@@ -47,10 +47,14 @@ public class DimensionUtils {
     public static final String BEDROCK_FOG_HELL = "minecraft:fog_hell";
 
     public static void switchDimension(GeyserSession session, JavaDimension javaDimension) {
-        switchDimension(session, javaDimension, javaDimension.bedrockId());
+        switchDimension(session, javaDimension, true);
     }
 
-    public static void switchDimension(GeyserSession session, JavaDimension javaDimension, int bedrockDimension) {
+    public static void switchDimension(GeyserSession session, JavaDimension javaDimension, boolean changeDimension) {
+        switchDimension(session, javaDimension, javaDimension.bedrockId(), changeDimension);
+    }
+
+    public static void switchDimension(GeyserSession session, JavaDimension javaDimension, int bedrockDimension, boolean changeDimension) {
         @Nullable JavaDimension previousDimension = session.getDimensionType(); // previous java dimension; can be null if an online player with no saved auth token logs in.
 
         Entity player = session.getPlayerEntity();
@@ -81,16 +85,18 @@ public class DimensionUtils {
         session.updateRain(0);
         session.updateThunder(0);
 
-        finalizeDimensionSwitch(session, player);
+        if (session.isQuickSwitchDimension()) {
+            finalizeDimensionSwitch(session, player);
 
-        // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
-        // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
-        // thinks they are in the end dimension.
-        if (BedrockDimension.isCustomBedrockNetherId()) {
-            if (javaDimension.isNetherLike()) {
-                session.camera().sendFog(BEDROCK_FOG_HELL);
-            } else if (previousDimension != null && previousDimension.isNetherLike()) {
-                session.camera().removeFog(BEDROCK_FOG_HELL);
+            // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
+            // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
+            // thinks they are in the end dimension.
+            if (BedrockDimension.isCustomBedrockNetherId()) {
+                if (javaDimension.isNetherLike()) {
+                    session.camera().sendFog(BEDROCK_FOG_HELL);
+                } else if (previousDimension != null && previousDimension.isNetherLike()) {
+                    session.camera().removeFog(BEDROCK_FOG_HELL);
+                }
             }
         }
     }
@@ -121,13 +127,15 @@ public class DimensionUtils {
 
         Vector3f pos = Vector3f.from(0, Short.MAX_VALUE, 0);
 
-        ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
-        changeDimensionPacket.setDimension(bedrockDimension);
-        changeDimensionPacket.setRespawn(true);
-        changeDimensionPacket.setPosition(pos);
-        session.sendUpstreamPacket(changeDimensionPacket);
+        if (!session.isQuickSwitchDimension()) {
+            ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
+            changeDimensionPacket.setDimension(bedrockDimension);
+            changeDimensionPacket.setRespawn(true);
+            changeDimensionPacket.setPosition(pos);
+            session.sendUpstreamPacket(changeDimensionPacket);
 
-        setBedrockDimension(session, bedrockDimension);
+            setBedrockDimension(session, bedrockDimension);
+        }
 
         session.getPlayerEntity().setPosition(pos);
         session.setSpawned(false);

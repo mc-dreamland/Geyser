@@ -916,4 +916,9 @@ public class LoggingPacketHandler implements BedrockPacketHandler {
     public PacketSignal handle(PlayerUpdateEntityOverridesPacket packet) {
         return defaultHandler(packet);
     }
+
+    @Override
+    public PacketSignal handle(NeteasePythonRpcPacket packet) {
+        return defaultHandler(packet);
+    }
 }

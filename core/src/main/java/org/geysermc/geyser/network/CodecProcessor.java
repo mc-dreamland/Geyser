@@ -472,7 +472,6 @@ class CodecProcessor {
             .updateSerializer(MoveEntityAbsolutePacket.class, MOVE_ENTITY_SERIALIZER)
             // Ignored only when serverbound
             .updateSerializer(BossEventPacket.class, bossEventSerializer)
-            .updateSerializer(MobArmorEquipmentPacket.class, MOB_ARMOR_EQUIPMENT_SERIALIZER)
             .updateSerializer(PlayerHotbarPacket.class, PLAYER_HOTBAR_SERIALIZER)
             .updateSerializer(PlayerSkinPacket.class, PLAYER_SKIN_SERIALIZER)
             .updateSerializer(SetEntityDataPacket.class, SET_ENTITY_DATA_SERIALIZER)
@@ -488,6 +487,10 @@ class CodecProcessor {
             .updateSerializer(ClientCacheStatusPacket.class, IGNORED_SERIALIZER)
             .updateSerializer(SimpleEventPacket.class, IGNORED_SERIALIZER)
             .updateSerializer(MultiplayerSettingsPacket.class, IGNORED_SERIALIZER);
+
+        if (codec.getProtocolVersion() > 686) {
+            codecBuilder.updateSerializer(MobArmorEquipmentPacket.class, MOB_ARMOR_EQUIPMENT_SERIALIZER);
+        }
 
         // These packets have been removed post 1.21.80.
         if (codec.getProtocolVersion() < 800) {

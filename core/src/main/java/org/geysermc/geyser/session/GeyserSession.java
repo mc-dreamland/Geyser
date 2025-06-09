@@ -688,6 +688,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     private final GeyserEntityData entityData;
 
+    @Setter
+    private boolean noUnloadChunk = true;
+    @Setter
+    private boolean quickSwitchDimension = true;
+
     @Getter(AccessLevel.MODULE)
     private MinecraftProtocol protocol;
 
