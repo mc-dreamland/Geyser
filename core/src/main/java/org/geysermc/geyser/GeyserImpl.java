@@ -29,6 +29,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zaxxer.hikari.HikariDataSource;
 import io.netty.channel.epoll.Epoll;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -38,6 +39,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -100,6 +102,8 @@ import org.geysermc.geyser.util.Metrics;
 import org.geysermc.geyser.util.NewsHandler;
 import org.geysermc.geyser.util.VersionCheckUtils;
 import org.geysermc.geyser.util.WebUtils;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -109,6 +113,10 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.security.Key;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -191,6 +199,14 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
      */
     @Setter
     private boolean isEnabled;
+
+    /**
+     * 数据库
+     */
+    @Getter
+    private static HikariDataSource dataSource;
+    @Getter
+    private static JedisPool pool;
 
     private GeyserImpl(PlatformType platformType, GeyserBootstrap bootstrap) {
         instance = this;
@@ -286,6 +302,24 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         }
 
         VersionCheckUtils.checkForOutdatedJava(logger);
+
+        initJedis();
+    }
+
+    private void initJedis() {
+        GeyserConfiguration geyserConfig = bootstrap.getGeyserConfig();
+        // 配置连接池
+        GenericObjectPoolConfig<Jedis> config = new GenericObjectPoolConfig<>();
+        config.setMaxTotal(20);
+        config.setMaxIdle(20);
+        config.setMinIdle(2);
+        config.setMaxWaitMillis(3000);
+        config.setTestWhileIdle(true);
+        config.setTimeBetweenEvictionRunsMillis(30000);
+        config.setMinEvictableIdleTimeMillis(60000);
+        config.setNumTestsPerEvictionRun(-1);
+
+        pool = new JedisPool(config, geyserConfig.getRedis().getUrl(), geyserConfig.getRedis().getPort());
     }
 
     private void startInstance() {

@@ -27,6 +27,7 @@ package org.geysermc.geyser.network.netty.handler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -34,7 +35,9 @@ import io.netty.channel.socket.DatagramPacket;
 import lombok.RequiredArgsConstructor;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.cloudburstmc.netty.channel.raknet.config.RakChannelOption;
+import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.network.netty.GeyserServer;
+import org.geysermc.geyser.util.UdpRealIp;
 
 import java.net.InetSocketAddress;
 
@@ -58,6 +61,21 @@ public class RakConnectionRequestHandler extends ChannelInboundHandlerAdapter {
         ByteBuf buf = packet.content();
         if (!buf.isReadable()) {
             return; // No packet ID
+        }
+
+        try {
+            String serverIp = GeyserImpl.getInstance().getConfig().getBedrock().address();
+            int serverPort = GeyserImpl.getInstance().getConfig().getBedrock().port();
+            if ((!serverIp.equals("127.0.0.1") && !serverIp.equals("0.0.0.0"))) {
+                // 获取客户端的 IP 和端口
+                InetSocketAddress sender = packet.sender();
+                String clientIp = sender.getAddress().getHostAddress();
+                int clientPort = sender.getPort();
+                // 使用 JNI 工具类获取真实源 IP
+                Channel channel = ctx.channel();
+                UdpRealIp.getRealIp(channel, clientIp, clientPort, serverIp, serverPort);
+            }
+        } catch (Exception ignored) {
         }
 
         boolean readableMagic = true;

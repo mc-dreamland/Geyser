@@ -38,6 +38,7 @@ import org.geysermc.geyser.skin.FloodgateSkinUploader;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.text.MinecraftLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
+import org.geysermc.geyser.util.UdpRealIp;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.event.session.ConnectedEvent;
 import org.geysermc.mcprotocollib.network.event.session.DisconnectedEvent;
@@ -47,9 +48,11 @@ import org.geysermc.mcprotocollib.network.event.session.SessionAdapter;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.UnexpectedEncryptionException;
 import org.geysermc.mcprotocollib.protocol.packet.handshake.serverbound.ClientIntentionPacket;
+import redis.clients.jedis.Jedis;
 
 import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.UUID;
 
 public class GeyserSessionAdapter extends SessionAdapter {
@@ -79,11 +82,36 @@ public class GeyserSessionAdapter extends SessionAdapter {
                     FloodgateSkinUploader skinUploader = geyser.getSkinUploader();
                     FloodgateCipher cipher = geyser.getCipher();
 
-                    String bedrockAddress = geyserSession.getUpstream().getAddress().getAddress().getHostAddress();
+                    UpstreamSession upstream = geyserSession.getUpstream();
+                    String bedrockAddress = upstream.getAddress().getAddress().getHostAddress();
                     // both BungeeCord and Velocity remove the IPv6 scope (if there is one) for Spigot
                     int ipv6ScopeIndex = bedrockAddress.indexOf('%');
                     if (ipv6ScopeIndex != -1) {
                         bedrockAddress = bedrockAddress.substring(0, ipv6ScopeIndex);
+                    }
+
+                    // 在此处处理网易proxy 代理，获取玩家真实IP
+                    int port = upstream.getAddress().getPort();
+                    String s = UdpRealIp.IP_PORT_WITH_RealIP.get(bedrockAddress + ":" + port);
+
+                    String serverIp = GeyserImpl.getInstance().getConfig().getBedrock().address();
+                    if ((!serverIp.equals("127.0.0.1") && !serverIp.equals("0.0.0.0"))) {
+                        try (Jedis resource = GeyserImpl.getPool().getResource();){
+                            resource.select(12);
+                            if (s == null) {
+                                Map<String, String> infos = resource.hgetAll("UoaIp:" + geyserSession.getAuthData().uuid());
+                                if (infos.containsKey(bedrockAddress + ":" + port)) {
+                                    s = infos.get(bedrockAddress + ":" + port);
+                                    if (s != null) {
+                                        UdpRealIp.IP_PORT_WITH_RealIP.put(bedrockAddress + ":" + port, s);
+                                    }
+                                }
+                            } else {
+                                resource.hset("UoaIp:" + geyserSession.getAuthData().uuid(), bedrockAddress + ":" + port, s);
+                                resource.expire("UoaIp:" + geyserSession.getAuthData().uuid(), 60 * 60 *24);
+                            }
+                        } catch (Throwable ignored) {
+                        }
                     }
 
                     encryptedData = cipher.encryptFromString(BedrockData.of(
@@ -94,7 +122,7 @@ public class GeyserSessionAdapter extends SessionAdapter {
                         clientData.getLanguageCode(),
                         clientData.getUiProfile().ordinal(),
                         clientData.getCurrentInputMode().ordinal(),
-                        bedrockAddress,
+                        s == null ? bedrockAddress : s,
                         skinUploader.getId(),
                         skinUploader.getVerifyCode()
                     ).toString());
