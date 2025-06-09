@@ -27,6 +27,8 @@ package org.geysermc.geyser.session;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import it.unimi.dsi.fastutil.Pair;
@@ -60,9 +62,15 @@ import org.cloudburstmc.netty.channel.raknet.RakChildChannel;
 import org.cloudburstmc.netty.handler.codec.raknet.common.RakSessionCodec;
 import org.cloudburstmc.protocol.bedrock.BedrockDisconnectReasons;
 import org.cloudburstmc.protocol.bedrock.BedrockServerSession;
+import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
+import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketDefinition;
+import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketSerializer;
+import org.cloudburstmc.protocol.bedrock.codec.v630.Bedrock_v630;
+import org.cloudburstmc.protocol.bedrock.codec.v686.Bedrock_v686;
 import org.cloudburstmc.protocol.bedrock.data.Ability;
 import org.cloudburstmc.protocol.bedrock.data.AbilityLayer;
 import org.cloudburstmc.protocol.bedrock.data.AuthoritativeMovementMode;
+import org.cloudburstmc.protocol.bedrock.data.BlockPropertyData;
 import org.cloudburstmc.protocol.bedrock.data.ChatRestrictionLevel;
 import org.cloudburstmc.protocol.bedrock.data.ExperimentData;
 import org.cloudburstmc.protocol.bedrock.data.GamePublishSetting;
@@ -76,11 +84,13 @@ import org.cloudburstmc.protocol.bedrock.data.command.CommandEnumData;
 import org.cloudburstmc.protocol.bedrock.data.command.CommandPermission;
 import org.cloudburstmc.protocol.bedrock.data.command.SoftEnumUpdateType;
 import org.cloudburstmc.protocol.bedrock.data.definitions.DimensionDefinition;
+import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.CraftingRecipeData;
 import org.cloudburstmc.protocol.bedrock.packet.AvailableEntityIdentifiersPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
+import org.cloudburstmc.protocol.bedrock.packet.BedrockPacketType;
 import org.cloudburstmc.protocol.bedrock.packet.BiomeDefinitionListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.CameraPresetsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ChunkRadiusUpdatedPacket;
@@ -105,6 +115,7 @@ import org.cloudburstmc.protocol.bedrock.packet.UpdateAttributesPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateClientInputLocksPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateSoftEnumPacket;
 import org.cloudburstmc.protocol.common.util.OptionalBoolean;
+import org.cloudburstmc.protocol.common.util.VarInts;
 import org.geysermc.api.util.BedrockPlatform;
 import org.geysermc.api.util.InputMode;
 import org.geysermc.api.util.UiProfile;
@@ -1640,6 +1651,63 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         startGamePacket.setScenarioId("");
 
         upstream.sendPacket(startGamePacket);
+
+    }
+
+
+
+    public void testBytes(GeyserSession session) {
+        String str1 = "fee4010201333f587cabe8249d33581dcb6e16178d8080010000000000000000000000000000000000000000000000000000000000000000e59947ffe59947ffe58d3fffe59947ffe59947ffe58d3fffe59947ffe58d3fffd88032ffd88032ffd88032ffd88032ffd88032ffd88032ffd88032ffd88032ff0000000000000000000000000000";
+        String str2 = "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000df994c00df994c00df8c4500df994c00df994c00df8c4500df994c00df8c4500d17f3800d17f3800d17f3800d17f3800d17f3800d17f3800d17f3800d17f38000000000000000000000000000000000000000000";
+        String str3 = "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e58d3fffe59947ffe58d3fffe59947ffe59947ffdc933cffe59947ffe89d4cffd88032ffd88032ffaa895effaa895effaa895effaa895effd88032ffd88032ff0000000000000000000000000000000000000000000000000000";
+        String str4 = "0000000000000000000000000000000000000000000000000000000000000000000000000000df8c4500df994c00df8c4500df994c00df994c00d6924100df994c00e29d5200d17f3800d17f3800a7896100a7896100a7896100a7896100d17f3800d17f38000000000000000000000000000000000000000000000000000000000000000000";
+        String str5 = "0000000000000000000000000000000000000000000000000000000000000000e59947ffdc933cffe89d4cffe59947ffe58d3fffdc933cffe58d3fffe59947ffd88032ffaa895eff9c7b50ff9c7b50ff9c7b50ff9c7b50ffaa895effd88032ff0000000000000000000000000000000000000000000000000000000000000000000000000000";
+        String str6 = "0000000000000000000000000000000000000000000000000000df994c00d6924100e29d5200df994c00df8c4500d6924100df8c4500df994c00d17f3800a7896100997a5200997a5200997a5200997a5200a7896100d17f38000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        String str7 = "0000000000000000000000000000000000000000e58d3fffdc933cffe89d4cffe59947ffe59947ffe59947ffe58d3fffdc933cffd88032ffaa895eff9c7b50ff9c7b50ff9c7b50ff9c7b50ffaa895effd88032ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        String str8 = "0000000000000000000000000000df8c4500d6924100e29d5200df994c00df994c00df994c00df8c4500d6924100d17f3800a7896100997a5200997a5200997a5200997a5200a7896100d17f38000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        String str9 = "0000000000000000e58d3fffe58d3fffe89d4cffe58d3fffe59947ffe58d3fffe89d4cffdc933cffdfc6a3ffaa895eff9c7b50ff9c7b50ff9c7b50ff9c7b50ffaa895effd88032ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        String str10 = "0000df8c4500df8c4500e29d5200df8c4500df994c00df8c4500e29d5200d6924100ddc5a400a7896100997a5200997a5200997a5200997a5200a7896100d17f380000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e59947ff";
+
+        StringBuffer sb = new StringBuffer();
+        String pack = sb.append(str1).append(str2).append(str3).append(str4).append(str5).append(str6).append(str7).append(str8).append(str9).append(str10).toString();
+
+        BedrockCodecHelper helper = session.getUpstream().getCodecHelper();
+        byte[] a = str2bytes(pack);
+
+        ByteBuf buffer = Unpooled.buffer();
+        buffer.writeBytes(a);
+//
+//        StartGameSerializer_v504.INSTANCE.deserialize(buffer, helper, packet);
+        System.out.println(buffer.readByte());
+        int x = VarInts.readUnsignedInt(buffer);
+        System.out.println(x);
+        BedrockPacketDefinition<? extends BedrockPacket> definition = Bedrock_v686.CODEC.getPacketDefinition(x);
+
+        BedrockPacket packet = definition.getFactory().get();
+        BedrockPacketSerializer<BedrockPacket> serializer = (BedrockPacketSerializer) definition.getSerializer();
+
+        serializer.deserialize(buffer, helper, packet);
+        System.out.println("packet.getPacketType() -> " + packet.getPacketType());
+        System.out.println(packet);
+
+
+    }
+
+    public static byte[] str2bytes(String src) {
+        if (src == null || src.length() == 0 || src.length() % 2 != 0) {
+            return null;
+        }
+        int nSrcLen = src.length();
+        byte byteArrayResult[] = new byte[nSrcLen / 2];
+        StringBuffer strBufTemp = new StringBuffer(src);
+        String strTemp;
+        int i = 0;
+        while (i < strBufTemp.length() - 1) {
+            strTemp = src.substring(i, i + 2);
+            byteArrayResult[i / 2] = (byte) Integer.parseInt(strTemp, 16);
+            i += 2;
+        }
+        return byteArrayResult;
     }
 
     private void syncEntityProperties() {

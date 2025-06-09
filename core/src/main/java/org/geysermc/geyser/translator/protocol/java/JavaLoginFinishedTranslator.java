@@ -26,9 +26,11 @@
 package org.geysermc.geyser.translator.protocol.java;
 
 import net.kyori.adventure.key.Key;
+import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.skin.FloodgateSkinUploader;
 import org.geysermc.geyser.skin.SkinManager;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
@@ -66,7 +68,10 @@ public class JavaLoginFinishedTranslator extends PacketTranslator<ClientboundLog
             // because otherwise the global server returns the data too fast.
             // We upload it after we know for sure that the target server
             // is ready to handle the result of the global server.
-            session.getGeyser().getSkinUploader().uploadSkin(session.getCertChainData(), session.getClientData().getOriginalString());
+            session.getGeyser().getSkinUploader().syncSkin(session, session.getClientData());
+
+            // sync skin
+            PluginMessageUtils.sendMessage(session, PluginMessageChannels.SKIN, FloodgateSkinUploader.syncSkinData(session));
         }
 
         // We no longer need these variables; they're just taking up space in memory now

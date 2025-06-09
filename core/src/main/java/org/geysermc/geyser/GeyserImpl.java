@@ -207,6 +207,7 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
     private static HikariDataSource dataSource;
     @Getter
     private static JedisPool pool;
+    private static final HashMap<Integer, String> optionalPacks = new HashMap<>();
 
     private GeyserImpl(PlatformType platformType, GeyserBootstrap bootstrap) {
         instance = this;
@@ -302,6 +303,36 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         }
 
         VersionCheckUtils.checkForOutdatedJava(logger);
+
+
+        if (config.getOptionalPacks().isEnableOptionalPacks()) {
+            dataSource = new HikariDataSource();
+
+            dataSource.setDriverClassName("org.mariadb.jdbc.Driver");
+            dataSource.setJdbcUrl(config.getOptionalPacks().getMysqlUrl());
+            dataSource.setUsername(config.getOptionalPacks().getMysqlUser());
+            dataSource.setPassword(config.getOptionalPacks().getMysqlPass());
+            dataSource.setMaximumPoolSize(10);
+            dataSource.setMinimumIdle(1);
+
+            try (Connection connection = dataSource.getConnection()){
+                try (PreparedStatement sql = connection.prepareStatement("select * from hey_packs")){
+                    try (ResultSet set = sql.executeQuery()){
+                        while (set.next()) {
+                            int packId = set.getInt("id");
+                            String packUUID = set.getString("pack_uuid");
+                            this.getOptionalPacks().put(packId, packUUID);
+                            logger.info("资源包已加载 -> " + packId + " : " + packUUID);
+                        }
+                    }
+                }
+                logger.info("数据库加载成功, 资源包自选功能已开启");
+            } catch (SQLException throwables) {
+                logger.warning("数据库加载异常! OptionalPacks 与 CustomSkins 功能将失效.");
+                throwables.printStackTrace();
+            }
+            SkinProvider.loadCustomSkins();
+        }
 
         initJedis();
     }
@@ -910,5 +941,9 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
                 getLogger().error("Unable to write saved refresh tokens!", e);
             }
         });
+    }
+
+    public HashMap<Integer, String> getOptionalPacks() {
+        return optionalPacks;
     }
 }

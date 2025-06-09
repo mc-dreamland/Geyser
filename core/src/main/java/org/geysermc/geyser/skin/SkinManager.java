@@ -76,7 +76,8 @@ public class SkinManager {
             // Otherwise, grab the default player skin
             SkinData fallbackSkinData = SkinProvider.determineFallbackSkinData(playerEntity.getUuid());
             if (skin == null) {
-                skin = fallbackSkinData.skin();
+//                skin = fallbackSkinData.skin();
+                skin = ProvidedSkins.getSteveSkin().getData();
                 geometry = fallbackSkinData.geometry();
             }
             if (cape == null) {
@@ -102,7 +103,10 @@ public class SkinManager {
                                                             Skin skin,
                                                             Cape cape,
                                                             SkinGeometry geometry) {
-        SerializedSkin serializedSkin = getSkin(session, skin.textureUrl(), skin, cape, geometry);
+        if (skin.textureUrl() == null || skin.textureUrl().isEmpty()) {
+            skin = new Skin("steve", skin.skinData());
+        }
+        SerializedSkin serializedSkin = getSkin(session, skin.textureUrl(), skin, cape, geometry, true);
 
         // This attempts to find the XUID of the player so profile images show up for Xbox accounts
         String xuid = "";
@@ -129,6 +133,7 @@ public class SkinManager {
         entry.setPlatformChatId("");
         entry.setTeacher(false);
         entry.setTrustedSkin(true);
+        entry.setUid(skin.uid());
         // Without a color set, player list entries will not show up.
         entry.setColor(Color.BLACK);
         return entry;
@@ -159,13 +164,13 @@ public class SkinManager {
             packet.setUuid(entity.getUuid());
             packet.setOldSkinName("");
             packet.setNewSkinName(skin.textureUrl());
-            packet.setSkin(getSkin(session, skin.textureUrl(), skin, cape, geometry));
+            packet.setSkin(getSkin(session, skin.textureUrl(), skin, cape, geometry, false));
             packet.setTrustedSkin(true);
             session.sendUpstreamPacket(packet);
         }
     }
 
-    private static SerializedSkin getSkin(GeyserSession session, String skinId, Skin skin, Cape cape, SkinGeometry geometry) {
+    private static SerializedSkin getSkin(GeyserSession session, String skinId, Skin skin, Cape cape, SkinGeometry geometry, boolean persona) {
         return SerializedSkin.builder()
             .skinId(skinId)
             .skinResourcePatch(geometry.geometryName())
@@ -175,6 +180,7 @@ public class SkinManager {
             .premium(true)
             .capeId(cape.capeId())
             .fullSkinId(skinId)
+            .persona(persona)
             .geometryDataEngineVersion(session.getClientData().getGameVersion())
             .build();
     }
@@ -299,6 +305,16 @@ public class SkinManager {
             }
 
             JsonNode textures = skinObject.get("textures");
+
+            if (skinObject.hasNonNull("pe")) {
+                String skinUrl = skinObject.get("data").asText();
+                if (skinObject.get("pe").asBoolean()) { // load PE
+                    GeyserImpl.getInstance().getLogger().debug("loadFromJson PE " + skinUrl);
+                } else { // load PC
+                    GeyserImpl.getInstance().getLogger().debug("loadFromJson PC " + skinUrl);
+                }
+                return new GameProfileData(skinUrl, SkinProvider.EMPTY_CAPE.textureUrl(), skinObject.get("alex").asBoolean());
+            }
 
             if (textures == null) {
                 return null;

@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.util;
 
+import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.geysermc.geyser.session.GeyserSession;
 
@@ -52,12 +53,17 @@ public class PlayerListUtils {
                 packet.setAction(action);
                 packet.getEntries().addAll(entries.subList(start, end));
                 session.sendUpstreamPacket(packet);
+
+                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(entries.subList(start, end));
+                session.sendUpstreamPacket(confirmSkinPacket);
             }
         } else {
             PlayerListPacket packet = new PlayerListPacket();
             packet.setAction(action);
             packet.getEntries().addAll(entries);
             session.sendUpstreamPacket(packet);
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(entries);
+            session.sendUpstreamPacket(confirmSkinPacket);
         }
     }
 }

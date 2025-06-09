@@ -31,23 +31,33 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.floodgate.util.WebsocketEventType;
 import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.GeyserLogger;
+import org.geysermc.geyser.api.skin.Skin;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.geyser.util.Gzip;
 import org.geysermc.geyser.util.PluginMessageUtils;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import javax.net.ssl.SSLException;
+import java.math.BigInteger;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -140,7 +150,17 @@ public final class FloodgateSkinUploader {
                             }
                             break;
                         case NEWS_ADDED:
-                            //todo
+                            UUID uuid = UUID.fromString(node.get("uuid").asText());
+                            String textures = node.get("skin_data").asText();
+                            byte[] skin_data = Gzip.unGZipBytes(Base64.getDecoder().decode(textures));
+                            String skinHash = node.get("skin_hash").asText();
+                            String skinUrl = String.format(GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/%s?%s?pe", uuid, skinHash);
+                            Skin skin = new Skin(skinUrl, skin_data, false);
+                            SkinProvider.storeJavaSkin(skin);
+                            SkinProvider.storeCustomSkin(uuid, uuid.toString(), skin_data);
+                            SkinProvider.saveCustomSkin(uuid, textures);
+                            logger.debug("update skin for " + uuid + " success");
+                            break;
                     }
                 } catch (Exception e) {
                     logger.error("Error while receiving a message", e);
@@ -188,6 +208,52 @@ public final class FloodgateSkinUploader {
                 logger.error("Got an error", ex);
             }
         };
+    }
+
+    @SneakyThrows
+    public void syncSkin(GeyserSession session, BedrockClientData clientData) {
+        List<String> chainData = session.getCertChainData();
+        if (chainData == null || chainData.isEmpty()) {
+            return;
+        }
+//        logger.debug(session.getAuthData().name() + " syncSkin " + clientData.getOriginalString());
+
+        ObjectNode node = JACKSON.createObjectNode();
+//        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
+        byte[] skinData = clientData.getSkinData().getBytes(StandardCharsets.UTF_8);
+        Skin skin = SkinProvider.CUSTOM_SKINS.getIfPresent(session.javaUuid().toString());
+        if (skin != null) {
+            // skin data byte[]
+            node.put("skin_data", Base64.getEncoder().encodeToString(Gzip.gZipBytes(skin.skinData())));
+        }else{
+            // client data base64 String
+            node.put("skin_data", Base64.getEncoder().encodeToString(Gzip.gZipBytes(Base64.getDecoder().decode(skinData))));
+        }
+        node.put("hash", hash(clientData.getSkinData()));
+        node.put("geometry_data", clientData.getGeometryData());
+//        node.put("geometry_data",MathUtils.gZipBytes(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8)));
+        node.put("geometry_name", clientData.getGeometryName());
+        node.put("skin_id", clientData.getSkinId());
+        node.put("uuid", session.getAuthData().uuid().toString());
+        node.put("xuid", session.getAuthData().xuid());
+        node.put("uid", session.getAuthData().uid());
+
+        // The reason why I don't like Jackson
+        String jsonString;
+        try {
+            jsonString = JACKSON.writeValueAsString(node);
+        } catch (Exception e) {
+            logger.error("Failed to upload skin", e);
+            return;
+        }
+
+        logger.debug(session.getAuthData().name() + "syncSkin Json: " + jsonString);
+
+        if (client.isOpen()) {
+            client.send(jsonString);
+            return;
+        }
+        skinQueue.add(jsonString);
     }
 
     public void uploadSkin(List<String> chainData, String clientData) {
@@ -240,5 +306,32 @@ public final class FloodgateSkinUploader {
             closed = true;
             client.close();
         }
+    }
+
+    public static String hash(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] messageDigest = md.digest(input.getBytes());
+            BigInteger number = new BigInteger (1, messageDigest);
+            String hashtext = number.toString(16);
+            while (hashtext.length()<32) {
+                hashtext = "0" + hashtext;
+            }
+            return hashtext;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @SneakyThrows
+    public static byte[] syncSkinData(GeyserSession geyserSession){
+        Map<String,Object> map = new LinkedHashMap<>(2);
+        map.put("pe",true);
+        map.put("alex",geyserSession.getClientData().getSkinId().contains("Slim") ?"true":"false");
+        map.put("data",GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/"
+            +geyserSession.getAuthData().uuid()+"?"+
+            hash(geyserSession.getClientData().getSkinData())+"?pe");
+        // 114514 魔法值 无作用
+        return (Base64.getEncoder().encodeToString(GeyserImpl.JSON_MAPPER.writeValueAsBytes(map))+ '\0'+"114514").getBytes(StandardCharsets.UTF_8);
     }
 }

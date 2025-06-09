@@ -122,8 +122,14 @@ public final class GeyserServer {
 
     public GeyserServer(GeyserImpl geyser, int threadCount) {
         this.geyser = geyser;
-        this.listenCount = Bootstraps.isReusePortAvailable() ?  Integer.getInteger("Geyser.ListenCount", 2) : 1;
-        GeyserImpl.getInstance().getLogger().debug("Listen thread count: " + listenCount);
+        int integer = Integer.getInteger("Geyser.ListenCount", 2);
+        if (integer == -1) {
+            integer = Math.max(1, Math.min(20, threadCount / 2));
+        } else if (integer < 20) {
+            integer = 20;
+        }
+        this.listenCount = Bootstraps.isReusePortAvailable() ? integer : 1;
+        GeyserImpl.getInstance().getLogger().info("Listen thread count: " + listenCount);
         this.group = TRANSPORT.eventLoopGroupFactory().apply(listenCount);
         this.childGroup = TRANSPORT.eventLoopGroupFactory().apply(threadCount);
 

@@ -223,7 +223,7 @@ allowed-pc: true
 
 optional-packs:
     enable-optional-packs: true
-    mysql-url: jdbc:mysql://mysql-01.bjd-mc.com/main_core?autoReconnect=true
+    mysql-url: jdbc:mariadb://mysql-01.bjd-mc.com/main_core?autoReconnect=true
     mysql-user: root
     mysql-pass: msj
 

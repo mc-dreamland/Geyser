@@ -32,8 +32,12 @@ package org.geysermc.geyser.api.skin;
  * @param skinData The raw skin image data in ARGB
  * @param failed If the skin failed to load, this is for things like fallback skins
  */
-public record Skin(String textureUrl, byte[] skinData, boolean failed) {
+public record Skin(String textureUrl, byte[] skinData, boolean failed, long uid) {
     public Skin(String textureUrl, byte[] skinData) {
         this(textureUrl, skinData, false);
     }
+    public Skin(String textureUrl, byte[] skinData, boolean failed) {
+        this(textureUrl, skinData, false, textureUrl.hashCode() < 0 ? -textureUrl.hashCode() : textureUrl.hashCode());
+    }
+
 }

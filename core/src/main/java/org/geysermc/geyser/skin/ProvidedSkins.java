@@ -64,6 +64,10 @@ public final class ProvidedSkins {
         return PROVIDED_SKINS[Math.floorMod(uuid.hashCode(), PROVIDED_SKINS.length)];
     }
 
+    public static ProvidedSkin getSteveSkin() {
+        return PROVIDED_SKINS[15];
+    }
+
     private ProvidedSkins() {
     }
 
@@ -81,7 +85,25 @@ public final class ProvidedSkins {
             String assetName = asset.substring(asset.lastIndexOf('/') + 1);
 
             Path location = folder.resolve(assetName);
-            AssetUtils.addTask(!Files.exists(location), new AssetUtils.ClientJarTask("assets/minecraft/" + asset,
+
+            if (Files.exists(location)) {
+                try {
+                    // TODO lazy initialize?
+                    BufferedImage image;
+                    try (InputStream stream = Files.newInputStream(location)) {
+                        image = ImageIO.read(stream);
+                    }
+
+                    byte[] byteData = SkinProvider.bufferedImageToImageData(image);
+                    image.flush();
+
+                    String identifier = "geysermc:" + assetName + "_" + (slim ? "slim" : "wide");
+                    this.data = new Skin(identifier, byteData);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                AssetUtils.addTask(!Files.exists(location), new AssetUtils.ClientJarTask("assets/minecraft/" + asset,
                     (stream) -> AssetUtils.saveFile(location, stream),
                     () -> {
                         try {
@@ -99,12 +121,13 @@ public final class ProvidedSkins {
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-            }));
+                    }));
+            }
         }
 
         public Skin getData() {
             // Fall back to the default skin if we can't load our skins, or it's not loaded yet.
-            return Objects.requireNonNullElse(data, SkinProvider.EMPTY_SKIN);
+            return Objects.requireNonNullElse(data, ProvidedSkins.getSteveSkin().data);
         }
 
         public boolean isSlim() {
