@@ -82,6 +82,8 @@ import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.network.netty.GeyserServer;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
+import org.geysermc.geyser.registry.loader.BehaviorPackLoader;
+import org.geysermc.geyser.registry.loader.OptionalResourcePackLoader;
 import org.geysermc.geyser.registry.loader.ResourcePackLoader;
 import org.geysermc.geyser.registry.provider.ProviderSupplier;
 import org.geysermc.geyser.scoreboard.ScoreboardUpdater;
@@ -368,6 +370,8 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         SkinProvider.registerCacheImageTask(this);
 
         Registries.RESOURCE_PACKS.load();
+        Registries.OPTIONAL_RESOURCE_PACKS.load();
+        Registries.BEHAVIOR_PACKS.load();
 
         String geyserUdpPort = System.getProperty("geyserUdpPort", "");
         String pluginUdpPort = geyserUdpPort.isEmpty() ? System.getProperty("pluginUdpPort", "") : geyserUdpPort;
@@ -744,6 +748,8 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         runIfNonNull(erosionUnixListener, UnixSocketClientListener::close);
 
         ResourcePackLoader.clear();
+        OptionalResourcePackLoader.clear();
+        BehaviorPackLoader.clear();
 
         this.setEnabled(false);
     }
@@ -833,8 +839,20 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
 
     @Override
     @NonNull
-    public Path packDirectory() {
-        return bootstrap.getConfigFolder().resolve("packs");
+    public Path resourcePackDirectory() {
+        return bootstrap.getConfigFolder().resolve("packs/ResourcePacks");
+    }
+
+    @Override
+    @NonNull
+    public Path optionalResourcePackDirectory() {
+        return bootstrap.getConfigFolder().resolve("packs/OptionalResourcePacks");
+    }
+
+    @Override
+    @NonNull
+    public Path behaviorPackDirectory() {
+        return bootstrap.getConfigFolder().resolve("packs/BehaviorPacks");
     }
 
     @Override

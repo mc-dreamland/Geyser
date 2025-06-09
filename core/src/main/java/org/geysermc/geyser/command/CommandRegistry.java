@@ -49,9 +49,11 @@ import org.geysermc.geyser.command.defaults.DumpCommand;
 import org.geysermc.geyser.command.defaults.ExtensionsCommand;
 import org.geysermc.geyser.command.defaults.HelpCommand;
 import org.geysermc.geyser.command.defaults.ListCommand;
+import org.geysermc.geyser.command.defaults.LoadPacksCommand;
 import org.geysermc.geyser.command.defaults.OffhandCommand;
 import org.geysermc.geyser.command.defaults.PingCommand;
 import org.geysermc.geyser.command.defaults.ReloadCommand;
+import org.geysermc.geyser.command.defaults.ReloadSkinCommand;
 import org.geysermc.geyser.command.defaults.SettingsCommand;
 import org.geysermc.geyser.command.defaults.StatisticsCommand;
 import org.geysermc.geyser.command.defaults.StopCommand;
@@ -163,6 +165,8 @@ public class CommandRegistry implements EventRegistrar {
         registerBuiltInCommand(new AdvancedTooltipsCommand("tooltips", "geyser.commands.advancedtooltips.desc", "geyser.command.tooltips"));
         registerBuiltInCommand(new ConnectionTestCommand(geyser, "connectiontest", "geyser.commands.connectiontest.desc", "geyser.command.connectiontest"));
         registerBuiltInCommand(new PingCommand("ping", "geyser.commands.ping.desc", "geyser.command.ping"));
+        registerBuiltInCommand(new ReloadSkinCommand("loadskin", "重载自定义皮肤", "geyser.command.loadskin"));
+        registerBuiltInCommand(new LoadPacksCommand(geyser, "loadpacks", "重载材质包", "geyser.command.loadPacks"));
         if (this.geyser.getPlatformType() == PlatformType.STANDALONE) {
             registerBuiltInCommand(new StopCommand(geyser, "stop", "geyser.commands.stop.desc", "geyser.command.stop"));
         }

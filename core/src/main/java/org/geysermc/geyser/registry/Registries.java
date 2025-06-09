@@ -175,7 +175,9 @@ public final class Registries {
     /**
      * A mapped registry holding {@link ResourcePackHolder}'s with the pack uuid as keys.
      */
-    public static final SimpleMappedDeferredRegistry<UUID, ResourcePackHolder> RESOURCE_PACKS = SimpleMappedDeferredRegistry.create(GeyserImpl.getInstance().packDirectory(), RegistryLoaders.RESOURCE_PACKS);
+    public static final SimpleMappedDeferredRegistry<UUID, ResourcePackHolder> RESOURCE_PACKS = SimpleMappedDeferredRegistry.create(GeyserImpl.getInstance().resourcePackDirectory(), RegistryLoaders.RESOURCE_PACKS);
+    public static final SimpleMappedDeferredRegistry<UUID, ResourcePackHolder> OPTIONAL_RESOURCE_PACKS = SimpleMappedDeferredRegistry.create(GeyserImpl.getInstance().optionalResourcePackDirectory(), RegistryLoaders.OPTIONAL_RESOURCE_PACKS);
+    public static final SimpleMappedDeferredRegistry<UUID, ResourcePackHolder> BEHAVIOR_PACKS = SimpleMappedDeferredRegistry.create(GeyserImpl.getInstance().behaviorPackDirectory(), RegistryLoaders.BEHAVIOR_PACKS);
 
     /**
      * A versioned registry holding most Bedrock tags, with the Java item list (sorted) being the key, and the tag name as the value.

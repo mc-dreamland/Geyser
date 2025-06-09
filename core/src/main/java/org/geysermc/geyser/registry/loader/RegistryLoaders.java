@@ -47,6 +47,8 @@ public final class RegistryLoaders {
      * The {@link RegistryLoader} responsible for loading resource packs.
      */
     public static final ResourcePackLoader RESOURCE_PACKS = new ResourcePackLoader();
+    public static final OptionalResourcePackLoader OPTIONAL_RESOURCE_PACKS = new OptionalResourcePackLoader();
+    public static final BehaviorPackLoader BEHAVIOR_PACKS = new BehaviorPackLoader();
 
     /**
      * Wraps the surrounding {@link Supplier} in a {@link RegistryLoader} which does
