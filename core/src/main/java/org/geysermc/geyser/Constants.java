@@ -27,6 +27,7 @@ package org.geysermc.geyser;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Locale;
 
 public final class Constants {
     public static final URI GLOBAL_API_WS_URI;
@@ -39,6 +40,7 @@ public final class Constants {
     static final String SAVED_AUTH_CHAINS_FILE = "saved-auth-chains.json";
 
     public static final String GEYSER_CUSTOM_NAMESPACE = "geyser_custom";
+    public static final String HEYPIXEL_CUSTOM_NAMESPACE = "heypixel";
 
     public static final String MINECRAFT_SKIN_SERVER_URL = "https://textures.minecraft.net/texture/";
 
@@ -50,5 +52,13 @@ public final class Constants {
             e.printStackTrace();
         }
         GLOBAL_API_WS_URI = wsUri;
+    }
+
+    public static boolean isHeyPixelCustom(String name) {
+        return name.toLowerCase(Locale.ROOT).startsWith(HEYPIXEL_CUSTOM_NAMESPACE + ":");
+    }
+
+    public static String getCustomName(String name) {
+        return name.replace(HEYPIXEL_CUSTOM_NAMESPACE + ":", "").toLowerCase(Locale.ROOT);
     }
 }

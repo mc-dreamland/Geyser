@@ -54,6 +54,7 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
 import org.geysermc.geyser.api.block.custom.nonvanilla.JavaBlockState;
+import org.geysermc.geyser.level.block.BlockStateValues;
 import org.geysermc.geyser.level.block.Blocks;
 import org.geysermc.geyser.level.block.property.Properties;
 import org.geysermc.geyser.level.block.type.Block;
@@ -72,6 +73,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -116,6 +118,10 @@ public final class BlockRegistryPopulator {
     public static int MIN_CUSTOM_RUNTIME_ID = -1;
     public static int JAVA_BLOCKS_SIZE = -1;
 
+    //自定义头颅方块ID
+    public static int JAVA_PLAYER_HEAD_ID_MIN;
+    public static int JAVA_PLAYER_HEAD_ID_MAX;
+
     private static void nullifyBlocksNbt() {
         BLOCKS_NBT = null;
     }
@@ -137,6 +143,7 @@ public final class BlockRegistryPopulator {
 
         for (ObjectIntPair<String> palette : blockMappers.keySet()) {
             int protocolVersion = palette.valueInt();
+            List<GeyserBedrockBlock> customRuntimeIdList = new ArrayList<>();
             List<NbtMap> vanillaBlockStates;
             List<NbtMap> blockStates;
             try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResourceOrThrow(String.format("bedrock/block_palette.%s.nbt", palette.key()));
@@ -198,6 +205,16 @@ public final class BlockRegistryPopulator {
                     NbtMap tag = customBlockStates.get(i);
                     CustomBlockState blockState = customExtBlockStates.get(i);
                     GeyserBedrockBlock bedrockBlock = blockStateOrderedMap.get(tag);
+
+                    if (blockState.block().components() != null && blockState.block().components().neteaseFaceDirectional() != null && blockState.block().components().neteaseFaceDirectional() == 1) {
+                        int checkedId = bedrockBlock == null ? -1 : bedrockBlock.getRuntimeId();
+                        if (checkedId != -1) {
+                            customRuntimeIdList.add(new GeyserBedrockBlock(bedrockBlock, true));
+                        }
+                    } else {
+                        customRuntimeIdList.add(new GeyserBedrockBlock(bedrockBlock, false));
+                    }
+
                     customBlockStateDefinitions.put(blockState, bedrockBlock);
 
                     Set<Integer> extendedCollisionjavaIds = BlockRegistries.EXTENDED_COLLISION_BOXES.getOrDefault(blockState.block(), null);
@@ -412,6 +429,10 @@ public final class BlockRegistryPopulator {
                     .customBlockStateDefinitions(customBlockStateDefinitions)
                     .extendedCollisionBoxes(extendedCollisionBoxes)
                     .build());
+
+            customRuntimeIdList.sort(Comparator.comparingInt(GeyserBedrockBlock::getRuntimeId));
+            BlockRegistries.CUSTOM_BLOCK_RUNTIME_LIST.put(palette.valueInt(), customRuntimeIdList);
+
         }
     }
 
@@ -425,12 +446,36 @@ public final class BlockRegistryPopulator {
         }
 
         int javaRuntimeId = -1;
+        int playerHeadRuntimeIdMin = -1;
+        int playerHeadRuntimeIdMax = -1;
         for (BlockState javaBlockState : BlockRegistries.BLOCK_STATES.get()) {
             javaRuntimeId++;
             String javaId = javaBlockState.toString().intern();
 
             BlockRegistries.JAVA_IDENTIFIER_TO_ID.register(javaId, javaRuntimeId);
+
+            if (javaId.contains("minecraft:player_head") || javaId.contains("minecraft:player_wall_head")) {
+                if (playerHeadRuntimeIdMin == -1) {
+                    playerHeadRuntimeIdMin = javaRuntimeId;
+                }
+                if (playerHeadRuntimeIdMax == -1) {
+                    playerHeadRuntimeIdMax = javaRuntimeId;
+                }
+                if (javaRuntimeId < playerHeadRuntimeIdMin) {
+                    playerHeadRuntimeIdMin = javaRuntimeId;
+                }
+                if (javaRuntimeId > playerHeadRuntimeIdMax) {
+                    playerHeadRuntimeIdMax = javaRuntimeId;
+                }
+            }
         }
+
+
+        if (playerHeadRuntimeIdMin == -1) {
+            throw new AssertionError("Unable to find Java Player Head in palette");
+        }
+        JAVA_PLAYER_HEAD_ID_MIN = playerHeadRuntimeIdMin;
+        JAVA_PLAYER_HEAD_ID_MAX = playerHeadRuntimeIdMax;
 
         BLOCKS_NBT = blocksNbt;
         JAVA_BLOCKS_SIZE = blocksNbt.size();
@@ -478,5 +523,27 @@ public final class BlockRegistryPopulator {
             hash ^= b;
         }
         return hash;
+    }
+
+    public static int manageCreativeItemsRuntimeId(List<GeyserBedrockBlock> customIdList, int runtimeId) {
+        int i = 0;
+        for (GeyserBedrockBlock neteaseBedrockBlock : customIdList) {
+            int j = 0;
+            if (neteaseBedrockBlock.getRuntimeId() - i >= runtimeId) {
+                j = i;
+            }
+            if (runtimeId + j >= neteaseBedrockBlock.getRuntimeId()) {
+                i++;
+            }
+        }
+        int ii = 0;
+
+
+        for (GeyserBedrockBlock neteaseBedrockBlock : customIdList) {
+            if ((runtimeId + i) >= neteaseBedrockBlock.getRuntimeId()) {
+                ii++;
+            }
+        }
+        return ii;
     }
 }

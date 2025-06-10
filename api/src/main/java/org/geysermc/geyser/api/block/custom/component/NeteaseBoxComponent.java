@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 GeyserMC. http://geysermc.org
+ * Copyright (c) 2025 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,25 +23,8 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.registry.mappings.util;
+package org.geysermc.geyser.api.block.custom.component;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.geysermc.geyser.api.block.custom.CustomBlockData;
-
-import java.util.Map;
-
-/**
- * This class is used to store a custom block mappings, which contain all of the 
- * data required to register a custom block that overrides a group of java block
- * states.
- * 
- * @param data The custom block data
- * @param states The custom block state mappings
- * @param javaIdentifier The java identifier of the block
- * @param overrideItem Whether the custom block should override the java item
- */
-public record CustomBlockMapping(@NonNull CustomBlockData data, @NonNull Map<String, CustomBlockStateMapping> states, @NonNull String javaIdentifier, boolean overrideItem, boolean replaceSkull) {
-    public CustomBlockMapping(@NonNull CustomBlockData data, @NonNull Map<String, CustomBlockStateMapping> states, @NonNull String javaIdentifier, boolean overrideItem) {
-        this(data, states, javaIdentifier, overrideItem, false);
-    }
+public record NeteaseBoxComponent(String molang, float originX, float originY, float originZ,
+                                  float sizeX, float sizeY, float sizeZ) {
 }

@@ -62,11 +62,16 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * A class responsible for reading custom item and block mappings from a JSON file
  */
 public class MappingsReader_v1 extends MappingsReader {
+    private static final int[] ROTATIONS = {0, -90, 180, 90};
+    private static final String BITS_A_PROPERTY = "geyser_skull:bits_a";
+    private static final String BITS_B_PROPERTY = "geyser_skull:bits_b";
+
     @Override
     public void readItemMappings(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomItemData> consumer) {
         this.readItemMappingsV1(file, mappingsRoot, consumer);
@@ -83,6 +88,7 @@ public class MappingsReader_v1 extends MappingsReader {
     @Override
     public void readBlockMappings(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomBlockMapping> consumer) {
         this.readBlockMappingsV1(file, mappingsRoot, consumer);
+        this.readSkullBlockMappingsV1(file, mappingsRoot, consumer);
     }
 
     public void readItemMappingsV1(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomItemData> consumer) {
@@ -129,6 +135,26 @@ public class MappingsReader_v1 extends MappingsReader {
                 }
             });
         }
+    }
+
+    public void readSkullBlockMappingsV1(Path file, JsonNode mappingsRoot, BiConsumer<String, CustomBlockMapping> consumer) {
+        JsonNode skullNode = mappingsRoot.get("skull_blocks");
+
+        if (skullNode != null && skullNode.isObject()) {
+            skullNode.fields().forEachRemaining(entry -> {
+                if (entry.getValue().isObject()) {
+                    try {
+                        String identifier = entry.getKey();
+                        CustomBlockMapping customBlockMapping = this.readSkullBlockMappingEntry(identifier, entry.getValue());
+                        consumer.accept(identifier, customBlockMapping);
+                    } catch (Exception e) {
+                        GeyserImpl.getInstance().getLogger().error("Error in registering blocks for custom mapping file: " + file.toString());
+                        GeyserImpl.getInstance().getLogger().error("due to entry: " + entry, e);
+                    }
+                }
+            });
+        }
+
     }
 
     private CustomItemOptions readItemCustomItemOptions(JsonNode node) {
@@ -450,37 +476,7 @@ public class MappingsReader_v1 extends MappingsReader {
         builder.placeAir(placeAir);
 
         if (node.has("transformation")) {
-            JsonNode transformation = node.get("transformation");
-
-            int rotationX = 0;
-            int rotationY = 0;
-            int rotationZ = 0;
-            float scaleX = 1;
-            float scaleY = 1;
-            float scaleZ = 1;
-            float transformX = 0;
-            float transformY = 0;
-            float transformZ = 0;
-
-            if (transformation.has("rotation")) {
-                JsonNode rotation = transformation.get("rotation");
-                rotationX = rotation.get(0).asInt();
-                rotationY = rotation.get(1).asInt();
-                rotationZ = rotation.get(2).asInt();
-            }
-            if (transformation.has("scale")) {
-                JsonNode scale = transformation.get("scale");
-                scaleX = scale.get(0).floatValue();
-                scaleY = scale.get(1).floatValue();
-                scaleZ = scale.get(2).floatValue();
-            }
-            if (transformation.has("translation")) {
-                JsonNode translation = transformation.get("translation");
-                transformX = translation.get(0).floatValue();
-                transformY = translation.get(1).floatValue();
-                transformZ = translation.get(2).floatValue();
-            }
-            builder.transformation(new TransformationComponent(rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ, transformX, transformY, transformZ));
+            readTransFormation(node, builder);
         }
 
         if (node.has("unit_cube")) {
@@ -527,7 +523,189 @@ public class MappingsReader_v1 extends MappingsReader {
             builder.tags(tagsSet);
         }
 
+        if (node.has("rotatable")) {
+            builder.rotatable(node.get("rotatable").asBoolean());
+        }
+
+        if (node.has("netease_face_directional")) {
+            builder.neteaseFaceDirectional(node.get("netease_face_directional").asInt());
+        }
+
+        if (node.has("netease_aabb")) {
+            JsonNode jsonNode = node.get("netease_aabb");
+            if (jsonNode.has("clip")) {
+                builder.neteaseAabbClip(createNetEaseBoxComponent(jsonNode.get("clip")));
+            }
+            if (jsonNode.has("collision")) {
+                builder.neteaseAabbCollision(createNetEaseBoxComponent(jsonNode.get("collision")));
+            }
+        }
+
+        if (node.has("netease_block_entity")) {
+            builder.neteaseBlockEntity(true);
+        }
+
+        if (node.has("netease_tier")) {
+            builder.neteaseTier(node.get("netease_tier").asText());
+        }
+
+        if (node.has("netease_solid")) {
+            builder.neteaseSolid(node.get("netease_solid").asBoolean());
+        }
+
+        if (node.has("netease_render_layer")) {
+            builder.neteaseRenderLayer(node.get("netease_render_layer").asText());
+        }
+
+
         return new CustomBlockComponentsMapping(builder.build(), extendedBoxComponent);
+    }
+    /**
+     * Read a block mapping entry from a JSON node and Java identifier
+     *
+     * @param identifier The Java identifier of the block
+     * @param node       The {@link JsonNode} containing the block mapping entry
+     * @return The {@link CustomBlockMapping} record to be read by {@link org.geysermc.geyser.registry.populator.CustomBlockRegistryPopulator#populate}
+     * @throws InvalidCustomMappingsFileException If the JSON node is invalid
+     */
+    @Override
+    public CustomBlockMapping readSkullBlockMappingEntry(String identifier, JsonNode node) throws InvalidCustomMappingsFileException {
+        if (node == null || !node.isObject()) {
+            throw new InvalidCustomMappingsFileException("Invalid custom skull block mappings entry:" + node);
+        }
+
+        String name = node.get("name").asText();
+        if (name == null || name.isEmpty()) {
+            throw new InvalidCustomMappingsFileException("A block entry has no name");
+        }
+
+        boolean includedInCreativeInventory = node.has("included_in_creative_inventory") && node.get("included_in_creative_inventory").asBoolean();
+
+        CreativeCategory creativeCategory = CreativeCategory.NONE;
+        String creativeGroup = "";
+        if (node.has("creative_category")) {
+            String categoryName = node.get("creative_category").asText();
+            creativeGroup = node.get("creative_group").asText();
+            try {
+                creativeCategory = CreativeCategory.valueOf(categoryName.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new InvalidCustomMappingsFileException("Invalid creative category \"" + categoryName + "\" for block \"" + name + "\"");
+            }
+        }
+
+
+        // If this is true, we will only register the states the user has specified rather than all the possible block states
+        boolean onlyOverrideStates = node.has("only_override_states") && node.get("only_override_states").asBoolean();
+
+        // Create the data for the overall block
+        CustomBlockData.Builder customBlockDataBuilder = new GeyserCustomBlockData.Builder()
+            .name(name)
+            .includedInCreativeInventory(includedInCreativeInventory)
+            .creativeCategory(creativeCategory)
+            .creativeGroup(creativeGroup);
+
+        if (BlockRegistries.JAVA_IDENTIFIER_TO_ID.get().containsKey(identifier)) {
+            // There is only one Java block state to override
+            throw new InvalidCustomMappingsFileException("Skull block entry for " + identifier + " is a java block, please rename.");
+        }
+        CustomBlockComponentsMapping componentsMapping = createCustomBlockComponentsMapping(node, identifier, name);
+
+        CustomBlockData.Builder builder = customBlockDataBuilder
+            .components(componentsMapping.components());
+        if (node.has("rotatable") && node.get("rotatable").asBoolean()) {
+
+            List<CustomBlockPermutation> permutations = new ArrayList<>();
+            addDefaultPermutation(permutations, componentsMapping.components().geometry(), componentsMapping.components().selectionBox(), componentsMapping.components().collisionBox());
+            addFloorPermutations(permutations, componentsMapping.components().geometry(), componentsMapping.components().selectionBox(), componentsMapping.components().collisionBox());
+            addWallPermutations(permutations, componentsMapping.components().geometry(), componentsMapping.components().selectionBox(), componentsMapping.components().collisionBox());
+            builder.intProperty(BITS_A_PROPERTY, IntStream.rangeClosed(0, 6).boxed().toList()) // This gives us exactly 21 block states
+                .intProperty(BITS_B_PROPERTY, IntStream.rangeClosed(0, 2).boxed().toList())
+                .permutations(permutations);
+        }
+
+        CustomBlockData blockData = builder
+            .build();
+        return new CustomBlockMapping(blockData, Map.of(identifier, new CustomBlockStateMapping(blockData.defaultBlockState(), componentsMapping.extendedCollisionBox())), identifier, !onlyOverrideStates, true);
+    }
+
+    private void addDefaultPermutation(List<CustomBlockPermutation> permutations, GeometryComponent geometry, BoxComponent selectBox, BoxComponent collisionBox) {
+        CustomBlockComponents components = new GeyserCustomBlockComponents.Builder()
+            .geometry(geometry)
+            .transformation(new TransformationComponent(0, 180, 0))
+            .build();
+
+        String condition = String.format("query.block_property('%s') == 0 && query.block_property('%s') == 0", BITS_A_PROPERTY, BITS_B_PROPERTY);
+        permutations.add(new CustomBlockPermutation(components, condition));
+    }
+
+    private void addFloorPermutations(List<CustomBlockPermutation> permutations, GeometryComponent geometry, BoxComponent selectBox, BoxComponent collisionBox) {
+        String[] quadrantNames = {"a", "b", "c", "d"};
+
+        for (int quadrant = 0; quadrant < 4; quadrant++) {
+            for (int i = 0; i < 4; i++) {
+                int floorRotation = 4 * quadrant + i;
+                CustomBlockComponents components = new GeyserCustomBlockComponents.Builder()
+                    .selectionBox(selectBox)
+                    .collisionBox(collisionBox)
+                    .geometry(geometry)
+                    .transformation(new TransformationComponent(0, ROTATIONS[quadrant], 0))
+                    .build();
+
+                int bitsA = (5 + floorRotation) % 7;
+                int bitsB = (5 + floorRotation) / 7;
+                String condition = String.format("query.block_property('%s') == %d && query.block_property('%s') == %d", BITS_A_PROPERTY, bitsA, BITS_B_PROPERTY, bitsB);
+                permutations.add(new CustomBlockPermutation(components, condition));
+            }
+        }
+    }
+
+    private void addWallPermutations(List<CustomBlockPermutation> permutations, GeometryComponent geometry, BoxComponent selectBox, BoxComponent collisionBox) {
+        for (int i = 0; i < 4; i++) {
+            CustomBlockComponents components = new GeyserCustomBlockComponents.Builder()
+                .selectionBox(selectBox)
+                .collisionBox(collisionBox)
+                .geometry(geometry)
+                .transformation(new TransformationComponent(0, ROTATIONS[i], 0))
+                .build();
+
+            String condition = String.format("query.block_property('%s') == %d && query.block_property('%s') == %d", BITS_A_PROPERTY, i + 1, BITS_B_PROPERTY, 0);
+            permutations.add(new CustomBlockPermutation(components, condition));
+        }
+    }
+
+
+    private static void readTransFormation(JsonNode node, CustomBlockComponents.Builder builder) {
+        JsonNode transformation = node.get("transformation");
+
+        int rotationX = 0;
+        int rotationY = 0;
+        int rotationZ = 0;
+        float scaleX = 1;
+        float scaleY = 1;
+        float scaleZ = 1;
+        float transformX = 0;
+        float transformY = 0;
+        float transformZ = 0;
+
+        if (transformation.has("rotation")) {
+            JsonNode rotation = transformation.get("rotation");
+            rotationX = rotation.get(0).asInt();
+            rotationY = rotation.get(1).asInt();
+            rotationZ = rotation.get(2).asInt();
+        }
+        if (transformation.has("scale")) {
+            JsonNode scale = transformation.get("scale");
+            scaleX = scale.get(0).floatValue();
+            scaleY = scale.get(1).floatValue();
+            scaleZ = scale.get(2).floatValue();
+        }
+        if (transformation.has("translation")) {
+            JsonNode translation = transformation.get("translation");
+            transformX = translation.get(0).floatValue();
+            transformY = translation.get(1).floatValue();
+            transformZ = translation.get(2).floatValue();
+        }
+        builder.transformation(new TransformationComponent(rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ, transformX, transformY, transformZ));
     }
 
     /**
@@ -539,6 +717,9 @@ public class MappingsReader_v1 extends MappingsReader {
      */
     private BoxComponent createBoxComponent(int javaId, float heightTranslation) {
         // Some blocks (e.g. plants) have no collision box
+        if (javaId < 0) {
+            return BoxComponent.emptyBox();
+        }
         BlockCollision blockCollision = BlockUtils.getCollision(javaId);
         if (blockCollision == null || blockCollision.getBoundingBoxes().length == 0) {
             return BoxComponent.emptyBox();
@@ -597,6 +778,9 @@ public class MappingsReader_v1 extends MappingsReader {
      * @return the {@link BoxComponent} or null if the block's collision box would not exceed 16 y units
      */
     private @Nullable BoxComponent createExtendedBoxComponent(int javaId) {
+        if (javaId == -1) {
+            return null;
+        }
         BlockCollision blockCollision = BlockUtils.getCollision(javaId);
         if (blockCollision == null) {
             return null;
@@ -726,6 +910,58 @@ public class MappingsReader_v1 extends MappingsReader {
 
         String states = state.substring(openBracketIndex + 1, state.length() - 1);
         return states.split(",");
+    }
+
+    /**
+     * Creates a {@link BoxComponent} from a JSON Node
+     *
+     * @param node the JSON node
+     * @return the {@link BoxComponent}
+     */
+    private List<NeteaseBoxComponent> createNetEaseBoxComponent(JsonNode node) {
+        List<NeteaseBoxComponent> boxComponents = new ArrayList<>();
+        if (node != null && node.isObject()) {
+            if (node.has("min") && node.has("max")) {
+                JsonNode min = node.get("min");
+                float minX = min.get(0).floatValue();
+                float minY = min.get(1).floatValue();
+                float minZ = min.get(2).floatValue();
+
+                JsonNode max = node.get("max");
+                float maxX = max.get(0).floatValue();
+                float maxY = max.get(1).floatValue();
+                float maxZ = max.get(2).floatValue();
+
+                if (node.has("enable")) {
+                    boxComponents.add(new NeteaseBoxComponent(node.get("enable").asText(), minX, minY, minZ, maxX, maxY, maxZ));
+                } else {
+                    boxComponents.add(new NeteaseBoxComponent("1.000000", minX, minY, minZ, maxX, maxY, maxZ));
+                }
+                return boxComponents;
+            }
+        }
+        if (node != null && node.isArray()) {
+            for (JsonNode nodeInfo : node) {
+                if (nodeInfo.has("min") && nodeInfo.has("max")) {
+                    JsonNode min = nodeInfo.get("min");
+                    float minX = min.get(0).floatValue();
+                    float minY = min.get(1).floatValue();
+                    float minZ = min.get(2).floatValue();
+
+                    JsonNode max = nodeInfo.get("max");
+                    float maxX = max.get(0).floatValue();
+                    float maxY = max.get(1).floatValue();
+                    float maxZ = max.get(2).floatValue();
+                    if (nodeInfo.has("enable")) {
+                        boxComponents.add(new NeteaseBoxComponent(nodeInfo.get("enable").asText(), minX, minY, minZ, maxX, maxY, maxZ));
+                    } else {
+                        boxComponents.add(new NeteaseBoxComponent("1.000000", minX, minY, minZ, maxX, maxY, maxZ));
+                    }
+                    return boxComponents;
+                }
+            }
+        }
+        return null;
     }
 
 }

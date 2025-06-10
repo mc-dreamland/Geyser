@@ -31,10 +31,24 @@ import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 public class GeyserBedrockBlock implements BlockDefinition {
     private final int runtimeId;
     private final NbtMap state;
+    private final boolean neteaseFaceDirectional;
 
     public GeyserBedrockBlock(int runtimeId, NbtMap state) {
         this.runtimeId = runtimeId;
         this.state = state;
+        this.neteaseFaceDirectional = false;
+    }
+
+    public GeyserBedrockBlock(int runtimeId, NbtMap state, boolean neteaseFaceDirectional) {
+        this.runtimeId = runtimeId;
+        this.state = state;
+        this.neteaseFaceDirectional = neteaseFaceDirectional;
+    }
+
+    public GeyserBedrockBlock(GeyserBedrockBlock geyserBedrockBlock, boolean neteaseFaceDirectional) {
+        this.runtimeId = geyserBedrockBlock.getRuntimeId();
+        this.state = geyserBedrockBlock.getState();
+        this.neteaseFaceDirectional = neteaseFaceDirectional;
     }
 
     @Override
@@ -44,6 +58,10 @@ public class GeyserBedrockBlock implements BlockDefinition {
 
     public NbtMap getState() {
         return state;
+    }
+
+    public boolean isNeteaseFaceDirectional() {
+        return neteaseFaceDirectional;
     }
 
     @Override

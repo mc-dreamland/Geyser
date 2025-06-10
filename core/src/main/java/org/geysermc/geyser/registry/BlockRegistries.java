@@ -44,10 +44,13 @@ import org.geysermc.geyser.registry.populator.CustomBlockRegistryPopulator;
 import org.geysermc.geyser.registry.populator.CustomSkullRegistryPopulator;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.CustomSkull;
+import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
 import org.geysermc.geyser.translator.collision.BlockCollision;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -59,6 +62,8 @@ public class BlockRegistries {
      * primarily Bedrock version-specific data.
      */
     public static final VersionedRegistry<BlockMappings> BLOCKS = VersionedRegistry.create(RegistryLoaders.empty(Int2ObjectOpenHashMap::new));
+    public static final HashMap<Integer, List<GeyserBedrockBlock>> CUSTOM_BLOCK_RUNTIME_LIST = new HashMap<>();
+
 
     /**
      * A registry which stores Java IDs to Java {@link BlockState}s, each with their specific state differences and a link
@@ -109,6 +114,7 @@ public class BlockRegistries {
      * A registry which stores Java Ids and the custom block state it should be replaced with.
      */
     public static final MappedRegistry<Integer, CustomBlockState, Int2ObjectMap<CustomBlockState>> CUSTOM_BLOCK_STATE_OVERRIDES = MappedRegistry.create(RegistryLoaders.empty(Int2ObjectOpenHashMap::new));
+    public static final SimpleMappedRegistry<String, CustomBlockData> CUSTOM_BLOCK_HEAD_OVERRIDES = SimpleMappedRegistry.create(RegistryLoaders.empty(Object2ObjectOpenHashMap::new));
 
     /**
      * A registry which stores non vanilla java blockstates and the custom block state it should be replaced with.

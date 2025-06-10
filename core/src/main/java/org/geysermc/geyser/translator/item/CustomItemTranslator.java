@@ -96,7 +96,9 @@ public final class CustomItemTranslator {
             }
 
             OptionalInt customModelDataOption = options.customModelData();
-            if (customModelDataOption.isPresent() && customModelDataInt < customModelDataOption.getAsInt()) {
+
+            //严格匹配customModelData
+            if (customModelDataOption.isPresent() && customModelDataInt != customModelDataOption.getAsInt()) {
                 continue;
             }
 

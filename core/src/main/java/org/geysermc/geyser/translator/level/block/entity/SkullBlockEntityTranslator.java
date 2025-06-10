@@ -32,9 +32,12 @@ import org.cloudburstmc.nbt.NbtMapBuilder;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateBlockPacket;
+import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.level.block.property.Properties;
 import org.geysermc.geyser.level.block.type.BlockState;
+import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.skin.SkinProvider;
@@ -104,6 +107,19 @@ public class SkullBlockEntityTranslator extends BlockEntityTranslator implements
             session.getSkullCache().removeSkull(blockPosition);
             return null;
         }
+        String customSkullBlockName = SkullCache.getCustomSkullBlockName(profile);
+
+        if (customSkullBlockName != null) {
+
+            CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(customSkullBlockName);
+            if (customBlockData == null) {
+                return null;
+            }
+
+            SkullCache.Skull skull = session.getSkullCache().putSkull(blockPosition, Constants.HEYPIXEL_CUSTOM_NAMESPACE + ":" + customSkullBlockName, blockState);
+            return skull.getBlockDefinition();
+        }
+
         UUID uuid = getUUID(profile);
 
         CompletableFuture<String> texturesFuture = getTextures(profile, uuid);

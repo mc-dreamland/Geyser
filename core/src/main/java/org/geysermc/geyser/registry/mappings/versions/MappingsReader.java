@@ -41,6 +41,8 @@ public abstract class MappingsReader {
 
     public abstract CustomItemData readItemMappingEntry(JsonNode node) throws InvalidCustomMappingsFileException;
     public abstract CustomBlockMapping readBlockMappingEntry(String identifier, JsonNode node) throws InvalidCustomMappingsFileException;
+    public abstract CustomBlockMapping readSkullBlockMappingEntry(String identifier, JsonNode node) throws InvalidCustomMappingsFileException;
+
 
     protected @Nullable CustomRenderOffsets fromJsonNode(JsonNode node) {
         if (node == null || !node.isObject()) {

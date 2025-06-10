@@ -43,6 +43,7 @@ import org.geysermc.geyser.api.block.custom.CustomBlockState;
 import org.geysermc.geyser.api.block.custom.component.BoxComponent;
 import org.geysermc.geyser.api.block.custom.component.CustomBlockComponents;
 import org.geysermc.geyser.api.block.custom.component.MaterialInstance;
+import org.geysermc.geyser.api.block.custom.component.NeteaseBoxComponent;
 import org.geysermc.geyser.api.block.custom.component.PlacementConditions;
 import org.geysermc.geyser.api.block.custom.component.PlacementConditions.Face;
 import org.geysermc.geyser.api.block.custom.nonvanilla.JavaBlockState;
@@ -122,6 +123,7 @@ public class CustomBlockRegistryPopulator {
 
     private static Set<CustomBlockData> CUSTOM_BLOCKS;
     private static Map<String, CustomBlockData> CUSTOM_BLOCK_ITEM_OVERRIDES;
+    private static Map<String, CustomBlockData> CUSTOM_BLOCK_HEAD_OVERRIDES;
     private static Map<JavaBlockState, CustomBlockState> NON_VANILLA_BLOCK_STATE_OVERRIDES;
     private static Map<String, CustomBlockState> BLOCK_STATE_OVERRIDES_QUEUE;
 
@@ -131,6 +133,7 @@ public class CustomBlockRegistryPopulator {
     private static void populateBedrock() {
         CUSTOM_BLOCKS = new ObjectOpenHashSet<>();
         CUSTOM_BLOCK_ITEM_OVERRIDES = new HashMap<>();
+        CUSTOM_BLOCK_HEAD_OVERRIDES = new HashMap<>();
         NON_VANILLA_BLOCK_STATE_OVERRIDES = new HashMap<>();
         BLOCK_STATE_OVERRIDES_QUEUE = new HashMap<>();
 
@@ -165,6 +168,14 @@ public class CustomBlockRegistryPopulator {
                     throw new IllegalArgumentException("Custom block is unregistered. Name: " + customBlockData.name());
                 }
                 CUSTOM_BLOCK_ITEM_OVERRIDES.put(javaIdentifier, customBlockData);
+            }
+
+            @Override
+            public void registerBlockHeadOverride(@NonNull String headOwnerName, @NonNull CustomBlockData customBlockData) {
+                if (!CUSTOM_BLOCKS.contains(customBlockData)) {
+                    throw new IllegalArgumentException("Custom block is unregistered. Name: " + customBlockData.name());
+                }
+                CUSTOM_BLOCK_HEAD_OVERRIDES .put(headOwnerName, customBlockData);
             }
 
             @Override
@@ -208,8 +219,11 @@ public class CustomBlockRegistryPopulator {
         MappingsConfigReader mappingsConfigReader = new MappingsConfigReader();
         mappingsConfigReader.loadBlockMappingsFromJson((key, block) -> {
             CUSTOM_BLOCKS.add(block.data());
-            if (block.overrideItem()) {
+            if (block.overrideItem() && !block.replaceSkull()) {
                 CUSTOM_BLOCK_ITEM_OVERRIDES.put(block.javaIdentifier(), block.data());
+            }
+            if (block.replaceSkull()) {
+                CUSTOM_BLOCK_HEAD_OVERRIDES.put(block.javaIdentifier(), block.data());
             }
             block.states().forEach((javaIdentifier, customBlockState) -> {
                 int id = BlockRegistries.JAVA_IDENTIFIER_TO_ID.getOrDefault(javaIdentifier, -1);
@@ -241,6 +255,12 @@ public class CustomBlockRegistryPopulator {
         if (!extendedCollisionBoxes.isEmpty()) {
             GeyserImpl.getInstance().getLogger().info("Registered " + extendedCollisionBoxes.size() + " custom block extended collision boxes.");
         }
+
+        BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.set(CUSTOM_BLOCK_HEAD_OVERRIDES);
+        if (!CUSTOM_BLOCK_HEAD_OVERRIDES.isEmpty()) {
+            GeyserImpl.getInstance().getLogger().info("Registered " + CUSTOM_BLOCK_HEAD_OVERRIDES.size() + " custom block head overrides.");
+        }
+
     }
 
     /**
@@ -358,6 +378,29 @@ public class CustomBlockRegistryPopulator {
                     .putCompound("states", states)
                     .build());
             customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+            if (customBlock.defaultBlockState().block().components().neteaseFaceDirectional() != null && customBlock.defaultBlockState().block().components().neteaseFaceDirectional() == 1) {
+                statesBuilder.putInt("face", 1);
+                states = statesBuilder.build();
+                customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+                blockStates.add(NbtMap.builder()
+                    .putString("name", customBlock.identifier())
+                    .putCompound("states", states)
+                    .build());
+                statesBuilder.putInt("face", 2);
+                states = statesBuilder.build();
+                customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+                blockStates.add(NbtMap.builder()
+                    .putString("name", customBlock.identifier())
+                    .putCompound("states", states)
+                    .build());
+                statesBuilder.putInt("face", 3);
+                states = statesBuilder.build();
+                customExtBlockStates.add(new GeyserCustomBlockState(customBlock, states));
+                blockStates.add(NbtMap.builder()
+                    .putString("name", customBlock.identifier())
+                    .putCompound("states", states)
+                    .build());
+            }
         }
     }
 
@@ -396,6 +439,7 @@ public class CustomBlockRegistryPopulator {
         CreativeCategory creativeCategory = customBlock.creativeCategory() != null ? customBlock.creativeCategory() : CreativeCategory.NONE;
         String creativeGroup = customBlock.creativeGroup() != null ? customBlock.creativeGroup() : "";
         NbtMapBuilder propertyTag = NbtMap.builder()
+                .putString("base_block", "")
                 .putCompound("components", CustomBlockRegistryPopulator.convertComponents(customBlock.components(), protocolVersion))
                 // this is required or the client will crash
                 // in the future, this can be used to replace items in the creative inventory
@@ -406,11 +450,15 @@ public class CustomBlockRegistryPopulator {
                     .putBoolean("is_hidden_in_commands", false)
                 .build())
                 // meaning of this version is unknown, but it's required for tags to work and should probably be checked periodically
-                .putInt("molangVersion", 1)
+                .putString("micro_size", "")
+                .putInt("molangVersion", 0)
+                .putString("netease_category", "construction")  //TODO 改为配置
+                .putBoolean("register_to_creative_menu", true)
                 .putList("permutations", NbtType.COMPOUND, permutations)
                 .putList("properties", NbtType.COMPOUND, properties)
                 .putCompound("vanilla_block_data", NbtMap.builder()
                     .putInt("block_id", BLOCK_ID.getAndIncrement())
+                    .putString("material", "dirt")
                     .build());
 
         return new BlockPropertyData(customBlock.identifier(), propertyTag.build());
@@ -538,6 +586,73 @@ public class CustomBlockRegistryPopulator {
 
         if (!components.tags().isEmpty()) {
             components.tags().forEach(tag -> builder.putCompound("tag:" + tag, NbtMap.EMPTY));
+        }
+
+        if (components.neteaseFaceDirectional() != null) {
+            builder.putCompound("netease:face_directional", NbtMap.builder()
+                .putByte("direction", components.neteaseFaceDirectional().byteValue())
+                .build());
+        }
+        if (components.neteaseAabbCollision() != null || components.neteaseAabbClip() != null) {
+            NbtMapBuilder endMap = NbtMap.builder();
+            List<NeteaseBoxComponent> collision = components.neteaseAabbCollision();
+            List<NeteaseBoxComponent> clip = components.neteaseAabbClip();
+
+            List<NbtMap> collisionNbtList = new ArrayList<>();
+            List<NbtMap> clipNbtList = new ArrayList<>();
+
+
+            for (NeteaseBoxComponent boxComponent : collision) {
+                NbtMap build = NbtMap.builder()
+                    .putString("enable", boxComponent.molang())
+                    .putList("aabb", NbtType.FLOAT, boxComponent.originX(), boxComponent.originY(), boxComponent.originZ(), boxComponent.sizeX(), boxComponent.sizeY(), boxComponent.sizeZ())
+                    .build();
+
+                collisionNbtList.add(build);
+            }
+            for (NeteaseBoxComponent boxComponent : clip) {
+                clipNbtList.add(NbtMap.builder()
+                    .putString("enable", boxComponent.molang())
+                    .putList("aabb", NbtType.FLOAT, boxComponent.originX(), boxComponent.originY(), boxComponent.originZ(), boxComponent.sizeX(), boxComponent.sizeY(), boxComponent.sizeZ())
+                    .build());
+            }
+            endMap.putList("clip", NbtType.COMPOUND, clipNbtList).putList("collision", NbtType.COMPOUND, collisionNbtList);
+            builder.putCompound("netease:aabb", endMap.build());
+        } else {
+            if (components.selectionBox() != null) {
+                builder.putCompound("minecraft:selection_box", convertBox(components.selectionBox()));
+            }
+
+            if (components.collisionBox() != null) {
+                builder.putCompound("minecraft:collision_box", convertBox(components.collisionBox()));
+            }
+        }
+
+        if (components.neteaseBlockEntity()) {
+            builder.putCompound("netease:block_entity", NbtMap.builder()
+                .putBoolean("movable", false)
+                .putBoolean("tick", false)
+                .build()
+            );
+        }
+
+        builder.putCompound("netease:solid", NbtMap.builder()
+            .putBoolean("value", components.neteaseSolid())
+            .build()
+        );
+
+        if (components.neteaseTier() != null) {
+            builder.putCompound("netease:tier", NbtMap.builder()
+                .putString("digger", components.neteaseTier())
+                .build()
+            );
+        }
+
+        if (components.neteaseRenderLayer() != null) {
+            builder.putCompound("netease:render_layer", NbtMap.builder()
+                .putString("value", components.neteaseRenderLayer())
+                .build()
+            );
         }
 
         return builder.build();

@@ -32,8 +32,11 @@ import lombok.RequiredArgsConstructor;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
+import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
 import org.geysermc.geyser.entity.type.player.SkullPlayerEntity;
 import org.geysermc.geyser.level.block.property.Properties;
@@ -41,6 +44,7 @@ import org.geysermc.geyser.level.block.type.BlockState;
 import org.geysermc.geyser.level.block.type.WallSkullBlock;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.type.CustomSkull;
+import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.skin.SkinManager;
 
@@ -77,6 +81,21 @@ public class SkullCache {
     public Skull putSkull(Vector3i position, UUID uuid, String texturesProperty, BlockState blockState) {
         Skull skull = skulls.computeIfAbsent(position, Skull::new);
         skull.uuid = uuid;
+
+        if (texturesProperty != null && Constants.isHeyPixelCustom(texturesProperty)) {
+            return putSkull(position, texturesProperty, blockState);
+        }
+
+        if (skull.ownerName != null && Constants.isHeyPixelCustom(skull.ownerName)) {
+            return putSkull(position, skull.ownerName, blockState);
+        }
+
+        //TODO 改为配置开启
+        if (true) {
+            skull.blockState = blockState;
+            return skull;
+        }
+
         if (!texturesProperty.equals(skull.texturesProperty)) {
             skull.texturesProperty = texturesProperty;
             skull.skinHash = null;
@@ -134,6 +153,24 @@ public class SkullCache {
         return skull;
     }
 
+    public Skull putSkull(Vector3i position, String skullOwnerName, BlockState blockState) {
+        Skull skull = skulls.computeIfAbsent(position, Skull::new);
+        skull.uuid = null;
+        skull.ownerName = skullOwnerName;
+        skull.skinHash = null;
+        skull.blockState = blockState;
+        skull.blockDefinition = translateCustomSkull(skull, blockState);
+
+        if (skull.blockDefinition.getRuntimeId() != -1) {
+            return skull;
+        }
+        if (lastPlayerPosition == null) {
+            return skull;
+        }
+        skull.distanceSquared = position.distanceSquared(lastPlayerPosition.getX(), lastPlayerPosition.getY(), lastPlayerPosition.getZ());
+        return skull;
+    }
+
     public void removeSkull(Vector3i position) {
         Skull skull = skulls.remove(position);
         if (skull != null) {
@@ -183,6 +220,14 @@ public class SkullCache {
     }
 
     private void assignSkullEntity(Skull skull) {
+        //TODO 改为配置文件控制
+        if (true) {
+            return;
+        }
+
+        if (getCustomSkullBlockName(skull) != null) {
+            return;
+        }
         if (skull.entity != null) {
             return;
         }
@@ -205,6 +250,9 @@ public class SkullCache {
     }
 
     private void reassignSkullEntity(Skull skull) {
+        if (getCustomSkullBlockName(skull) != null) {
+            return;
+        }
         boolean hadEntity = skull.entity != null;
         freeSkullEntity(skull);
 
@@ -244,10 +292,137 @@ public class SkullCache {
         return null;
     }
 
+    private static final String BITS_A_PROPERTY = "geyser_skull:bits_a";
+    private static final String BITS_B_PROPERTY = "geyser_skull:bits_b";
+
+    private BlockDefinition translateCustomSkull(Skull skull, BlockState blockState) {
+        CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.get(getCustomSkullBlockName(skull));
+        if (customBlockData == null) {
+            return () -> -1;
+        }
+        CustomBlockState key = customBlockData.defaultBlockState();
+        int neteaseRot = 0;
+        if (customBlockData.components().rotatable()) {
+            CustomBlockState build;
+
+            if (blockState.block() instanceof WallSkullBlock) {
+                int wallDirection = WallSkullBlock.getDegrees(blockState);
+                wallDirection = switch (wallDirection) {
+                    case 0 -> 2; // South
+                    case 90 -> 3; // West
+                    case 180 -> 0; // North
+                    case 270 -> 1; // East
+                    default -> throw new IllegalArgumentException("Unknown skull wall direction: " + wallDirection);
+                };
+                neteaseRot = wallDirection;
+                build = customBlockData.blockStateBuilder()
+                    .intProperty(BITS_A_PROPERTY, wallDirection + 1)
+                    .intProperty(BITS_B_PROPERTY, 0)
+                    .build();
+
+            } else {
+                Integer rotation = blockState.getValue(Properties.ROTATION_16);
+                build = customBlockData.blockStateBuilder()
+                    .intProperty(BITS_A_PROPERTY, (5 + rotation) % 7)
+                    .intProperty(BITS_B_PROPERTY, (5 + rotation) / 7)
+                    .build();
+                neteaseRot = getFloorHeadRotation(rotation);
+            }
+            GeyserBedrockBlock geyserBedrockBlock = session.getBlockMappings().getCustomBlockStateDefinitions().get(build);
+            if (geyserBedrockBlock != null) {
+                return geyserBedrockBlock;
+            }
+        }
+
+        GeyserBedrockBlock orDefault = session.getBlockMappings().getCustomBlockStateDefinitions().getOrDefault(key, null);
+
+        if (orDefault == null) {
+            return () -> -1;
+        }
+
+        if (customBlockData.components().neteaseFaceDirectional() == null || customBlockData.components().neteaseFaceDirectional() != 1) {
+            neteaseRot = 0;
+        }
+        int finalRotation = neteaseRot;
+        return () -> orDefault.getRuntimeId() + finalRotation;
+    }
+
+    public int getFloorHeadRotation(int rotation) {
+        if (rotation >= 15 || rotation <= 2) return 2;
+        if (rotation <= 6) return 3;
+        if (rotation <= 10) return 0;
+        return 1;
+    }
+
+    public static String getCustomSkullBlockName(Skull skull) {
+        if (skull.ownerName != null && Constants.isHeyPixelCustom(skull.ownerName)) {
+            return Constants.getCustomName(skull.ownerName);
+        }
+
+        if (skull.texturesProperty != null && Constants.isHeyPixelCustom(skull.texturesProperty)) {
+            return Constants.getCustomName(skull.texturesProperty);
+        }
+
+        if (skull.skinHash != null && Constants.isHeyPixelCustom(skull.skinHash)) {
+            return Constants.getCustomName(skull.skinHash);
+        }
+
+        return null;
+    }
+
+    public static String getCustomSkullBlockName(NbtMap nbt) {
+        if (nbt == null || nbt.isEmpty()) {
+            return null;
+        }
+        if (nbt.containsKey("SkullOwner")) {
+            Object skullOwner = nbt.get("SkullOwner");
+            if (skullOwner instanceof NbtMap nbtMap && nbtMap.get("Name") instanceof String skullName) {
+                if (skullName.toLowerCase(Locale.ROOT).startsWith("geyser_custom_block_")) {
+                    return skullName.replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
+                }
+                if (Constants.isHeyPixelCustom(skullName)) {
+                    return Constants.getCustomName(skullName);
+                }
+            }
+        }
+
+        if (nbt.containsKey("name")) {
+            String skullName = nbt.getString("name");
+            if (skullName.toLowerCase(Locale.ROOT).startsWith("geyser_custom_block_")) {
+                return skullName.replace("geyser_custom_block_", "").toLowerCase(Locale.ROOT);
+            }
+            if (Constants.isHeyPixelCustom(skullName)) {
+                return Constants.getCustomName(skullName);
+            }
+        }
+
+        // TODO? 似乎头颅转换中，除了skullOwner以外的NBT不会传过来
+        if (nbt.containsKey("PublicBukkitValues")) {
+            Object publicBukkitValues = nbt.get("PublicBukkitValues");
+
+            if (publicBukkitValues instanceof NbtMap compoundTag) {
+                if (compoundTag.containsKey("slimefun:slimefun_block")) {
+                    String tag = compoundTag.getString("slimefun:slimefun_block");
+                    return tag.toLowerCase(Locale.ROOT);
+                }
+
+                if (compoundTag.containsKey("slimefun:slimefun_item")) {
+                    String tag = compoundTag.getString("slimefun:slimefun_item");
+                    return tag.toLowerCase(Locale.ROOT);
+                }
+            }
+        }
+
+
+        return null;
+    }
+
+
     @RequiredArgsConstructor
     @Data
     public static class Skull {
         private UUID uuid;
+        private String ownerName;
         private String texturesProperty;
         private String skinHash;
 
