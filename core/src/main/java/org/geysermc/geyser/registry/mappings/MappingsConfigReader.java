@@ -32,6 +32,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.registry.mappings.util.CustomBlockMapping;
+import org.geysermc.geyser.registry.mappings.util.CustomEntityMapping;
 import org.geysermc.geyser.registry.mappings.versions.MappingsReader;
 import org.geysermc.geyser.registry.mappings.versions.MappingsReader_v1;
 
@@ -93,6 +94,29 @@ public class MappingsConfigReader {
         for (Path mappingsFile : mappingsFiles) {
             this.readBlockMappingsFromJson(mappingsFile, consumer);
         }
+    }
+
+    public void loadEntityMappingsFromJson(BiConsumer<String, CustomEntityMapping> consumer) {
+        if (!ensureMappingsDirectory(this.customMappingsDirectory)) {
+            return;
+        }
+
+        Path[] mappingsFiles = this.getCustomMappingsFiles();
+        for (Path mappingsFile : mappingsFiles) {
+            this.readEntityMappingsFromJson(mappingsFile, consumer);
+        }
+    }
+
+    public void readEntityMappingsFromJson(Path file, BiConsumer<String, CustomEntityMapping> consumer) {
+        JsonNode mappingsRoot = getMappingsRoot(file);
+
+        int formatVersion = getFormatVersion(mappingsRoot, file);
+
+        if (formatVersion < 0 || mappingsRoot == null) {
+            return;
+        }
+
+        this.mappingReaders.get(formatVersion).readEntityMappings(file, mappingsRoot, consumer);
     }
 
     public @Nullable JsonNode getMappingsRoot(Path file) {

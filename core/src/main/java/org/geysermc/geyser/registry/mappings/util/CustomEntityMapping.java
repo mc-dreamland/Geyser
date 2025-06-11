@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 GeyserMC. http://geysermc.org
+ * Copyright (c) 2025 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,28 +23,7 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.entity.type.living;
+package org.geysermc.geyser.registry.mappings.util;
 
-import org.cloudburstmc.math.vector.Vector3f;
-import org.geysermc.geyser.entity.EntityDefinition;
-import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.IntEntityMetadata;
-
-import java.util.UUID;
-
-public class SlimeEntity extends MobEntity {
-
-    public SlimeEntity(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, float pitch, float headYaw) {
-        super(session, entityId, geyserId, uuid, definition, position, motion, yaw, pitch, headYaw);
-    }
-
-    public void setSlimeScale(IntEntityMetadata entityMetadata) {
-        setScale(0.10f + entityMetadata.getPrimitiveValue());
-        this.customEntityScale = 0.10f + entityMetadata.getPrimitiveValue();
-    }
-
-    @Override
-    protected boolean isEnemy() {
-        return true;
-    }
+public record CustomEntityMapping(String identifier, float width, float height) {
 }

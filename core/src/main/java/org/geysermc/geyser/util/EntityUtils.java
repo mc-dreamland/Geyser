@@ -128,6 +128,9 @@ public final class EntityUtils {
 
     private static float getHeightOffset(Entity passenger) {
         boolean isBaby;
+        if (passenger.getDefinition().entityType() == null) {
+            return 0.0f;
+        }
         switch (passenger.getDefinition().entityType()) {
             case ALLAY, VEX:
                 return 0.4f;
@@ -249,10 +252,14 @@ public final class EntityUtils {
                 case MINECART, HOPPER_MINECART, TNT_MINECART, CHEST_MINECART, FURNACE_MINECART, SPAWNER_MINECART,
                         COMMAND_BLOCK_MINECART -> yOffset -= mount.getDefinition().height() * 0.5f;
             }
-            switch (passenger.getDefinition().entityType()) {
-                case MINECART, HOPPER_MINECART, TNT_MINECART, CHEST_MINECART, FURNACE_MINECART, SPAWNER_MINECART,
-                        COMMAND_BLOCK_MINECART -> yOffset += passenger.getDefinition().height() * 0.5f;
-                case FALLING_BLOCK -> yOffset += 0.5f;
+            if (passenger.getDefinition().entityType() == null) {
+                yOffset += passenger.getDefinition().height() * 0.5f;
+            } else {
+                switch (passenger.getDefinition().entityType()) {
+                    case MINECART, HOPPER_MINECART, TNT_MINECART, CHEST_MINECART, FURNACE_MINECART, SPAWNER_MINECART,
+                         COMMAND_BLOCK_MINECART -> yOffset += passenger.getDefinition().height() * 0.5f;
+                    case FALLING_BLOCK -> yOffset += 0.5f;
+                }
             }
             if (mount instanceof BoatEntity) {
                 yOffset -= mount.getDefinition().height() * 0.5f;
