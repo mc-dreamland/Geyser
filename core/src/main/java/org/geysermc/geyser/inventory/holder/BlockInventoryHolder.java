@@ -129,7 +129,12 @@ public class BlockInventoryHolder extends InventoryHolder {
         // Check to see if there is an existing block we can use that the player just selected.
         // First, verify that the player's position has not changed, so we don't try to select a block wildly out of range.
         // (This could be a virtual inventory that the player is opening)
-        if (checkInteractionPosition(session)) {
+        if (checkInteractionPosition(session)
+            && (!container.getContainerType().toString().startsWith("GENERIC")
+            && !container.getContainerType().toString().equals("ENCHANTMENT")
+            && !container.getContainerType().toString().equals("ANVIL")
+            && !container.getContainerType().toString().equals("FURNACE"))
+        ) {
             // Then, check to see if the interacted block is valid for this inventory by ensuring the block state identifier is valid
             // and the bedrock block is vanilla
             BlockState state = session.getGeyser().getWorldManager().blockAt(session, session.getLastInteractionBlockPosition());
