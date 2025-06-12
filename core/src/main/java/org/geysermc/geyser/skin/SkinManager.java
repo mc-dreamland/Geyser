@@ -106,7 +106,7 @@ public class SkinManager {
         if (skin.textureUrl() == null || skin.textureUrl().isEmpty()) {
             skin = new Skin("steve", skin.skinData());
         }
-        SerializedSkin serializedSkin = getSkin(session, skin.textureUrl(), skin, cape, geometry, true);
+        SerializedSkin serializedSkin = getSkin(session, skin.textureUrl(), skin, cape, geometry);
 
         // This attempts to find the XUID of the player so profile images show up for Xbox accounts
         String xuid = "";
@@ -164,13 +164,13 @@ public class SkinManager {
             packet.setUuid(entity.getUuid());
             packet.setOldSkinName("");
             packet.setNewSkinName(skin.textureUrl());
-            packet.setSkin(getSkin(session, skin.textureUrl(), skin, cape, geometry, false));
+            packet.setSkin(getSkin(session, skin.textureUrl(), skin, cape, geometry));
             packet.setTrustedSkin(true);
             session.sendUpstreamPacket(packet);
         }
     }
 
-    private static SerializedSkin getSkin(GeyserSession session, String skinId, Skin skin, Cape cape, SkinGeometry geometry, boolean persona) {
+    private static SerializedSkin getSkin(GeyserSession session, String skinId, Skin skin, Cape cape, SkinGeometry geometry) {
         return SerializedSkin.builder()
             .skinId(skinId)
             .skinResourcePatch(geometry.geometryName())
@@ -180,7 +180,7 @@ public class SkinManager {
             .premium(true)
             .capeId(cape.capeId())
             .fullSkinId(skinId)
-            .persona(persona)
+            .persona(false)
             .geometryDataEngineVersion(session.getClientData().getGameVersion())
             .build();
     }

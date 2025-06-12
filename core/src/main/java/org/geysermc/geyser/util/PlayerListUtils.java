@@ -29,6 +29,8 @@ import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.geysermc.geyser.session.GeyserSession;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class PlayerListUtils {
@@ -53,8 +55,16 @@ public class PlayerListUtils {
                 packet.setAction(action);
                 packet.getEntries().addAll(entries.subList(start, end));
                 session.sendUpstreamPacket(packet);
-
-                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(entries.subList(start, end));
+                List<PlayerListPacket.Entry> entries1 = entries.subList(start, end);
+                ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
+                for (PlayerListPacket.Entry entry : entries1) {
+                    if (entry.getSkin() != null) {
+                        if (!entry.getSkin().getSkinId().startsWith("geysermc:")) {
+                            confirmSkin.add(entry);
+                        }
+                    }
+                }
+                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
                 session.sendUpstreamPacket(confirmSkinPacket);
             }
         } else {
@@ -62,7 +72,17 @@ public class PlayerListUtils {
             packet.setAction(action);
             packet.getEntries().addAll(entries);
             session.sendUpstreamPacket(packet);
-            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(entries);
+            ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
+            for (PlayerListPacket.Entry entry : entries) {
+                if (entry.getSkin() != null) {
+                    if (!entry.getSkin().getSkinId().startsWith("geysermc:")) {
+                        if (!entry.getSkin().isPersona()) {
+                            confirmSkin.add(entry);
+                        }
+                    }
+                }
+            }
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
             session.sendUpstreamPacket(confirmSkinPacket);
         }
     }

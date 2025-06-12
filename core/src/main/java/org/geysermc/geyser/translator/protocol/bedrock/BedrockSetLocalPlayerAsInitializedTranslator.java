@@ -25,7 +25,11 @@
 
 package org.geysermc.geyser.translator.protocol.bedrock;
 
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
+import net.kyori.adventure.key.Key;
 import org.cloudburstmc.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
+import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.event.bedrock.SessionJoinEvent;
 import org.geysermc.geyser.api.network.AuthType;
@@ -34,7 +38,10 @@ import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.InventoryUtils;
 import org.geysermc.geyser.util.LoginEncryptionUtils;
+import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundPlayerLoadedPacket;
+
+import java.util.UUID;
 
 @Translator(packet = SetLocalPlayerAsInitializedPacket.class)
 public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslator<SetLocalPlayerAsInitializedPacket> {
@@ -43,6 +50,14 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
         if (session.getPlayerEntity().getGeyserId() == packet.getRuntimeEntityId()) {
             if (!session.getUpstream().isInitialized()) {
                 session.getUpstream().setInitialized(true);
+
+                UUID uuid = session.getPlayerEntity().getUuid();
+                ByteArrayDataOutput out = ByteStreams.newDataOutput();
+                out.writeInt(113);
+                out.writeUTF(packet.getPacketType().name());
+                out.writeUTF(uuid.toString());
+                session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(Key.key(PluginMessageChannels.CUSTOM), out.toByteArray()));
+
 
                 if (session.remoteServer().authType() == AuthType.ONLINE) {
                     if (!session.isLoggedIn()) {

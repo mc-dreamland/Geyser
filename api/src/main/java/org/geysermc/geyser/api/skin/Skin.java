@@ -36,8 +36,9 @@ public record Skin(String textureUrl, byte[] skinData, boolean failed, long uid)
     public Skin(String textureUrl, byte[] skinData) {
         this(textureUrl, skinData, false);
     }
+
     public Skin(String textureUrl, byte[] skinData, boolean failed) {
-        this(textureUrl, skinData, false, textureUrl.hashCode() < 0 ? -textureUrl.hashCode() : textureUrl.hashCode());
+        this(textureUrl, skinData, false, -1);
     }
 
 }

@@ -400,7 +400,7 @@ public class SkinProvider {
             return skinCompletableFuture.get();
         } catch (Exception ignored) {
         }
-        return new Skin("", ProvidedSkins.getSteveSkin().getData().skinData(), false, uuid.hashCode() <= 0 ? -uuid.hashCode() : uuid.hashCode());
+        return new Skin("", ProvidedSkins.getSteveSkin().getData().skinData(), false, uuid.toString().replace("-", "").hashCode() <= 0 ? -uuid.toString().replace("-", "").hashCode() : uuid.toString().replace("-", "").hashCode());
     }
 
     public static Skin requestPCSkin(UUID uuid, String textureUrl) {
