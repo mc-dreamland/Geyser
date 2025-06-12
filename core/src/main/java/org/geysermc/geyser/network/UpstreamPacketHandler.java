@@ -419,14 +419,17 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         ResourcePackHolder holder = null;
         if (this.resourcePackLoadEvent.getPacks().containsKey(packId)) {
             holder = this.resourcePackLoadEvent.getPacks().get(packId);
+            data.setType(ResourcePackType.RESOURCES);
         }
 
         if (this.optionalResourcePacksEvent != null && this.optionalResourcePacksEvent.getPacks().containsKey(packId)) {
             holder = this.optionalResourcePacksEvent.getPacks().get(packId);
+            data.setType(ResourcePackType.RESOURCES);
         }
 
         if (this.behaviorPackLoadEvent.getPacks().containsKey(packId)) {
             holder = this.behaviorPackLoadEvent.getPacks().get(packId);
+            data.setType(ResourcePackType.DATA_ADD_ON);
         }
 
         if (holder == null) {
@@ -448,7 +451,6 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         data.setHash(codec.sha256());
         data.setPackVersion(packID[1]);
         data.setPremium(false);
-        data.setType(ResourcePackType.RESOURCES);
 
         session.sendUpstreamPacket(data);
     }

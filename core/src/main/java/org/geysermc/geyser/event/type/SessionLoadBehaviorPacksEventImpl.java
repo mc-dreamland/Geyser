@@ -72,7 +72,7 @@ public class SessionLoadBehaviorPacksEventImpl extends SessionLoadResourcePacksE
 
     public SessionLoadBehaviorPacksEventImpl(GeyserSession session) {
         super(session);
-        this.packs = new Object2ObjectLinkedOpenHashMap<>(Registries.RESOURCE_PACKS.get());
+        this.packs = new Object2ObjectLinkedOpenHashMap<>(Registries.BEHAVIOR_PACKS.get());
         this.sessionPackOptionOverrides = new Object2ObjectOpenHashMap<>();
     }
 
