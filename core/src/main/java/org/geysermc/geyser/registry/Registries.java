@@ -227,7 +227,6 @@ public final class Registries {
 
     public static void populate() {
         PacketRegistryPopulator.populate();
-        DataComponentRegistryPopulator.populate();
         ItemRegistryPopulator.populate();
         TagRegistryPopulator.populate();
         CustomEntityRegistryPopulator.populate();

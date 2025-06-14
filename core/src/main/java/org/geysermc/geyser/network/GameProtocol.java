@@ -27,7 +27,7 @@ package org.geysermc.geyser.network;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
-import org.cloudburstmc.protocol.bedrock.codec.v685.Bedrock_v685;
+import org.cloudburstmc.protocol.bedrock.codec.v630.Bedrock_v630;
 import org.cloudburstmc.protocol.bedrock.codec.v686.Bedrock_v686;
 import org.cloudburstmc.protocol.bedrock.codec.v766.Bedrock_v766;
 import org.cloudburstmc.protocol.bedrock.codec.v776.Bedrock_v776;
@@ -70,6 +70,9 @@ public final class GameProtocol {
 //        SUPPORTED_BEDROCK_CODECS.add(CodecProcessor.processCodec(Bedrock_v685.CODEC.toBuilder()
 //            .minecraftVersion("1.21.0")
 //            .build()));
+        SUPPORTED_BEDROCK_CODECS.add(Bedrock_v630.CODEC.toBuilder()
+            .minecraftVersion("1.20.50/1.20.51")
+            .build());
         SUPPORTED_BEDROCK_CODECS.add(CodecProcessor.processCodec(Bedrock_v686.CODEC.toBuilder()
             .minecraftVersion("1.21.2")
             .build()));

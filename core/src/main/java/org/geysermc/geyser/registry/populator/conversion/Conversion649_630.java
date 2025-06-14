@@ -31,7 +31,7 @@ import org.geysermc.geyser.registry.type.GeyserMappingItem;
 
 public class Conversion649_630 {
     
-        static GeyserMappingItem remapItem(@SuppressWarnings("unused") Item item, GeyserMappingItem mapping) {
+        public static GeyserMappingItem remapItem(@SuppressWarnings("unused") Item item, GeyserMappingItem mapping) {
             mapping = Conversion662_649.remapItem(item, mapping);
 
             String identifer = mapping.getBedrockIdentifier();
@@ -42,11 +42,12 @@ public class Conversion649_630 {
                 case "minecraft:trial_spawner" -> { return mapping.withBedrockIdentifier("minecraft:mob_spawner"); }
                 case "minecraft:trial_key" -> { return mapping.withBedrockIdentifier("minecraft:echo_shard"); }
                 case "minecraft:wolf_armor" -> { return mapping.withBedrockIdentifier("minecraft:leather_horse_armor"); }
+                case "minecraft:breeze_spawn_egg" -> {return mapping.withBedrockIdentifier("minecraft:cow_spawn_egg"); }
                 default -> { return mapping; }
             }
         }
     
-        static NbtMap remapBlock(NbtMap tag) {
+        public static NbtMap remapBlock(NbtMap tag) {
             tag = Conversion662_649.remapBlock(tag);
 
             final String name = tag.getString("name");

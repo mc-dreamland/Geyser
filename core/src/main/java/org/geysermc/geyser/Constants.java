@@ -55,10 +55,13 @@ public final class Constants {
     }
 
     public static boolean isHeyPixelCustom(String name) {
-        return name.toLowerCase(Locale.ROOT).startsWith(HEYPIXEL_CUSTOM_NAMESPACE + ":");
+        return name != null && name.toLowerCase(Locale.ROOT).startsWith(HEYPIXEL_CUSTOM_NAMESPACE + ":");
     }
 
     public static String getCustomName(String name) {
+        if (name == null) {
+            return "";
+        }
         return name.replace(HEYPIXEL_CUSTOM_NAMESPACE + ":", "").toLowerCase(Locale.ROOT);
     }
 }

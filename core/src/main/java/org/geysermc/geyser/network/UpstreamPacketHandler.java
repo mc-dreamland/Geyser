@@ -83,6 +83,7 @@ import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.UUID;
 
@@ -195,6 +196,9 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         LoginEncryptionUtils.encryptPlayerConnection(session, loginPacket);
 
+
+        GeyserImpl.getInstance().getLogger().info(String.format("Player %s : %s connected with protocol version %s!",
+            session.bedrockUsername(), session.playerUuid(), session.protocolVersion()));
         if (session.isClosed()) {
             // Can happen if Xbox validation fails
             return PacketSignal.HANDLED;
@@ -228,15 +232,11 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                 String packs = resource.get("HeyCore:Resource:" + session.getAuthData().uuid());
 
                 if (packs != null){
-                    HashMap<UUID, ResourcePackHolder> packMap = new HashMap<>();
+                    Map<UUID, ResourcePackHolder> uuidResourcePackHolderMap = Registries.OPTIONAL_RESOURCE_PACKS.get();
                     for (String packId : packs.split(",")) {
                         UUID packUUID = UUID.fromString(GeyserImpl.getInstance().getOptionalPacks().get(Integer.valueOf(packId)));
-                        ResourcePackHolder resourcePackHolder = this.optionalResourcePacksEvent.getPacks().get(packUUID);
-                        packMap.put(packUUID, resourcePackHolder);
-                    }
-                    for (UUID uuid : this.optionalResourcePacksEvent.getPacks().keySet()) {
-                        if (!packMap.containsKey(uuid)) {
-                            this.optionalResourcePacksEvent.unregister(uuid);
+                        if (uuidResourcePackHolderMap.containsKey(packUUID)) {
+                            this.optionalResourcePacksEvent.getPacks().put(packUUID, uuidResourcePackHolderMap.get(packUUID));
                         }
                     }
                 }

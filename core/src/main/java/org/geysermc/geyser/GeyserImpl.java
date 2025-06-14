@@ -85,6 +85,7 @@ import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.registry.loader.BehaviorPackLoader;
 import org.geysermc.geyser.registry.loader.OptionalResourcePackLoader;
 import org.geysermc.geyser.registry.loader.ResourcePackLoader;
+import org.geysermc.geyser.registry.populator.DataComponentRegistryPopulator;
 import org.geysermc.geyser.registry.provider.ProviderSupplier;
 import org.geysermc.geyser.scoreboard.ScoreboardUpdater;
 import org.geysermc.geyser.session.GeyserSession;
@@ -254,6 +255,7 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         so maintaining this order is crucial for Geyser to load.
          */
         Registries.load();
+        DataComponentRegistryPopulator.populate();
         BlockRegistries.populate();
         Registries.populate();
 

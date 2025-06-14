@@ -45,7 +45,7 @@ import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.nbt.NbtUtils;
-import org.cloudburstmc.protocol.bedrock.codec.v685.Bedrock_v685;
+import org.cloudburstmc.protocol.bedrock.codec.v630.Bedrock_v630;
 import org.cloudburstmc.protocol.bedrock.codec.v686.Bedrock_v686;
 import org.cloudburstmc.protocol.bedrock.codec.v766.Bedrock_v766;
 import org.cloudburstmc.protocol.bedrock.codec.v776.Bedrock_v776;
@@ -76,6 +76,7 @@ import org.geysermc.geyser.level.block.property.Properties;
 import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
+import org.geysermc.geyser.registry.populator.conversion.Conversion649_630;
 import org.geysermc.geyser.registry.populator.conversion.Conversion712_685;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
@@ -131,7 +132,8 @@ public class ItemRegistryPopulator {
 
         List<PaletteVersion> paletteVersions = new ArrayList<>(2);
 //        paletteVersions.add(new PaletteVersion("1_21_0", Bedrock_v685.CODEC.getProtocolVersion(), Collections.emptyMap(), Conversion712_685::remapItem));
-        paletteVersions.add(new PaletteVersion("1_21_2", Bedrock_v686.CODEC.getProtocolVersion(), Collections.emptyMap(), Conversion712_685::remapItem));
+        paletteVersions.add(new PaletteVersion("1_20_50", Bedrock_v686.CODEC.getProtocolVersion(), Collections.emptyMap(), Conversion649_630::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_2", Bedrock_v630.CODEC.getProtocolVersion(), Collections.emptyMap(), Conversion712_685::remapItem));
         paletteVersions.add(new PaletteVersion("1_21_50", Bedrock_v766.CODEC.getProtocolVersion(), itemFallbacks, (item, mapping) -> mapping));
         paletteVersions.add(new PaletteVersion("1_21_60", Bedrock_v776.CODEC.getProtocolVersion(), itemFallbacks, (item, mapping) -> mapping));
         paletteVersions.add(new PaletteVersion("1_21_70", Bedrock_v786.CODEC.getProtocolVersion()));

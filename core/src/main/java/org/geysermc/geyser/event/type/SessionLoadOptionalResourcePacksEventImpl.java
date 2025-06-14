@@ -65,7 +65,7 @@ public class SessionLoadOptionalResourcePacksEventImpl extends SessionLoadResour
 
     public SessionLoadOptionalResourcePacksEventImpl(GeyserSession session) {
         super(session);
-        this.packs = new Object2ObjectLinkedOpenHashMap<>(Registries.OPTIONAL_RESOURCE_PACKS.get());
+        this.packs = new Object2ObjectLinkedOpenHashMap<>();
         this.sessionPackOptionOverrides = new Object2ObjectOpenHashMap<>();
     }
 

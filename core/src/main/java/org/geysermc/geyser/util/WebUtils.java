@@ -42,12 +42,54 @@ import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public class WebUtils {
 
+    public static int online = -1;
+    public static long lastUpdate = -1;
+
     private static final Path REMOTE_PACK_CACHE = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("cache").resolve("remote_packs");
 
+
+    public static String getBody(String reqURL,Map<String,String> property) {
+        try {
+            URL url = new URL(reqURL);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("GET");
+            con.setRequestProperty("User-Agent", "Geyser-" + GeyserImpl.getInstance().getPlatformType().toString() + "/" + GeyserImpl.VERSION); // Otherwise Java 8 fails on checking updates
+            property.forEach(con::setRequestProperty);
+
+            con.setConnectTimeout(10000);
+            con.setReadTimeout(10000);
+            return connectionToString(con);
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
+    private static int ONLINE = 0;
+    /**
+     * 获取总在线
+     */
+    public static int getTotalOnline(){
+        try {
+            String body = getBody(
+                GeyserImpl.getInstance().getConfig().getService().getUrl(),
+                Map.of("X-Auth", GeyserImpl.getInstance().getConfig().getService().getToken()));
+            if (Objects.isNull(body)) return ONLINE;
+            return ONLINE = GeyserImpl.JSON_MAPPER.readTree(body).get("data").asInt();
+        }catch (Exception ignored){}
+
+        if (lastUpdate == -1) return ONLINE;
+
+        if (System.currentTimeMillis() - lastUpdate > 60 * 60 * 1000) {
+            return ONLINE;
+        }
+
+        return online;
+    }
     /**
      * Makes a web request to the given URL and returns the body as a string
      *

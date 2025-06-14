@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.translator.item;
 
+import org.cloudburstmc.nbt.NbtMap;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.CustomModelData;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
@@ -55,6 +56,12 @@ public final class CustomItemTranslator {
 
         float customModelDataInt = 0;
         CustomModelData customModelData = components.get(DataComponentTypes.CUSTOM_MODEL_DATA);
+        if (customModelData == null) {
+            NbtMap nbtMap = components.get(DataComponentTypes.CUSTOM_DATA);
+            if (nbtMap != null) {
+                customModelDataInt = nbtMap.getInt("CustomModelData");
+            }
+        }
         if (customModelData != null) {
             if (!customModelData.floats().isEmpty()) {
                 customModelDataInt = customModelData.floats().get(0);

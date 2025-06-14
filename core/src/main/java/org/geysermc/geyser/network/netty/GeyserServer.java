@@ -64,6 +64,7 @@ import org.geysermc.geyser.ping.IGeyserPingPassthrough;
 import org.geysermc.geyser.skin.SkinProvider;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
+import org.geysermc.geyser.util.WebUtils;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -341,7 +342,7 @@ public final class GeyserServer {
             pong.playerCount(pingInfo.getPlayers().getOnline());
             pong.maximumPlayerCount(pingInfo.getPlayers().getMax());
         } else {
-            pong.playerCount(geyser.getSessionManager().getSessions().size());
+            pong.playerCount((int) (WebUtils.getTotalOnline()));
             pong.maximumPlayerCount(config.getMaxPlayers());
         }
 
