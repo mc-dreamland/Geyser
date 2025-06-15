@@ -132,8 +132,8 @@ public class ItemRegistryPopulator {
 
         List<PaletteVersion> paletteVersions = new ArrayList<>(2);
 //        paletteVersions.add(new PaletteVersion("1_21_0", Bedrock_v685.CODEC.getProtocolVersion(), Collections.emptyMap(), Conversion712_685::remapItem));
-        paletteVersions.add(new PaletteVersion("1_20_50", Bedrock_v686.CODEC.getProtocolVersion(), Collections.emptyMap(), Conversion649_630::remapItem));
-        paletteVersions.add(new PaletteVersion("1_21_2", Bedrock_v630.CODEC.getProtocolVersion(), Collections.emptyMap(), Conversion712_685::remapItem));
+        paletteVersions.add(new PaletteVersion("1_20_50", Bedrock_v630.CODEC.getProtocolVersion(), Collections.emptyMap(), Conversion649_630::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_2", Bedrock_v686.CODEC.getProtocolVersion(), Collections.emptyMap(), Conversion712_685::remapItem));
         paletteVersions.add(new PaletteVersion("1_21_50", Bedrock_v766.CODEC.getProtocolVersion(), itemFallbacks, (item, mapping) -> mapping));
         paletteVersions.add(new PaletteVersion("1_21_60", Bedrock_v776.CODEC.getProtocolVersion(), itemFallbacks, (item, mapping) -> mapping));
         paletteVersions.add(new PaletteVersion("1_21_70", Bedrock_v786.CODEC.getProtocolVersion()));
