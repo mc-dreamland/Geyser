@@ -128,8 +128,11 @@ final class BedrockMovePlayer {
             entity.setYaw(yaw);
             entity.setPitch(pitch);
             entity.setHeadYaw(headYaw);
-
-            session.sendDownstreamGamePacket(playerRotationPacket);
+            if (!session.isLeavingVehicle()) {
+                session.sendDownstreamGamePacket(playerRotationPacket);
+            } else {
+                session.setLeavingVehicle(false);
+            }
 
             // Player position MUST be updated on our end, otherwise e.g. chunk loading breaks
             if (hasVehicle) {

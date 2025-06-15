@@ -54,6 +54,7 @@ public class JavaSetPassengersTranslator extends PacketTranslator<ClientboundSet
             Entity passenger = session.getEntityCache().getEntityByJavaId(passengerId);
             if (passenger == session.getPlayerEntity()) {
                 session.getPlayerEntity().setVehicle(entity);
+                session.setMounting(true);
                 // We need to confirm teleports before entering a vehicle, or else we will likely exit right out
                 session.confirmTeleport(passenger.getPosition().down(EntityDefinitions.PLAYER.offset()).toDouble());
 

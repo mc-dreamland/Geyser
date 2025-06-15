@@ -666,6 +666,14 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Setter
     private ScheduledFuture<?> mountVehicleScheduledFuture = null;
 
+    @Setter
+    @Getter
+    private boolean leavingVehicle;
+
+    @Setter
+    @Getter
+    private boolean mounting = false;
+
     /**
      * A cache of IDs from ClientboundKeepAlivePackets that have been sent to the Bedrock client, but haven't been returned to the server.
      * Only used if {@link GeyserConfiguration#isForwardPlayerPing()} is enabled.
