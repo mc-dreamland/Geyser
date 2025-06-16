@@ -105,11 +105,11 @@ final class BedrockMovePlayer {
             // If the player is riding a vehicle or is in spectator mode, onGround is always set to false for the player
             isOnGround = false;
         } else {
-            isOnGround = packet.getInputData().contains(PlayerAuthInputData.VERTICAL_COLLISION) && entity.getLastTickEndVelocity().getY() < 0;
-        }
-
-        if (GameProtocol.is1_20_0orLower(session)) {
-            isOnGround = packet.getInputData().contains(PlayerAuthInputData.HORIZONTAL_COLLISION) && entity.getLastTickEndVelocity().getY() < 0;
+            if (GameProtocol.is1_20_0orLower(session)) {
+                isOnGround = packet.getInputData().contains(PlayerAuthInputData.HORIZONTAL_COLLISION) && entity.getLastTickEndVelocity().getY() < 0;
+            } else {
+                isOnGround = packet.isOnGround();
+            }
         }
 
         entity.setLastTickEndVelocity(packet.getDelta());
@@ -142,11 +142,18 @@ final class BedrockMovePlayer {
         } else if (positionChangedAndShouldUpdate) {
             if (isValidMove(session, entity.getPosition(), packet.getPosition())) {
                 if (!session.getWorldBorder().isPassingIntoBorderBoundaries(entity.getPosition(), true)) {
-                    CollisionResult result = session.getCollisionManager().adjustBedrockPosition(packet.getPosition(), isOnGround, packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
+                    CollisionResult result;
+                    if (GameProtocol.is1_20_0orLower(session)) {
+                        result = session.getCollisionManager().adjustBedrockPosition(packet.getPosition(), packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
+                    } else {
+                        result = session.getCollisionManager().adjustBedrockPosition(packet.getPosition(), isOnGround, packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
+                    }
                     if (result != null) { // A null return value cancels the packet
                         Vector3d position = result.correctedMovement();
                         boolean isBelowVoid = entity.isVoidPositionDesynched();
-
+                        if (GameProtocol.is1_20_0orLower(session)) {
+                            isOnGround = result.onGround().toBooleanOrElse(entity.isOnGround());
+                        }
                         boolean teleportThroughVoidFloor, mustResyncPosition;
                         // Compare positions here for void floor fix below before the player's position variable is set to the packet position
                         if (entity.getPosition().getY() >= packet.getPosition().getY() && !isBelowVoid) {

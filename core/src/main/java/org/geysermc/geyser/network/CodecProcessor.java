@@ -41,6 +41,7 @@ import org.cloudburstmc.protocol.bedrock.codec.v407.serializer.InventorySlotSeri
 import org.cloudburstmc.protocol.bedrock.codec.v419.serializer.MovePlayerSerializer_v419;
 import org.cloudburstmc.protocol.bedrock.codec.v486.serializer.BossEventSerializer_v486;
 import org.cloudburstmc.protocol.bedrock.codec.v557.serializer.SetEntityDataSerializer_v557;
+import org.cloudburstmc.protocol.bedrock.codec.v575.serializer.PlayerAuthInputSerializer_v575;
 import org.cloudburstmc.protocol.bedrock.codec.v662.serializer.PlayerAuthInputSerializer_v662;
 import org.cloudburstmc.protocol.bedrock.codec.v662.serializer.SetEntityMotionSerializer_v662;
 import org.cloudburstmc.protocol.bedrock.codec.v685.serializer.TextSerializer_v685;
@@ -304,6 +305,7 @@ class CodecProcessor {
 
             //v662
             if (packet.getInputData().contains(PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE)) {
+                System.out.println("IN_CLIENT_PREDICTED_IN_VEHICLE");
                 packet.setVehicleRotation(helper.readVector2f(buffer));
                 packet.setPredictedVehicle(VarInts.readLong(buffer));
             }
@@ -315,6 +317,68 @@ class CodecProcessor {
             packet.setReadyPosDetalDirty(buffer.readBoolean());
             packet.setOnGround(buffer.readBoolean());
             packet.setResetPosition(buffer.readByte());
+            //Netease Only End
+        }
+    };
+    private static final BedrockPacketSerializer<PlayerAuthInputPacket> PLAYER_AUTH_INPUT_NETEASE_V630 = new PlayerAuthInputSerializer_v575() {
+        @Override
+        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
+            super.serialize(buffer, helper, packet);
+        }
+
+        @Override
+        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
+            //v388
+            float x = buffer.readFloatLE();
+            float y = buffer.readFloatLE();
+            packet.setPosition(helper.readVector3f(buffer));
+            packet.setMotion(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
+            float z = buffer.readFloatLE();
+            packet.setRotation(Vector3f.from(x, y, z));
+            long flagValue = VarInts.readUnsignedLong(buffer);
+            Set<PlayerAuthInputData> flags = packet.getInputData();
+            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
+                if ((flagValue & (1L << flag.ordinal())) != 0) {
+                    flags.add(flag);
+                }
+            }
+            packet.setInputMode(INPUT_MODES[VarInts.readUnsignedInt(buffer)]);
+            packet.setPlayMode(CLIENT_PLAY_MODES[VarInts.readUnsignedInt(buffer)]);
+            readInteractionModel(buffer, helper, packet);
+
+            if (packet.getPlayMode() == ClientPlayMode.REALITY) {
+                packet.setVrGazeDirection(helper.readVector3f(buffer));
+            }
+
+            //v419
+            packet.setTick(VarInts.readUnsignedLong(buffer));
+            packet.setDelta(helper.readVector3f(buffer));
+
+            //v428
+            //Netease Only Start
+            packet.setCameraDeparted(buffer.readBoolean());
+            //Netease Only End
+
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_INTERACTION)) {
+                packet.setItemUseTransaction(this.readItemUseTransaction(buffer, helper));
+            }
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_STACK_REQUEST)) {
+                packet.setItemStackRequest(helper.readItemStackRequest(buffer));
+            }
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_BLOCK_ACTIONS)) {
+                helper.readArray(buffer, packet.getPlayerActions(), VarInts::readInt, this::readPlayerBlockActionData, 32); // 32 is more than enough
+            }
+
+            //v575
+            packet.setAnalogMoveVector(helper.readVector2f(buffer));
+
+            //Netease Only Start
+            packet.setThirdPersonPerspective(buffer.readBoolean());
+            packet.setPlayerRotationToCamera(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
+            packet.setReadyPosDetalDirty(buffer.readBoolean());
             //Netease Only End
         }
     };
@@ -421,16 +485,18 @@ class CodecProcessor {
 
     @SuppressWarnings("unchecked")
     static BedrockCodec processCodec(BedrockCodec codec) {
+        BedrockCodec.Builder codecBuilder = codec.toBuilder();
         BedrockPacketSerializer<BossEventPacket> bossEventSerializer;
         BedrockPacketSerializer<InventoryContentPacket> inventoryContentSerializer;
         BedrockPacketSerializer<InventorySlotPacket> inventorySlotSerializer;
-        if (codec.getProtocolVersion() >= 776) {
+        int protocolVersion = codec.getProtocolVersion();
+        if (protocolVersion >= 776) {
             bossEventSerializer = BOSS_EVENT_SERIALIZER_776;
         } else {
             bossEventSerializer = BOSS_EVENT_SERIALIZER_486;
         }
 
-        if (codec.getProtocolVersion() >= 748) {
+        if (protocolVersion >= 748) {
             inventoryContentSerializer = INVENTORY_CONTENT_SERIALIZER_V748;
             inventorySlotSerializer = INVENTORY_SLOT_SERIALIZER_V748;
         } else {
@@ -438,8 +504,13 @@ class CodecProcessor {
             inventorySlotSerializer = INVENTORY_SLOT_SERIALIZER_V407;
         }
 
+        if (protocolVersion == 630) {
+            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE_V630);
+            return codecBuilder.build();
+        }
 
-        BedrockCodec.Builder codecBuilder = codec.toBuilder()
+
+        codecBuilder
             // Illegal unused serverbound EDU packets
             .updateSerializer(PhotoTransferPacket.class, ILLEGAL_SERIALIZER)
             .updateSerializer(LabTablePacket.class, ILLEGAL_SERIALIZER)
@@ -488,22 +559,22 @@ class CodecProcessor {
             .updateSerializer(SimpleEventPacket.class, IGNORED_SERIALIZER)
             .updateSerializer(MultiplayerSettingsPacket.class, IGNORED_SERIALIZER);
 
-        if (codec.getProtocolVersion() > 686) {
+        if (protocolVersion > 686) {
             codecBuilder.updateSerializer(MobArmorEquipmentPacket.class, MOB_ARMOR_EQUIPMENT_SERIALIZER);
         }
 
         // These packets have been removed post 1.21.80.
-        if (codec.getProtocolVersion() < 800) {
+        if (protocolVersion < 800) {
             codecBuilder
                 .updateSerializer(RiderJumpPacket.class, ILLEGAL_SERIALIZER)
                 .updateSerializer(PlayerInputPacket.class, ILLEGAL_SERIALIZER);
         }
 
-        if (codec.getProtocolVersion() == 685 || codec.getProtocolVersion() == 686) {
+        if (protocolVersion == 685 || protocolVersion == 686) {
             codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE);
             codecBuilder.updateSerializer(TextPacket.class, TEXT_SERIALIZER_NETEASE);
         }
-        if (codec.getProtocolVersion() < 685) {
+        if (protocolVersion < 685) {
             codecBuilder.updateSerializer(PlayerAuthInputPacket.class, ILLEGAL_SERIALIZER);
         }
 

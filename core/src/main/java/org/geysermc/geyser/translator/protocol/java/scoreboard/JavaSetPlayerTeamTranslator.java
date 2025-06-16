@@ -43,6 +43,10 @@ public class JavaSetPlayerTeamTranslator extends PacketTranslator<ClientboundSet
 
     @Override
     public void translate(GeyserSession session, ClientboundSetPlayerTeamPacket packet) {
+        if (packet.getPlayers() != null && packet.getPlayers().length >= 100) {
+            logger.debug("Very Huge Team Packet: " + packet.getTeamName() + " size: " + packet.getPlayers().length);
+            return;
+        }
         if (logger.isDebug()) {
             logger.debug("Team packet " + packet.getTeamName() + " " + packet.getAction() + " " + Arrays.toString(packet.getPlayers()));
         }
@@ -92,8 +96,8 @@ public class JavaSetPlayerTeamTranslator extends PacketTranslator<ClientboundSet
             }
         }
 
-
         // ScoreboardUpdater will handle it for us if the packets per second
+
         // (for score and team packets) is higher than the first threshold
         if (pps < ScoreboardUpdater.FIRST_SCORE_PACKETS_PER_SECOND_THRESHOLD) {
             scoreboard.onUpdate();

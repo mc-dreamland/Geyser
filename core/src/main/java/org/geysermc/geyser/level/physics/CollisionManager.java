@@ -216,6 +216,99 @@ public class CollisionManager {
 
         return new CollisionResult(position, TriState.byBoolean(onGround));
     }
+    public @Nullable CollisionResult adjustBedrockPosition(Vector3f bedrockPosition, boolean teleported) {
+        PistonCache pistonCache = session.getPistonCache();
+        // Bedrock clients tend to fall off of honey blocks, so we need to teleport them to the new position
+        if (pistonCache.isPlayerAttachedToHoney()) {
+            return null;
+        }
+        // We need to parse the float as a string since casting a float to a double causes us to
+        // lose precision and thus, causes players to get stuck when walking near walls
+        double javaY = bedrockPosition.getY() - EntityDefinitions.PLAYER.offset();
+
+        Vector3d position = Vector3d.from(Double.parseDouble(Float.toString(bedrockPosition.getX())), javaY,
+            Double.parseDouble(Float.toString(bedrockPosition.getZ())));
+
+        // Don't correct position if controlling a vehicle
+        if (session.getPlayerEntity().getVehicle() instanceof ClientVehicle clientVehicle && clientVehicle.isClientControlled()) {
+            playerBoundingBox.setMiddleX(position.getX());
+            playerBoundingBox.setMiddleY(position.getY() + playerBoundingBox.getSizeY() / 2);
+            playerBoundingBox.setMiddleZ(position.getZ());
+
+            return new CollisionResult(playerBoundingBox.getBottomCenter(), TriState.NOT_SET);
+        }
+
+        Vector3d startingPos = playerBoundingBox.getBottomCenter();
+        Vector3d movement = position.sub(startingPos);
+        Vector3d adjustedMovement = correctPlayerMovement(movement, false, teleported);
+        playerBoundingBox.translate(adjustedMovement.getX(), adjustedMovement.getY(), adjustedMovement.getZ());
+        playerBoundingBox.translate(pistonCache.getPlayerMotion().getX(), pistonCache.getPlayerMotion().getY(), pistonCache.getPlayerMotion().getZ());
+        // Correct player position
+        if (!correctPlayerPosition()) {
+            // Cancel the movement if it needs to be cancelled
+            recalculatePosition();
+            return null;
+        }
+        // The server can't complain about our movement if we never send it
+        // TODO get rid of this and handle teleports smoothly
+        if (pistonCache.isPlayerCollided()) {
+            return null;
+        }
+
+        position = playerBoundingBox.getBottomCenter();
+
+        boolean onGround = (adjustedMovement.getY() != movement.getY() && movement.getY() < 0) || isOnGround();
+        // Send corrected position to Bedrock if they differ by too much to prevent de-syncs
+        if (movement.distanceSquared(adjustedMovement) > INCORRECT_MOVEMENT_THRESHOLD) {
+            PlayerEntity playerEntity = session.getPlayerEntity();
+            // Client will dismount if on a vehicle
+            if (playerEntity.getVehicle() == null && pistonCache.getPlayerMotion().equals(Vector3f.ZERO) && !pistonCache.isPlayerSlimeCollision()) {
+                playerEntity.moveAbsolute(position.toFloat(), playerEntity.getYaw(), playerEntity.getPitch(), playerEntity.getHeadYaw(), onGround, true);
+            }
+        }
+
+        if (!onGround) {
+            // Trim the position to prevent rounding errors that make Java think we are clipping into a block
+            position = Vector3d.from(position.getX(), Double.parseDouble(DECIMAL_FORMAT.format(position.getY())), position.getZ());
+        }
+
+        return new CollisionResult(position, TriState.byBoolean(onGround));
+    }
+
+
+    private boolean isOnGround() {
+        // Someone smarter than me at collisions plz check this.
+        Vector3d bottomCenter = playerBoundingBox.getBottomCenter();
+        Vector3i groundPos = Vector3i.from(bottomCenter.getX(), bottomCenter.getY() - 1, bottomCenter.getZ());
+        BlockCollision collision = BlockUtils.getCollisionAt(session, groundPos);
+        if (collision == null) {
+            return false; // Probably air.
+        }
+
+        // Hack to not check below the player
+        playerBoundingBox.setSizeY(playerBoundingBox.getSizeY() - 0.001);
+        playerBoundingBox.setMiddleY(playerBoundingBox.getMiddleY() + 0.002);
+
+        boolean intersected = collision.checkIntersection(groundPos.getX(), groundPos.getY(), groundPos.getZ(), playerBoundingBox);
+
+        playerBoundingBox.setSizeY(playerBoundingBox.getSizeY() + 0.001);
+        playerBoundingBox.setMiddleY(playerBoundingBox.getMiddleY() - 0.002);
+
+        boolean result;
+        if (intersected) {
+            result = true;
+        } else {
+            // Hack to check slightly below the player
+            playerBoundingBox.setSizeY(playerBoundingBox.getSizeY() + 0.001);
+            playerBoundingBox.setMiddleY(playerBoundingBox.getMiddleY() - 0.002);
+
+            result = collision.checkIntersection(groundPos.getX(), groundPos.getY(), groundPos.getZ(), playerBoundingBox);
+
+            playerBoundingBox.setSizeY(playerBoundingBox.getSizeY() - 0.001);
+            playerBoundingBox.setMiddleY(playerBoundingBox.getMiddleY() + 0.002);
+        }
+        return result;
+    }
 
     // TODO: This makes the player look upwards for some reason, rotation values must be wrong
     public void recalculatePosition() {

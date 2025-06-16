@@ -70,9 +70,9 @@ public final class GameProtocol {
 //        SUPPORTED_BEDROCK_CODECS.add(CodecProcessor.processCodec(Bedrock_v685.CODEC.toBuilder()
 //            .minecraftVersion("1.21.0")
 //            .build()));
-        SUPPORTED_BEDROCK_CODECS.add(Bedrock_v630.CODEC.toBuilder()
+        SUPPORTED_BEDROCK_CODECS.add(CodecProcessor.processCodec(Bedrock_v630.CODEC.toBuilder()
             .minecraftVersion("1.20.50/1.20.51")
-            .build());
+            .build()));
         SUPPORTED_BEDROCK_CODECS.add(CodecProcessor.processCodec(Bedrock_v686.CODEC.toBuilder()
             .minecraftVersion("1.21.2")
             .build()));
@@ -121,7 +121,7 @@ public final class GameProtocol {
     }
 
     public static boolean is1_20_0orLower(GeyserSession session) {
-        return session.protocolVersion() <= Bedrock_v686.CODEC.getProtocolVersion();
+        return session.protocolVersion() < Bedrock_v686.CODEC.getProtocolVersion();
     }
 
     /**

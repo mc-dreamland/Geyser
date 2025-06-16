@@ -128,9 +128,10 @@ public class JavaCommandsTranslator extends PacketTranslator<ClientboundCommands
             session.getGeyser().getLogger().debug("Not sending translated command suggestions as they are disabled.");
 
             // Send a mostly empty packet so Bedrock doesn't override /help with its own, built-in help command.
-            AvailableCommandsPacket emptyPacket = new AvailableCommandsPacket();
-            emptyPacket.getCommands().add(createFakeHelpCommand());
-            session.sendUpstreamPacket(emptyPacket);
+            //网易版收到这个包会巨卡，即使是空的。
+//            AvailableCommandsPacket emptyPacket = new AvailableCommandsPacket();
+//            emptyPacket.getCommands().add(createFakeHelpCommand());
+//            session.sendUpstreamPacket(emptyPacket);
             return;
         }
 
