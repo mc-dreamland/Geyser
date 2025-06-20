@@ -153,6 +153,9 @@ final class BedrockMovePlayer {
                         boolean isBelowVoid = entity.isVoidPositionDesynched();
                         if (GameProtocol.is1_20_0orLower(session)) {
                             isOnGround = result.onGround().toBooleanOrElse(entity.isOnGround());
+                            if (!isOnGround) {
+                                isOnGround = session.isSdkOnGround();
+                            }
                         }
                         boolean teleportThroughVoidFloor, mustResyncPosition;
                         // Compare positions here for void floor fix below before the player's position variable is set to the packet position

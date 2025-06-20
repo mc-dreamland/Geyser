@@ -45,9 +45,21 @@ public class BedrockNeteasePythonRpcTranslator extends PacketTranslator<NeteaseP
             return;
         }
 
-        MessagePack messagePack = new MessagePack();
+        //由于1.20.50版本，authinput无法正确获取是否在地上。现通过SDK设置onGround属性
+        if (packet.getEventName() != null) {
+            switch (packet.getEventName()) {
+                case "OnGround":
+                    session.setSdkOnGround(true);
+                    return;
+                case "NotOnGround":
+                    session.setSdkOnGround(false);
+                    return;
+            }
+        }
+
         try {
-            byte[] write = messagePack.write(packet.getJson());
+            MessagePack msgPack = new MessagePack();
+            byte[] write = msgPack.write(packet.getJson());
             session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(Key.key(PluginMessageChannels.MOD_SDK), write));
         } catch (IOException e) {
             e.printStackTrace();

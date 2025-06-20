@@ -266,6 +266,9 @@ public class CollisionManager {
                 playerEntity.moveAbsolute(position.toFloat(), playerEntity.getYaw(), playerEntity.getPitch(), playerEntity.getHeadYaw(), onGround, true);
             }
         }
+        if (!onGround) {
+            onGround = session.isSdkOnGround();
+        }
 
         if (!onGround) {
             // Trim the position to prevent rounding errors that make Java think we are clipping into a block
