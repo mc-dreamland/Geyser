@@ -232,6 +232,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -718,6 +719,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Setter
     private boolean sdkOnGround;
 
+    private final HashMap<UUID, String> cachedPlayerList;
+
     public GeyserSession(GeyserImpl geyser, BedrockServerSession bedrockServerSession, EventLoop tickEventLoop) {
         this.geyser = geyser;
         this.upstream = new UpstreamSession(bedrockServerSession);
@@ -768,6 +771,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         }
 
         this.remoteServer = geyser.defaultRemoteServer();
+
+        this.cachedPlayerList = new HashMap<>();
     }
 
     /**

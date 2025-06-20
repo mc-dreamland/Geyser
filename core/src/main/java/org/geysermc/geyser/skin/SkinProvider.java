@@ -310,7 +310,6 @@ public class SkinProvider {
     }
 
     private static CompletableFuture<SkinAndCape> requestSkinAndCape(UUID playerId, String skinUrl, String capeUrl) {
-        System.out.println("requestSkinAndCape -> " + skinUrl);
         return CompletableFuture.supplyAsync(() -> {
             long time = System.currentTimeMillis();
 
@@ -325,7 +324,7 @@ public class SkinProvider {
     }
 
     public static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
-        GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url:" + textureUrl);
+        GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url: " + textureUrl);
         if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(ProvidedSkins.getSteveSkin().getData());
         //  从 cachedSkins 里面拿皮肤
         // 从HTTP请求缓存里面拿皮肤
@@ -336,6 +335,7 @@ public class SkinProvider {
             return requestedSkin;
         }
 
+        GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url #2: ");
         // 从缓存的 url拿皮肤
         Skin cachedSkin = CACHED_JAVA_SKINS.getIfPresent(textureUrl);
         if (cachedSkin != null) {
@@ -343,8 +343,10 @@ public class SkinProvider {
             return CompletableFuture.completedFuture(cachedSkin);
         }
 
+        GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url #3: ");
         CompletableFuture<Skin> future;
         if (newThread) {
+            GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url #4: ");
             if (textureUrl.endsWith("?pe")){
                 future = CompletableFuture.supplyAsync(()-> requestSkin(playerId,textureUrl),EXECUTOR_SERVICE).whenCompleteAsync((skin,throwable)->{
                     CACHED_JAVA_SKINS.put(textureUrl, skin);
@@ -366,13 +368,16 @@ public class SkinProvider {
             }
             requestedSkins.put(textureUrl, future);
         } else {
+            GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url #5: ");
             if (textureUrl.endsWith("?pe")) {
+                GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url #6: ");
                 Skin skin = requestSkin(playerId, textureUrl);
                 future = CompletableFuture.completedFuture(skin);
                 CACHED_JAVA_SKINS.put(textureUrl, skin);
                 CACHED_JAVA_SKINS_UUID.put(playerId, textureUrl);
                 return future;
             } else if (textureUrl.endsWith("?pc")) {
+                GeyserImpl.getInstance().getLogger().debug(playerId + "请求皮肤 url #7: ");
                 Skin skin = requestPCSkin(playerId, textureUrl);
                 future = CompletableFuture.completedFuture(skin);
                 CACHED_JAVA_SKINS.put(textureUrl, skin);
@@ -395,7 +400,6 @@ public class SkinProvider {
                 byte[] geometry_data = Base64.getDecoder().decode(json.get("geometry_data").asText());
                 GeyserImpl.getInstance().getLogger().debug("storeBedrock Geometry: " + uuid + " data length: " + geometry_data.length);
                 SkinProvider.storeBedrockGeometry(uuid, geometryNameBytes, geometry_data);
-
                 return buildSkin(uuid, textureUrl, json);
             });
             return skinCompletableFuture.get();
@@ -424,6 +428,23 @@ public class SkinProvider {
                     return json;
                 } else {
                     JsonNode json = WebUtils.getJson(textureUrl);
+                    if (json != null && !json.isEmpty()) {
+                        String uuid = "";
+                        if (json.has("uuid")) {
+                            uuid = json.get("uuid").asText();
+                        }
+                        String skinId = "";
+                        if (json.has("skin_id")) {
+                            skinId = json.get("skin_id").asText();
+                        }
+                        String uid = "";
+                        if (json.has("uid")) {
+                            uid = json.get("uid").asText();
+                        }
+                        GeyserImpl.getInstance().getLogger().info("已获取皮肤信息： " + textureUrl + ", uuid: " + uuid + ", skinId: " + skinId + ", uid: " + uid);
+                    } else {
+                        GeyserImpl.getInstance().getLogger().info("皮肤信息为空： " + textureUrl);
+                    }
                     return json;
                 }
             } catch (IOException e) {

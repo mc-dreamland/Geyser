@@ -38,7 +38,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.scoreboard.
 
 @Translator(packet = ClientboundResetScorePacket.class)
 public class JavaResetScorePacket extends PacketTranslator<ClientboundResetScorePacket> {
-    private static final boolean SHOW_SCOREBOARD_LOGS = Boolean.parseBoolean(System.getProperty("Geyser.ShowScoreboardLogs", "true"));
+    private static final boolean SHOW_SCOREBOARD_LOGS = Boolean.parseBoolean(System.getProperty("Geyser.ShowScoreboardLogs", "false"));
 
     private final GeyserLogger logger = GeyserImpl.getInstance().getLogger();
 

@@ -135,7 +135,14 @@ public class SkinManager {
         entry.setPlatformChatId("");
         entry.setTeacher(false);
         entry.setTrustedSkin(true);
-        entry.setUid(skin.uid());
+        long uid = skin.uid();
+        if (uid <= 0) {
+            uid = uuid.toString().replace("-", "").hashCode();
+            if (uid < 0) {
+                uid = -uid;
+            }
+        }
+        entry.setUid(uid);
         // Without a color set, player list entries will not show up.
         entry.setColor(Color.BLACK);
         return entry;
@@ -161,12 +168,10 @@ public class SkinManager {
             playerAddPacket.setAction(PlayerListPacket.Action.ADD);
             playerAddPacket.getEntries().add(updatedEntry);
             session.sendUpstreamPacket(playerAddPacket);
-
-            ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
-            confirmSkin.add(updatedEntry);
-            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
-            session.sendUpstreamPacket(confirmSkinPacket);
         } else {
+            if (skin.textureUrl().contains("geysermc:")) {
+                return;
+            }
             PlayerSkinPacket packet = new PlayerSkinPacket();
             packet.setUuid(entity.getUuid());
             packet.setOldSkinName("");
@@ -175,19 +180,21 @@ public class SkinManager {
             packet.setTrustedSkin(true);
             session.sendUpstreamPacket(packet);
 
-            PlayerListPacket.Entry updatedEntry = buildEntryManually(
-                session,
-                entity.getUuid(),
-                entity.getUsername(),
-                entity.getGeyserId(),
-                skin,
-                cape,
-                geometry
-            );
-            ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
-            confirmSkin.add(updatedEntry);
-            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
-            session.sendUpstreamPacket(confirmSkinPacket);
+            if (!skin.textureUrl().contains("geysermc:")) {
+                PlayerListPacket.Entry updatedEntry = buildEntryManually(
+                    session,
+                    entity.getUuid(),
+                    entity.getUsername(),
+                    entity.getGeyserId(),
+                    skin,
+                    cape,
+                    geometry
+                );
+                ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
+                confirmSkin.add(updatedEntry);
+                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
+                session.sendUpstreamPacket(confirmSkinPacket);
+            }
         }
     }
 

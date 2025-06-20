@@ -59,13 +59,15 @@ public class PlayerListUtils {
                 ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
                 for (PlayerListPacket.Entry entry : entries1) {
                     if (entry.getSkin() != null) {
-                        if (!entry.getSkin().getSkinId().startsWith("geysermc:")) {
+                        if (!entry.getSkin().getSkinId().contains("geysermc:")) {
                             confirmSkin.add(entry);
                         }
                     }
                 }
-                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
-                session.sendUpstreamPacket(confirmSkinPacket);
+                if (!confirmSkin.isEmpty()) {
+                    ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
+                    session.sendUpstreamPacket(confirmSkinPacket);
+                }
             }
         } else {
             PlayerListPacket packet = new PlayerListPacket();
@@ -75,15 +77,17 @@ public class PlayerListUtils {
             ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
             for (PlayerListPacket.Entry entry : entries) {
                 if (entry.getSkin() != null) {
-                    if (!entry.getSkin().getSkinId().startsWith("geysermc:")) {
+                    if (!entry.getSkin().getSkinId().contains("geysermc:")) {
                         if (!entry.getSkin().isPersona()) {
                             confirmSkin.add(entry);
                         }
                     }
                 }
             }
-            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
-            session.sendUpstreamPacket(confirmSkinPacket);
+            if (!confirmSkin.isEmpty()) {
+                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
+                session.sendUpstreamPacket(confirmSkinPacket);
+            }
         }
     }
 }

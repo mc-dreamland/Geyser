@@ -219,7 +219,6 @@ public class Entity implements GeyserEntity {
                     dirtyMetadata.put(EntityDataTypes.NAME, nametag.replace("@size_" + size + "@", ""));
                     this.nametag = nametag.replace("@size_" + size + "@", "");
                 } catch (NumberFormatException ignored) {
-                    System.out.println("");
                 }
             }
         }
@@ -264,7 +263,6 @@ public class Entity implements GeyserEntity {
                     dirtyMetadata.put(EntityDataTypes.NAME, nametag.replace("@size_" + size + "@", ""));
                     this.nametag = nametag.replace("@size_" + size + "@", "");
                 } catch (NumberFormatException ignored) {
-                    System.out.println("");
                 }
             }
         }
@@ -584,7 +582,6 @@ public class Entity implements GeyserEntity {
                         dirtyMetadata.put(EntityDataTypes.SCALE, scale);
                         nametag = nametag.replace("@size_" + size + "@", "");
                     } catch (NumberFormatException ignored) {
-                        System.out.println("");
                     }
                 }
             } else {
