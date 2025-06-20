@@ -47,8 +47,18 @@ public final class Constants {
     static {
         URI wsUri = null;
         try {
-            wsUri = new URI("wss://api.geysermc.org/ws");
+
+            String os = System.getProperty("os.name").toLowerCase();
+            String skinurl = GeyserImpl.getInstance().getConfig().getService().getSkinurl();
+            if (os.contains("win")) {
+                skinurl = skinurl.replace("skinsync.bjd-mc.com", "42.186.61.161").replace("10.191.171.36", "42.186.61.161");
+            }
+            wsUri = new URI("ws://"+ skinurl
+                .replace("http://","")
+                .replace("https://","") + "/geyser");
         } catch (URISyntaxException e) {
+            GeyserImpl.getInstance().getLogger().error("Unable to resolve api.geysermc.org! Check your internet connection.");
+
             e.printStackTrace();
         }
         GLOBAL_API_WS_URI = wsUri;

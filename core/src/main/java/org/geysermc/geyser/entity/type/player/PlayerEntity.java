@@ -133,7 +133,6 @@ public class PlayerEntity extends LivingEntity implements GeyserPlayerEntity {
                     dirtyMetadata.put(EntityDataTypes.NAME, nametag.replace("@size_" + size + "@", ""));
                     this.nametag = nametag.replace("@size_" + size + "@", "");
                 } catch (NumberFormatException ignored) {
-                    System.out.println("");
                 }
             }
         }

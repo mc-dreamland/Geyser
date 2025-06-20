@@ -31,6 +31,7 @@ import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.skin.ImageData;
 import org.cloudburstmc.protocol.bedrock.data.skin.SerializedSkin;
+import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
 import org.geysermc.geyser.GeyserImpl;
@@ -47,6 +48,7 @@ import org.geysermc.geyser.text.GeyserLocale;
 import java.awt.*;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
@@ -159,6 +161,11 @@ public class SkinManager {
             playerAddPacket.setAction(PlayerListPacket.Action.ADD);
             playerAddPacket.getEntries().add(updatedEntry);
             session.sendUpstreamPacket(playerAddPacket);
+
+            ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
+            confirmSkin.add(updatedEntry);
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
+            session.sendUpstreamPacket(confirmSkinPacket);
         } else {
             PlayerSkinPacket packet = new PlayerSkinPacket();
             packet.setUuid(entity.getUuid());
@@ -167,6 +174,20 @@ public class SkinManager {
             packet.setSkin(getSkin(session, skin.textureUrl(), skin, cape, geometry));
             packet.setTrustedSkin(true);
             session.sendUpstreamPacket(packet);
+
+            PlayerListPacket.Entry updatedEntry = buildEntryManually(
+                session,
+                entity.getUuid(),
+                entity.getUsername(),
+                entity.getGeyserId(),
+                skin,
+                cape,
+                geometry
+            );
+            ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
+            confirmSkin.add(updatedEntry);
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
+            session.sendUpstreamPacket(confirmSkinPacket);
         }
     }
 

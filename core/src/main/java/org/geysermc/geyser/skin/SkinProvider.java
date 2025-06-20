@@ -310,6 +310,7 @@ public class SkinProvider {
     }
 
     private static CompletableFuture<SkinAndCape> requestSkinAndCape(UUID playerId, String skinUrl, String capeUrl) {
+        System.out.println("requestSkinAndCape -> " + skinUrl);
         return CompletableFuture.supplyAsync(() -> {
             long time = System.currentTimeMillis();
 

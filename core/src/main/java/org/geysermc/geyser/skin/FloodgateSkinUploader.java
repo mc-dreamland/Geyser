@@ -159,7 +159,7 @@ public final class FloodgateSkinUploader {
                             SkinProvider.storeJavaSkin(skin);
                             SkinProvider.storeCustomSkin(uuid, uuid.toString(), skin_data);
                             SkinProvider.saveCustomSkin(uuid, textures);
-                            logger.debug("update skin for " + uuid + " success");
+                            logger.info("update skin for " + uuid + " success");
                             break;
                     }
                 } catch (Exception e) {
