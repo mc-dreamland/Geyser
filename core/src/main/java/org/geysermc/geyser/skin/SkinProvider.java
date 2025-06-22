@@ -441,9 +441,9 @@ public class SkinProvider {
                         if (json.has("uid")) {
                             uid = json.get("uid").asText();
                         }
-                        GeyserImpl.getInstance().getLogger().info("已获取皮肤信息： " + textureUrl + ", uuid: " + uuid + ", skinId: " + skinId + ", uid: " + uid);
+                        GeyserImpl.getInstance().getLogger().debug("已获取皮肤信息： " + textureUrl + ", uuid: " + uuid + ", skinId: " + skinId + ", uid: " + uid);
                     } else {
-                        GeyserImpl.getInstance().getLogger().info("皮肤信息为空： " + textureUrl);
+                        GeyserImpl.getInstance().getLogger().debug("皮肤信息为空： " + textureUrl);
                     }
                     return json;
                 }

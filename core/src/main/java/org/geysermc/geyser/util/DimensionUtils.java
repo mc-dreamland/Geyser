@@ -162,7 +162,9 @@ public class DimensionUtils {
 
         // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
         // The client wants sections sent to it before it can successfully respawn.
-        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+        if (!session.isQuickSwitchDimension()) {
+            ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
+        }
     }
 
     public static void setBedrockDimension(GeyserSession session, int bedrockDimension) {

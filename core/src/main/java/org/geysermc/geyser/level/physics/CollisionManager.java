@@ -54,6 +54,7 @@ import org.geysermc.geyser.util.BlockUtils;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.Arrays;
 import java.util.Locale;
 
 public class CollisionManager {
@@ -279,37 +280,67 @@ public class CollisionManager {
     }
 
 
+
     private boolean isOnGround() {
-        // Someone smarter than me at collisions plz check this.
-        Vector3d bottomCenter = playerBoundingBox.getBottomCenter();
-        Vector3i groundPos = Vector3i.from(bottomCenter.getX(), bottomCenter.getY() - 1, bottomCenter.getZ());
-        BlockCollision collision = BlockUtils.getCollisionAt(session, groundPos);
-        if (collision == null) {
-            return false; // Probably air.
+        final double EPS = 1.0E-4;
+        BoundingBox box = playerBoundingBox;
+
+        Vector3d min = box.getMin();
+        Vector3d max = box.getMax();
+
+        double minX = min.getX() + EPS;
+        double maxX = max.getX() - EPS;
+        double minZ = min.getZ() + EPS;
+        double maxZ = max.getZ() - EPS;
+        int blockY  = (int) Math.floor(min.getY() - EPS);
+
+        Vector3i[] samplePos = new Vector3i[] {
+            Vector3i.from(minX, blockY, minZ),
+            Vector3i.from(minX, blockY, maxZ),
+            Vector3i.from(maxX, blockY, minZ),
+            Vector3i.from(maxX, blockY, maxZ)
+        };
+
+        box.setSizeY(box.getSizeY() - 0.001);
+        box.setMiddleY(box.getMiddleY() + 0.002);
+        for (Vector3i pos : samplePos) {
+            if (checkGroundIntersection(pos, box)) {
+                box.setSizeY(box.getSizeY() + 0.001);
+                box.setMiddleY(box.getMiddleY() - 0.002);
+                return true;
+            }
         }
 
-        // Hack to not check below the player
-        playerBoundingBox.setSizeY(playerBoundingBox.getSizeY() - 0.001);
-        playerBoundingBox.setMiddleY(playerBoundingBox.getMiddleY() + 0.002);
+        box.setSizeY(box.getSizeY() + 0.001);
+        box.setMiddleY(box.getMiddleY() - 0.002);
+        return false;
+    }
 
-        boolean intersected = collision.checkIntersection(groundPos.getX(), groundPos.getY(), groundPos.getZ(), playerBoundingBox);
-
-        playerBoundingBox.setSizeY(playerBoundingBox.getSizeY() + 0.001);
-        playerBoundingBox.setMiddleY(playerBoundingBox.getMiddleY() - 0.002);
-
-        boolean result;
-        if (intersected) {
-            result = true;
-        } else {
-            // Hack to check slightly below the player
-            playerBoundingBox.setSizeY(playerBoundingBox.getSizeY() + 0.001);
-            playerBoundingBox.setMiddleY(playerBoundingBox.getMiddleY() - 0.002);
-
-            result = collision.checkIntersection(groundPos.getX(), groundPos.getY(), groundPos.getZ(), playerBoundingBox);
-
-            playerBoundingBox.setSizeY(playerBoundingBox.getSizeY() - 0.001);
-            playerBoundingBox.setMiddleY(playerBoundingBox.getMiddleY() + 0.002);
+    private boolean checkGroundIntersection(Vector3i pos, BoundingBox playerBB) {
+        BlockCollision collision = BlockUtils.getCollisionAt(session, pos);
+        if (collision == null || collision.getBoundingBoxes() == null) {
+            Vector3i below = pos.sub(0, 1, 0);
+            collision = BlockUtils.getCollisionAt(session, below);
+            if (collision == null || collision.getBoundingBoxes() == null) {
+                return false;
+            }
+            BoundingBox bb = collision.getBoundingBoxes()[0];
+            if (!(bb.getMiddleY() == 0.75 && bb.getSizeY() == 1.5)) {
+                return false;
+            }
+            pos = below;
         }
+
+        if (collision.checkIntersection(pos.getX(), pos.getY(), pos.getZ(), playerBB)) {
+            return true;
+        }
+
+        playerBB.setSizeY(playerBB.getSizeY() + 0.002);
+        playerBB.setMiddleY(playerBB.getMiddleY() - 0.004);
+        boolean result = collision.checkIntersection(pos.getX(), pos.getY(), pos.getZ(), playerBB);
+        playerBB.setSizeY(playerBB.getSizeY() - 0.002);
+        playerBB.setMiddleY(playerBB.getMiddleY() + 0.004);
+
         return result;
     }
 

@@ -40,6 +40,7 @@ import org.cloudburstmc.protocol.bedrock.codec.v407.serializer.InventoryContentS
 import org.cloudburstmc.protocol.bedrock.codec.v407.serializer.InventorySlotSerializer_v407;
 import org.cloudburstmc.protocol.bedrock.codec.v419.serializer.MovePlayerSerializer_v419;
 import org.cloudburstmc.protocol.bedrock.codec.v486.serializer.BossEventSerializer_v486;
+import org.cloudburstmc.protocol.bedrock.codec.v554.serializer.TextSerializer_v554;
 import org.cloudburstmc.protocol.bedrock.codec.v557.serializer.SetEntityDataSerializer_v557;
 import org.cloudburstmc.protocol.bedrock.codec.v575.serializer.PlayerAuthInputSerializer_v575;
 import org.cloudburstmc.protocol.bedrock.codec.v662.serializer.PlayerAuthInputSerializer_v662;
@@ -246,6 +247,80 @@ class CodecProcessor {
             packet.setFilteredMessage(helper.readString(buffer));
 
             System.out.println("packet -> " + packet);
+        }
+    };
+    private static final BedrockPacketSerializer<TextPacket> TEXT_SERIALIZER_V630_NETEASE = new TextSerializer_v554() {
+        @Override
+        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, TextPacket packet) {
+            //V554
+
+            TextPacket.Type type = packet.getType();
+            // 网易客户端收到聊天包会掉线，目前将所有聊天都视作系统命令
+            if (type.equals(TextPacket.Type.CHAT)) {
+                type = TextPacket.Type.SYSTEM;
+            }
+            buffer.writeByte(type.ordinal());
+            buffer.writeBoolean(packet.isNeedsTranslation());
+
+            switch (type) {
+                case WHISPER:
+                case ANNOUNCEMENT:
+                    helper.writeString(buffer, packet.getSourceName());
+                case CHAT:
+                case RAW:
+                case TIP:
+                case SYSTEM:
+                case JSON:
+                case WHISPER_JSON:
+                case ANNOUNCEMENT_JSON:
+                    helper.writeString(buffer, packet.getMessage());
+                    break;
+                case TRANSLATION:
+                case POPUP:
+                case JUKEBOX_POPUP:
+                    helper.writeString(buffer, packet.getMessage());
+                    helper.writeArray(buffer, packet.getParameters(), helper::writeString);
+                    break;
+                default:
+                    throw new UnsupportedOperationException("Unsupported TextType " + type);
+            }
+
+            helper.writeString(buffer, packet.getXuid());
+            helper.writeString(buffer, packet.getPlatformChatId());
+        }
+
+        @Override
+        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, TextPacket packet) {
+            //V554
+            TextPacket.Type type = TextPacket.Type.values()[buffer.readUnsignedByte()];
+            packet.setType(type);
+            packet.setNeedsTranslation(buffer.readBoolean());
+
+            switch (type) {
+                case CHAT:
+                case WHISPER:
+                case ANNOUNCEMENT:
+                    packet.setSourceName(helper.readString(buffer));
+                case RAW:
+                case TIP:
+                case SYSTEM:
+                case JSON:
+                case WHISPER_JSON:
+                case ANNOUNCEMENT_JSON:
+                    packet.setMessage(helper.readString(buffer));
+                    break;
+                case TRANSLATION:
+                case POPUP:
+                case JUKEBOX_POPUP:
+                    packet.setMessage(helper.readString(buffer));
+                    helper.readArray(buffer, packet.getParameters(), helper::readString);
+                    break;
+                default:
+                    throw new UnsupportedOperationException("Unsupported TextType " + type);
+            }
+
+            packet.setXuid(helper.readString(buffer));
+            packet.setPlatformChatId(helper.readString(buffer));
         }
     };
 
@@ -505,7 +580,10 @@ class CodecProcessor {
         }
 
         if (protocolVersion == 630) {
-            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE_V630);
+            codecBuilder
+                .updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE_V630)
+                .updateSerializer(TextPacket.class, TEXT_SERIALIZER_V630_NETEASE)
+            ;
             return codecBuilder.build();
         }
 
