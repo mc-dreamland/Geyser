@@ -72,7 +72,6 @@ public final class TagRegistryPopulator {
         };
 
         List<ObjectIntPair<String>> paletteVersions = List.of(
-//            ObjectIntPair.of("1_21_0", Bedrock_v685.CODEC.getProtocolVersion()),
             ObjectIntPair.of("1_20_50", Bedrock_v630.CODEC.getProtocolVersion()),
             ObjectIntPair.of("1_21_2", Bedrock_v686.CODEC.getProtocolVersion()),
             ObjectIntPair.of("1_21_50", Bedrock_v766.CODEC.getProtocolVersion()),
