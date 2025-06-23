@@ -71,7 +71,7 @@ public class JavaLoginFinishedTranslator extends PacketTranslator<ClientboundLog
             session.getGeyser().getSkinUploader().syncSkin(session, session.getClientData());
 
             // sync skin
-            PluginMessageUtils.sendMessage(session, PluginMessageChannels.SKIN, FloodgateSkinUploader.syncSkinData(session));
+//            PluginMessageUtils.sendMessage(session, PluginMessageChannels.SKIN, FloodgateSkinUploader.syncSkinData(session));
         }
 
         // We no longer need these variables; they're just taking up space in memory now

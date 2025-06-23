@@ -225,7 +225,7 @@ public final class FloodgateSkinUploader {
         if (skin != null) {
             // skin data byte[]
             node.put("skin_data", Base64.getEncoder().encodeToString(Gzip.gZipBytes(skin.skinData())));
-        }else{
+        } else {
             // client data base64 String
             node.put("skin_data", Base64.getEncoder().encodeToString(Gzip.gZipBytes(Base64.getDecoder().decode(skinData))));
         }
@@ -237,7 +237,6 @@ public final class FloodgateSkinUploader {
         node.put("uuid", session.getAuthData().uuid().toString());
         node.put("xuid", session.getAuthData().xuid());
         node.put("uid", session.getAuthData().uid());
-
         // The reason why I don't like Jackson
         String jsonString;
         try {
@@ -293,7 +292,7 @@ public final class FloodgateSkinUploader {
         long additionalTime = ThreadLocalRandom.current().nextInt(7);
         // we don't have to check the result. onClose will handle that for us
         geyser.getScheduledThread()
-                .schedule(client::reconnect, 8 + additionalTime, TimeUnit.SECONDS);
+            .schedule(client::reconnect, 8 + additionalTime, TimeUnit.SECONDS);
     }
 
     public FloodgateSkinUploader start() {
@@ -312,9 +311,9 @@ public final class FloodgateSkinUploader {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] messageDigest = md.digest(input.getBytes());
-            BigInteger number = new BigInteger (1, messageDigest);
+            BigInteger number = new BigInteger(1, messageDigest);
             String hashtext = number.toString(16);
-            while (hashtext.length()<32) {
+            while (hashtext.length() < 32) {
                 hashtext = "0" + hashtext;
             }
             return hashtext;
@@ -324,14 +323,14 @@ public final class FloodgateSkinUploader {
     }
 
     @SneakyThrows
-    public static byte[] syncSkinData(GeyserSession geyserSession){
-        Map<String,Object> map = new LinkedHashMap<>(2);
-        map.put("pe",true);
-        map.put("alex",geyserSession.getClientData().getSkinId().contains("Slim") ?"true":"false");
-        map.put("data",GeyserImpl.getInstance().getConfig().getService().getSkinurl()+"/skin/"
-            +geyserSession.getAuthData().uuid()+"?"+
-            hash(geyserSession.getClientData().getSkinData())+"?pe");
+    public static byte[] syncSkinData(GeyserSession geyserSession) {
+        Map<String, Object> map = new LinkedHashMap<>(2);
+        map.put("pe", true);
+        map.put("alex", geyserSession.getClientData().getSkinId().contains("Slim") ? "true" : "false");
+        map.put("data", GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/"
+            + geyserSession.getAuthData().uuid() + "?" +
+            hash(geyserSession.getClientData().getSkinData()) + "?pe");
         // 114514 魔法值 无作用
-        return (Base64.getEncoder().encodeToString(GeyserImpl.JSON_MAPPER.writeValueAsBytes(map))+ '\0'+"114514").getBytes(StandardCharsets.UTF_8);
+        return (Base64.getEncoder().encodeToString(GeyserImpl.JSON_MAPPER.writeValueAsBytes(map)) + '\0' + "114514").getBytes(StandardCharsets.UTF_8);
     }
 }
