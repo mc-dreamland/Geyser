@@ -42,13 +42,21 @@ import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 @Translator(packet = ClientboundPlayerInfoUpdatePacket.class)
 public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<ClientboundPlayerInfoUpdatePacket> {
+
+    private String encodeSkinUrl(UUID uuid) {
+        String url = "{\"pe\":true,\"alex\":\"false\",\"data\":\"" + GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid.toString() + "?pe\"}";
+        return Base64.getEncoder().encodeToString(url.getBytes(StandardCharsets.UTF_8));
+    }
+
     @Override
     public void translate(GeyserSession session, ClientboundPlayerInfoUpdatePacket packet) {
         Set<PlayerListEntryAction> actions = packet.getActions();
@@ -93,7 +101,9 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                     session.getEntityCache().addPlayerEntity(playerEntity);
                 }
                 playerEntity.setUsername(name);
-                playerEntity.setTexturesProperty(texturesProperty);
+                if (id.toString().startsWith("00000000")) {
+                    playerEntity.setTexturesProperty(encodeSkinUrl(id));
+                }
 
                 if (self) {
                     SkinManager.requestAndHandleSkinAndCape(playerEntity, session, skinAndCape ->
@@ -114,8 +124,6 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (entry.isListed()) {
-//                    PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
-//                    toAdd.add(playerListEntry);
                     sendAddPlayerList(session, entity);
                 } else {
                     toRemove.add(new PlayerListPacket.Entry(entity.getTabListUuid()));

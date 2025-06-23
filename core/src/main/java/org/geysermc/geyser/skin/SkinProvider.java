@@ -424,25 +424,10 @@ public class SkinProvider {
                 String os = System.getProperty("os.name").toLowerCase();
                 if (os.contains("win")) {
                     String replace = textureUrl.replace("skinsync.bjd-mc.com", "42.186.61.161").replace("10.191.171.36", "42.186.61.161");
-                    JsonNode json = WebUtils.getJson(replace);
-                    return json;
+                    return WebUtils.getJson(replace);
                 } else {
                     JsonNode json = WebUtils.getJson(textureUrl);
-                    if (json != null && !json.isEmpty()) {
-                        String uuid = "";
-                        if (json.has("uuid")) {
-                            uuid = json.get("uuid").asText();
-                        }
-                        String skinId = "";
-                        if (json.has("skin_id")) {
-                            skinId = json.get("skin_id").asText();
-                        }
-                        String uid = "";
-                        if (json.has("uid")) {
-                            uid = json.get("uid").asText();
-                        }
-                        GeyserImpl.getInstance().getLogger().debug("已获取皮肤信息： " + textureUrl + ", uuid: " + uuid + ", skinId: " + skinId + ", uid: " + uid);
-                    } else {
+                    if (json == null || json.isEmpty()) {
                         GeyserImpl.getInstance().getLogger().debug("皮肤信息为空： " + textureUrl);
                     }
                     return json;
@@ -790,7 +775,7 @@ public class SkinProvider {
                             String textures = resultSet.getString("textures");
                             storeCustomSkin(uuid, uuid.toString(), Gzip.unGZipBytes(Base64.getDecoder().decode(textures)));
                         }
-                        GeyserImpl.getInstance().getLogger().info("成功加载 " + CUSTOM_SKINS.size() + " 个自定义皮肤！");
+                        GeyserImpl.getInstance().getLogger().info("Successfully load " + CUSTOM_SKINS.size() + " custom skin！");
                     }
                 }
             } catch (Exception e) {

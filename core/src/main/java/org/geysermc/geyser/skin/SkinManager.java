@@ -168,6 +168,10 @@ public class SkinManager {
             playerAddPacket.setAction(PlayerListPacket.Action.ADD);
             playerAddPacket.getEntries().add(updatedEntry);
             session.sendUpstreamPacket(playerAddPacket);
+
+            // 应用自己的皮肤
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(List.of(updatedEntry));
+            session.sendUpstreamPacket(confirmSkinPacket);
         } else {
             if (skin.textureUrl().contains("geysermc:")) {
                 return;
