@@ -47,6 +47,9 @@ public class JavaSetPlayerTeamTranslator extends PacketTranslator<ClientboundSet
             logger.debug("Very Huge Team Packet: " + packet.getTeamName() + " size: " + packet.getPlayers().length);
             return;
         }
+        if (packet.getTeamName().startsWith("PM.")) {
+            return;
+        }
         if (logger.isDebug()) {
             logger.debug("Team packet " + packet.getTeamName() + " " + packet.getAction() + " " + Arrays.toString(packet.getPlayers()));
         }
