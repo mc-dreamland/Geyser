@@ -69,6 +69,7 @@ public final class BedrockClientData {
     @JsonProperty(value = "SkinResourcePatch")
     private String geometryName;
     @JsonProperty(value = "SkinGeometryData")
+    @Setter
     private String geometryData;
     @JsonProperty(value = "PersonaSkin")
     private boolean personaSkin;

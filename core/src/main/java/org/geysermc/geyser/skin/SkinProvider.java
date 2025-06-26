@@ -212,9 +212,9 @@ public class SkinProvider {
                 skin = CACHED_BEDROCK_SKINS.getIfPresent(skinId);
                 String capeId = session.getClientData().getCapeId();
                 cape = CACHED_BEDROCK_CAPES.getIfPresent(capeId);
-                Pair<String, SkinGeometry> ifPresent = cachedGeometry.getIfPresent(uuid);
-                if (ifPresent != null) {
-                    geometry = ifPresent.right();
+                Pair<String, SkinGeometry> pair = cachedGeometry.getIfPresent(uuid);
+                if (pair != null) {
+                    geometry = pair.right();
                 }
             }
         }
@@ -274,7 +274,7 @@ public class SkinProvider {
                     // only PE
                     Pair<String, SkinGeometry> stringSkinGeometryPair = cachedGeometry.getIfPresent(uuid);
                     if (uuid.toString().startsWith("00000000") && stringSkinGeometryPair != null) {
-                        geometry = stringSkinGeometryPair.value();
+                        geometry = stringSkinGeometryPair.right();
                     }
 
                     // Whether we should see if this player has a Bedrock skin we should check for on failure of
@@ -507,9 +507,11 @@ public class SkinProvider {
         CACHED_BEDROCK_CAPES.put(capeId, cape);
     }
 
+    // 处理模型
     static void storeBedrockGeometry(UUID playerID, byte[] geometryName, byte[] geometryData) {
-        SkinGeometry geometry = new SkinGeometry(new String(geometryName), new String(geometryData));
-        cachedGeometry.put(playerID, Pair.of(new String(geometryName), geometry));
+        String geoName = new String(geometryName);
+//        SkinGeometry geometry = new SkinGeometry(geometryName1, new String(geometryData));
+        cachedGeometry.put(playerID, Pair.of(new String(geometryName), geoName.contains("customSlim") ? SkinGeometry.SLIM : SkinGeometry.WIDE));
     }
 
     private static Skin supplySkin(UUID uuid, String textureUrl) {
