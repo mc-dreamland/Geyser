@@ -88,13 +88,13 @@ public class SkinManager {
         }
 
         return buildEntryManually(
-                session,
-                playerEntity.getUuid(),
-                playerEntity.getUsername(),
-                playerEntity.getGeyserId(),
-                skin,
-                cape,
-                geometry
+            session,
+            playerEntity.getUuid(),
+            playerEntity.getUsername(),
+            playerEntity.getGeyserId(),
+            skin,
+            cape,
+            geometry
         );
     }
 
@@ -155,13 +155,13 @@ public class SkinManager {
 
         if (entity.getUuid().equals(session.getPlayerEntity().getUuid())) {
             PlayerListPacket.Entry updatedEntry = buildEntryManually(
-                    session,
-                    entity.getUuid(),
-                    entity.getUsername(),
-                    entity.getGeyserId(),
-                    skin,
-                    cape,
-                    geometry
+                session,
+                entity.getUuid(),
+                entity.getUsername(),
+                entity.getGeyserId(),
+                skin,
+                cape,
+                geometry
             );
 
             PlayerListPacket playerAddPacket = new PlayerListPacket();
@@ -253,6 +253,9 @@ public class SkinManager {
 
             if (skinBytes.length <= (128 * 128 * 4) && !clientData.isPersonaSkin()) {
                 SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
+                String geoName = new String(geometryNameBytes);
+                // 仅使用本地缓存
+                clientData.setGeometryData(geoName.contains("customSlim") ? SkinGeometry.SLIM.geometryData() : SkinGeometry.WIDE.geometryData());
                 SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
             } else if (geyser.getConfig().isDebugMode()) {
                 geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.skin.bedrock.fail", playerEntity.getUsername()));
