@@ -46,7 +46,6 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.FileUtils;
 import org.geysermc.geyser.util.Gzip;
-import org.geysermc.geyser.util.PluginMessageUtils;
 import org.geysermc.geyser.util.WebUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -88,17 +87,17 @@ public class SkinProvider {
         .expireAfterAccess(1, TimeUnit.HOURS)
         .build();
 
-    private static final Cache<String, Cape> CACHED_BEDROCK_CAPES = CacheBuilder.newBuilder()
+    public static final Cache<String, Cape> CACHED_BEDROCK_CAPES = CacheBuilder.newBuilder()
         .expireAfterAccess(1, TimeUnit.HOURS)
         .build();
-    private static final Cache<String, Skin> CACHED_BEDROCK_SKINS = CacheBuilder.newBuilder()
+    public static final Cache<String, Skin> CACHED_BEDROCK_SKINS = CacheBuilder.newBuilder()
         .expireAfterAccess(1, TimeUnit.HOURS)
         .build();
 
     private static final Map<String, CompletableFuture<Cape>> requestedCapes = new ConcurrentHashMap<>();
     private static final Map<String, CompletableFuture<Skin>> requestedSkins = new ConcurrentHashMap<>();
 
-    public static final Cache<UUID, Pair<String, SkinGeometry>> cachedGeometry = CacheBuilder.newBuilder()
+    public static final Cache<UUID, Pair<String, SkinGeometry>> CACHED_GEOMETRY = CacheBuilder.newBuilder()
         .expireAfterAccess(1, TimeUnit.HOURS)
         .build();
 
@@ -212,7 +211,7 @@ public class SkinProvider {
                 skin = CACHED_BEDROCK_SKINS.getIfPresent(skinId);
                 String capeId = session.getClientData().getCapeId();
                 cape = CACHED_BEDROCK_CAPES.getIfPresent(capeId);
-                Pair<String, SkinGeometry> pair = cachedGeometry.getIfPresent(uuid);
+                Pair<String, SkinGeometry> pair = CACHED_GEOMETRY.getIfPresent(uuid);
                 if (pair != null) {
                     geometry = pair.right();
                 }
@@ -272,7 +271,7 @@ public class SkinProvider {
                     Cape cape = skinAndCape.cape();
                     SkinGeometry geometry = data.isAlex() ? SkinGeometry.SLIM : SkinGeometry.WIDE;
                     // only PE
-                    Pair<String, SkinGeometry> stringSkinGeometryPair = cachedGeometry.getIfPresent(uuid);
+                    Pair<String, SkinGeometry> stringSkinGeometryPair = CACHED_GEOMETRY.getIfPresent(uuid);
                     if (uuid.toString().startsWith("00000000") && stringSkinGeometryPair != null) {
                         geometry = stringSkinGeometryPair.right();
                     }
@@ -511,7 +510,7 @@ public class SkinProvider {
     static void storeBedrockGeometry(UUID playerID, byte[] geometryName, byte[] geometryData) {
         String geoName = new String(geometryName);
 //        SkinGeometry geometry = new SkinGeometry(geometryName1, new String(geometryData));
-        cachedGeometry.put(playerID, Pair.of(new String(geometryName), geoName.contains("customSlim") ? SkinGeometry.SLIM : SkinGeometry.WIDE));
+        CACHED_GEOMETRY.put(playerID, Pair.of(new String(geometryName), geoName.contains("customSlim") ? SkinGeometry.SLIM : SkinGeometry.WIDE));
     }
 
     private static Skin supplySkin(UUID uuid, String textureUrl) {
