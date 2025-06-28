@@ -255,7 +255,10 @@ public class SkinManager {
                 SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
                 String geoName = new String(geometryNameBytes);
                 // 仅使用本地缓存
-                clientData.setGeometryData(geoName.contains("customSlim") ? SkinGeometry.SLIM.geometryData() : SkinGeometry.WIDE.geometryData());
+                if (!GeyserImpl.getInstance().getConfig().isAllowCustomGeometry()) {
+                    SkinGeometry customSlim = geoName.contains("customSlim") ? SkinGeometry.SLIM : SkinGeometry.WIDE;
+                    clientData.setGeometryData(customSlim.geometryData());
+                }
                 SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
             } else if (geyser.getConfig().isDebugMode()) {
                 geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.skin.bedrock.fail", playerEntity.getUsername()));

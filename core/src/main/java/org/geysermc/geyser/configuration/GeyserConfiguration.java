@@ -184,6 +184,7 @@ public interface GeyserConfiguration {
     //Netease Only
     boolean isOnlineMode();
     boolean isAllowedPc();
+    boolean isAllowCustomGeometry();
 
     IServiceConfiguration getService();
     IOptionalPacks getOptionalPacks();

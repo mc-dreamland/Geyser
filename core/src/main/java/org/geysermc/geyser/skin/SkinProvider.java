@@ -509,8 +509,9 @@ public class SkinProvider {
     // 处理模型
     static void storeBedrockGeometry(UUID playerID, byte[] geometryName, byte[] geometryData) {
         String geoName = new String(geometryName);
-//        SkinGeometry geometry = new SkinGeometry(geometryName1, new String(geometryData));
-        CACHED_GEOMETRY.put(playerID, Pair.of(new String(geometryName), geoName.contains("customSlim") ? SkinGeometry.SLIM : SkinGeometry.WIDE));
+        CACHED_GEOMETRY.put(playerID, Pair.of(new String(geometryName), GeyserImpl.getInstance().getConfig().isAllowCustomGeometry() ?
+            new SkinGeometry(geoName, new String(geometryData)) :
+            geoName.contains("customSlim") ? SkinGeometry.SLIM : SkinGeometry.WIDE));
     }
 
     private static Skin supplySkin(UUID uuid, String textureUrl) {

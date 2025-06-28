@@ -348,6 +348,9 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
     @JsonProperty("allowed-pc")
     private boolean allowedPc = false;
 
+    @JsonProperty("allow-custom-geometry")
+    private boolean allowCustomGeometry = false;
+
     private ServiceConfiguration service = new ServiceConfiguration();
 
     @JsonProperty("optional-packs")
