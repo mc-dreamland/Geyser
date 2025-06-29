@@ -401,9 +401,13 @@ public class SkinProvider {
         try {
             CompletableFuture<Skin> skinCompletableFuture = getTextureJson(textureUrl).thenApply(json -> {
                 byte[] geometryNameBytes = Base64.getDecoder().decode((json.get("geometry_name").asText()));
+                String geoName = new String(geometryNameBytes);
                 byte[] geometry_data = Base64.getDecoder().decode(json.get("geometry_data").asText());
                 GeyserImpl.getInstance().getLogger().debug("storeBedrock Geometry: " + uuid + " data length: " + geometry_data.length);
-                SkinProvider.storeBedrockGeometry(uuid, geometryNameBytes, geometry_data);
+                SkinProvider.storeBedrockGeometry(uuid, geoName, geometry_data);
+                if (!GeyserImpl.getInstance().getConfig().isAllowCustomGeometry() && geoName.contains("netease_skin")) {
+                    return ProvidedSkins.getAlexOrSteve(uuid).getData();
+                }
                 return buildSkin(uuid, textureUrl, json);
             });
             return skinCompletableFuture.get();
@@ -508,10 +512,16 @@ public class SkinProvider {
 
     // 处理模型
     static void storeBedrockGeometry(UUID playerID, byte[] geometryName, byte[] geometryData) {
-        String geoName = new String(geometryName);
-        CACHED_GEOMETRY.put(playerID, Pair.of(new String(geometryName), GeyserImpl.getInstance().getConfig().isAllowCustomGeometry() ?
-            new SkinGeometry(geoName, new String(geometryData)) :
-            geoName.contains("customSlim") ? SkinGeometry.SLIM : SkinGeometry.WIDE));
+        storeBedrockGeometry(playerID, new String(geometryName), geometryData);
+    }
+
+    static void storeBedrockGeometry(UUID playerID, String geoName, byte[] geometryData) {
+        boolean allowCustomGeometry = GeyserImpl.getInstance().getConfig().isAllowCustomGeometry();
+        SkinGeometry skinGeometry = geoName.contains("customSlim") ? SkinGeometry.SLIM : !allowCustomGeometry && geoName.contains("netease_skin") ? playerID.hashCode() % 2 == 0 ? SkinGeometry.SLIM : SkinGeometry.WIDE : SkinGeometry.WIDE;
+        if (allowCustomGeometry && geoName.contains("netease_skin")) {
+            skinGeometry = new SkinGeometry(geoName, new String(geometryData));
+        }
+        CACHED_GEOMETRY.put(playerID, Pair.of(geoName, skinGeometry));
     }
 
     private static Skin supplySkin(UUID uuid, String textureUrl) {

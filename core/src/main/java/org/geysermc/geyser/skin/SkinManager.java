@@ -240,8 +240,9 @@ public class SkinManager {
 
     public static void handleBedrockSkin(PlayerEntity playerEntity, BedrockClientData clientData) {
         GeyserImpl geyser = GeyserImpl.getInstance();
+        UUID uuid = playerEntity.getUuid();
         if (geyser.getConfig().isDebugMode()) {
-            geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.skin.bedrock.register", playerEntity.getUsername(), playerEntity.getUuid()));
+            geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.skin.bedrock.register", playerEntity.getUsername(), uuid));
         }
 
         try {
@@ -252,14 +253,14 @@ public class SkinManager {
             byte[] geometryBytes = Base64.getDecoder().decode(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8));
 
             if (skinBytes.length <= (128 * 128 * 4) && !clientData.isPersonaSkin()) {
-                SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
+                SkinProvider.storeBedrockSkin(uuid, clientData.getSkinId(), skinBytes);
                 String geoName = new String(geometryNameBytes);
                 // 仅使用本地缓存
                 if (!GeyserImpl.getInstance().getConfig().isAllowCustomGeometry()) {
                     SkinGeometry customSlim = geoName.contains("customSlim") ? SkinGeometry.SLIM : SkinGeometry.WIDE;
                     clientData.setGeometryData(customSlim.geometryData());
                 }
-                SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
+                SkinProvider.storeBedrockGeometry(uuid, geometryNameBytes, geometryBytes);
             } else if (geyser.getConfig().isDebugMode()) {
                 geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.skin.bedrock.fail", playerEntity.getUsername()));
                 geyser.getLogger().debug("The size of '" + playerEntity.getUsername() + "' skin is: " + clientData.getSkinImageWidth() + "x" + clientData.getSkinImageHeight());
