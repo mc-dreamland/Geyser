@@ -94,7 +94,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
             if (session.getServerRenderDistance() > 32 && !session.isEmulatePost1_13Logic()) {
                 // See DimensionUtils for an explanation
                 ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
-                chunkRadiusUpdatedPacket.setRadius(session.getServerRenderDistance());
+                chunkRadiusUpdatedPacket.setRadius(10);
                 session.sendUpstreamPacket(chunkRadiusUpdatedPacket);
 
                 session.setLastChunkPosition(null);

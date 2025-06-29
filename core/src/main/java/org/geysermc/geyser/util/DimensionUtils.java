@@ -120,7 +120,7 @@ public class DimensionUtils {
             session.getGeyser().getLogger().debug("Applying dimension switching workaround for Bedrock render distance of "
                 + session.getServerRenderDistance());
             ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
-            chunkRadiusUpdatedPacket.setRadius(32);
+            chunkRadiusUpdatedPacket.setRadius(10);
             session.sendUpstreamPacket(chunkRadiusUpdatedPacket);
             // Will be re-adjusted on spawn
         }
