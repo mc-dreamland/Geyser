@@ -28,6 +28,7 @@ package org.geysermc.geyser.registry.loader;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.event.lifecycle.GeyserLoadBehaviorPacksEvent;
@@ -61,6 +62,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -331,13 +333,13 @@ public class BehaviorPackLoader implements RegistryLoader<Path, Map<UUID, Resour
         }
     }
 
-    public static CompletableFuture<@Nullable PathPackCodec> downloadPack(String url, boolean testing) throws IllegalArgumentException {
+    public static CompletableFuture<@NonNull PathPackCodec> downloadPack(String url, boolean testing) throws IllegalArgumentException {
         return CompletableFuture.supplyAsync(() -> {
-            Path path = WebUtils.downloadRemotePack(url, testing);
-
-            // Already warned about these above
-            if (path == null) {
-                return null;
+            Path path;
+            try {
+                path = WebUtils.downloadRemotePack(url, testing);
+            } catch (Throwable e) {
+                throw new CompletionException(e);
             }
 
             // Check if the pack is a .zip or .mcpack file
