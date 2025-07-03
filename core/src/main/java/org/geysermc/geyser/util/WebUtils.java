@@ -153,7 +153,7 @@ public class WebUtils {
      * @return Path to the downloaded pack file, or null if it was unable to be loaded
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public static @Nullable Path downloadRemotePack(String url, boolean force) {
+    public static @NonNull Path downloadRemotePack(String url, boolean force) throws IOException {
         GeyserLogger logger = GeyserImpl.getInstance().getLogger();
         try {
             HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
