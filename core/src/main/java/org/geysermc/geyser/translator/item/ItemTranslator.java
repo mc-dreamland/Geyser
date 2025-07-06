@@ -492,7 +492,7 @@ public final class ItemTranslator {
      */
     @NonNull
     public static ItemDefinition getBedrockItemDefinition(GeyserSession session, @NonNull GeyserItemStack itemStack) {
-        if (itemStack.isEmpty()) {
+        if (itemStack == null || itemStack.isEmpty()) {
             return ItemDefinition.AIR;
         }
 

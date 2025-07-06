@@ -55,6 +55,7 @@ public class DimensionUtils {
     }
 
     public static void switchDimension(GeyserSession session, JavaDimension javaDimension, int bedrockDimension, boolean changeDimension) {
+        session.getChunkCache().setLastChangeWorldTime(System.currentTimeMillis());
         @Nullable JavaDimension previousDimension = session.getDimensionType(); // previous java dimension; can be null if an online player with no saved auth token logs in.
 
         Entity player = session.getPlayerEntity();
@@ -149,20 +150,20 @@ public class DimensionUtils {
         stopSoundPacket.setSoundName("");
         session.sendUpstreamPacket(stopSoundPacket);
 
-        // Kind of silly but Bedrock 1.19.50 and later requires an acknowledgement after the
-        // initial chunks are sent, prior to the client acknowledgement
-        // Note: send this before chunks are sent. Fixed https://github.com/GeyserMC/Geyser/issues/3421
-        PlayerActionPacket ackPacket = new PlayerActionPacket();
-        ackPacket.setRuntimeEntityId(player.getGeyserId());
-        ackPacket.setAction(PlayerActionType.DIMENSION_CHANGE_SUCCESS);
-        ackPacket.setBlockPosition(Vector3i.ZERO);
-        ackPacket.setResultPosition(Vector3i.ZERO);
-        ackPacket.setFace(0);
-        session.sendUpstreamPacket(ackPacket);
-
-        // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
-        // The client wants sections sent to it before it can successfully respawn.
         if (!session.isQuickSwitchDimension()) {
+            // Kind of silly but Bedrock 1.19.50 and later requires an acknowledgement after the
+            // initial chunks are sent, prior to the client acknowledgement
+            // Note: send this before chunks are sent. Fixed https://github.com/GeyserMC/Geyser/issues/3421
+            PlayerActionPacket ackPacket = new PlayerActionPacket();
+            ackPacket.setRuntimeEntityId(player.getGeyserId());
+            ackPacket.setAction(PlayerActionType.DIMENSION_CHANGE_SUCCESS);
+            ackPacket.setBlockPosition(Vector3i.ZERO);
+            ackPacket.setResultPosition(Vector3i.ZERO);
+            ackPacket.setFace(0);
+            session.sendUpstreamPacket(ackPacket);
+
+            // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
+            // The client wants sections sent to it before it can successfully respawn.
             ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
         }
     }

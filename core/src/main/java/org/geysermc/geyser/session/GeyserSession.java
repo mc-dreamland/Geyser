@@ -1270,6 +1270,9 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                 // but this will work once we implement matching Java custom tick cycles
                 sendDownstreamGamePacket(ServerboundClientTickEndPacket.INSTANCE);
             }
+            if (chunkCache != null) {
+                chunkCache.tickCleanup(this);
+            }
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
@@ -1540,7 +1543,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         int renderDistance = ChunkUtils.squareToCircle(this.serverRenderDistance);
         ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
 
-        chunkRadiusUpdatedPacket.setRadius(Math.min(10, renderDistance));
+        chunkRadiusUpdatedPacket.setRadius(Math.min(6, renderDistance));
         upstream.sendPacket(chunkRadiusUpdatedPacket);
     }
 
