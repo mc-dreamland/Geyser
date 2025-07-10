@@ -12,5 +12,5 @@
 * 检查是否实现自定义资源包功能
 * 检查是否实现实现通过网易代理获取玩家真实IP
 * 检查MAPPING，检查是否添加网易的mod_xx 系列物品/方块
-* 注意java药水持续时间为-1代表无限，但PE不认，需处理。JavaUpdateMobEffectTranslator
+* 注意java药水持续时间为-1代表无限，但PE不认，需处理。JavaUpdateMobEffectTranslator，最大值为
 * 注意更新区块范围需限制最大10格，因为低版本viaversion会强制为96导致低端设备严重卡顿或崩溃。

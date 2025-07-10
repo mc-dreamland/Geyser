@@ -75,20 +75,6 @@ public class WebUtils {
      * 获取总在线
      */
     public static int getTotalOnline(){
-        try {
-            String body = getBody(
-                GeyserImpl.getInstance().getConfig().getService().getUrl(),
-                Map.of("X-Auth", GeyserImpl.getInstance().getConfig().getService().getToken()));
-            if (Objects.isNull(body)) return ONLINE;
-            return ONLINE = GeyserImpl.JSON_MAPPER.readTree(body).get("data").asInt();
-        }catch (Exception ignored){}
-
-        if (lastUpdate == -1) return ONLINE;
-
-        if (System.currentTimeMillis() - lastUpdate > 60 * 60 * 1000) {
-            return ONLINE;
-        }
-
         return online;
     }
     /**
