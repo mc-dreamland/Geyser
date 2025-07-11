@@ -324,7 +324,8 @@ public class SkinProvider {
             long time = System.currentTimeMillis();
 
             SkinAndCape skinAndCape = new SkinAndCape(
-                getOrDefault(requestSkin(playerId, skinUrl, false), ProvidedSkins.getSteveSkin().getData(), 5),
+                getOrDefault(requestSkin(playerId, skinUrl, false),
+                    playerId.hashCode() % 2 == 0 ? ProvidedSkins.getAlexSkin().getData() : ProvidedSkins.getSteveSkin().getData(), 5),
                 getOrDefault(requestCape(capeUrl, false), EMPTY_CAPE, 5)
             );
 
@@ -334,7 +335,7 @@ public class SkinProvider {
     }
 
     public static CompletableFuture<Skin> requestSkin(UUID playerId, String textureUrl, boolean newThread) {
-        if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(ProvidedSkins.getSteveSkin().getData());
+        if (textureUrl == null || textureUrl.isEmpty()) return CompletableFuture.completedFuture(ProvidedSkins.getAlexOrSteve(playerId).getData());
         //  从 cachedSkins 里面拿皮肤
         // 从HTTP请求缓存里面拿皮肤
         CompletableFuture<Skin> requestedSkin = requestedSkins.get(textureUrl);
@@ -402,18 +403,19 @@ public class SkinProvider {
             CompletableFuture<Skin> skinCompletableFuture = getTextureJson(textureUrl).thenApply(json -> {
                 byte[] geometryNameBytes = Base64.getDecoder().decode((json.get("geometry_name").asText()));
                 String geoName = new String(geometryNameBytes);
-                byte[] geometry_data = Base64.getDecoder().decode(json.get("geometry_data").asText());
-                GeyserImpl.getInstance().getLogger().debug("storeBedrock Geometry: " + uuid + " data length: " + geometry_data.length);
-                SkinProvider.storeBedrockGeometry(uuid, geoName, geometry_data);
-                if (!GeyserImpl.getInstance().getConfig().isAllowCustomGeometry() && geoName.contains("netease_skin")) {
+                if (!GeyserImpl.getInstance().getConfig().isAllowCustomGeometry()) {
+                    SkinProvider.storeBedrockGeometry(uuid, geoName, null);
                     return ProvidedSkins.getAlexOrSteve(uuid).getData();
                 }
+                byte[] geometry_data = Base64.getDecoder().decode(json.get("geometry_data").asText());
+                SkinProvider.storeBedrockGeometry(uuid, geoName, geometry_data);
+                GeyserImpl.getInstance().getLogger().debug("storeBedrock Geometry: " + uuid + " data length: " + geometry_data.length);
                 return buildSkin(uuid, textureUrl, json);
             });
             return skinCompletableFuture.get();
         } catch (Exception ignored) {
         }
-        return new Skin("", ProvidedSkins.getSteveSkin().getData().skinData(), false, uuid.toString().replace("-", "").hashCode() <= 0 ? -uuid.toString().replace("-", "").hashCode() : uuid.toString().replace("-", "").hashCode());
+        return new Skin("", ProvidedSkins.getAlexOrSteve(uuid).getData().skinData(), false, uuid.toString().replace("-", "").hashCode() <= 0 ? -uuid.toString().replace("-", "").hashCode() : uuid.toString().replace("-", "").hashCode());
     }
 
     public static Skin requestPCSkin(UUID uuid, String textureUrl) {
@@ -517,9 +519,11 @@ public class SkinProvider {
 
     static void storeBedrockGeometry(UUID playerID, String geoName, byte[] geometryData) {
         boolean allowCustomGeometry = GeyserImpl.getInstance().getConfig().isAllowCustomGeometry();
-        SkinGeometry skinGeometry = geoName.contains("customSlim") ? SkinGeometry.SLIM : !allowCustomGeometry && geoName.contains("netease_skin") ? playerID.hashCode() % 2 == 0 ? SkinGeometry.SLIM : SkinGeometry.WIDE : SkinGeometry.WIDE;
-        if (allowCustomGeometry && geoName.contains("netease_skin")) {
+        SkinGeometry skinGeometry;
+        if (allowCustomGeometry) {
             skinGeometry = new SkinGeometry(geoName, new String(geometryData));
+        } else {
+            skinGeometry = geoName.contains("customSlim") ? SkinGeometry.SLIM : playerID.hashCode() % 2 == 0 ? SkinGeometry.SLIM : SkinGeometry.WIDE;
         }
         CACHED_GEOMETRY.put(playerID, Pair.of(geoName, skinGeometry));
     }

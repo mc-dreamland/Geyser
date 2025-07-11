@@ -257,7 +257,7 @@ public class SkinManager {
                 String geoName = new String(geometryNameBytes);
                 // 仅使用本地缓存
                 if (!GeyserImpl.getInstance().getConfig().isAllowCustomGeometry()) {
-                    SkinGeometry customSlim = geoName.contains("customSlim") ? SkinGeometry.SLIM : SkinGeometry.WIDE;
+                    SkinGeometry customSlim = geoName.contains("customSlim") ? SkinGeometry.SLIM : uuid.hashCode() % 2 == 0 ? SkinGeometry.SLIM : SkinGeometry.WIDE;
                     clientData.setGeometryData(customSlim.geometryData());
                 }
                 SkinProvider.storeBedrockGeometry(uuid, geometryNameBytes, geometryBytes);
