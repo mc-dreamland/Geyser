@@ -141,7 +141,7 @@ final class BedrockMovePlayer {
             }
         } else if (positionChangedAndShouldUpdate) {
             if (isValidMove(session, entity.getPosition(), packet.getPosition())) {
-                if (!session.getWorldBorder().isPassingIntoBorderBoundaries(entity.getPosition(), true)) {
+                if (!session.getWorldBorder().isPassingIntoBorderBoundaries(packet.getPosition(), true)) {
                     CollisionResult result;
                     if (GameProtocol.is1_20_0orLower(session)) {
                         result = session.getCollisionManager().adjustBedrockPosition(packet.getPosition(), packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
