@@ -263,7 +263,6 @@ public class SkinProvider {
             // This player likely does not have a textures property
             return CompletableFuture.completedFuture(determineFallbackSkinData(uuid));
         }
-
         return requestSkinAndCape(uuid, data.skinUrl(), data.capeUrl())
             .thenApplyAsync(skinAndCape -> {
                 try {
@@ -403,13 +402,7 @@ public class SkinProvider {
             CompletableFuture<Skin> skinCompletableFuture = getTextureJson(textureUrl).thenApply(json -> {
                 byte[] geometryNameBytes = Base64.getDecoder().decode((json.get("geometry_name").asText()));
                 String geoName = new String(geometryNameBytes);
-                if (!GeyserImpl.getInstance().getConfig().isAllowCustomGeometry()) {
-                    SkinProvider.storeBedrockGeometry(uuid, geoName, null);
-                    return ProvidedSkins.getAlexOrSteve(uuid).getData();
-                }
-                byte[] geometry_data = Base64.getDecoder().decode(json.get("geometry_data").asText());
-                SkinProvider.storeBedrockGeometry(uuid, geoName, geometry_data);
-                GeyserImpl.getInstance().getLogger().debug("storeBedrock Geometry: " + uuid + " data length: " + geometry_data.length);
+                SkinProvider.storeBedrockGeometry(uuid, geoName, GeyserImpl.getInstance().getConfig().isAllowCustomGeometry() ? Base64.getDecoder().decode(json.get("geometry_data").asText()) : null);
                 return buildSkin(uuid, textureUrl, json);
             });
             return skinCompletableFuture.get();
