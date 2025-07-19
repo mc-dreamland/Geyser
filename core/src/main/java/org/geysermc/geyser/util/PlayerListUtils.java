@@ -56,17 +56,19 @@ public class PlayerListUtils {
                 packet.getEntries().addAll(entries.subList(start, end));
                 session.sendUpstreamPacket(packet);
                 List<PlayerListPacket.Entry> entries1 = entries.subList(start, end);
-                ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
-                for (PlayerListPacket.Entry entry : entries1) {
-                    if (entry.getSkin() != null) {
-                        if (!entry.getSkin().getSkinId().contains("geysermc:")) {
-                            confirmSkin.add(entry);
+                if (action.equals(PlayerListPacket.Action.ADD)) {
+                    ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
+                    for (PlayerListPacket.Entry entry : entries1) {
+                        if (entry.getSkin() != null) {
+                            if (!entry.getSkin().getSkinId().contains("geysermc:")) {
+                                confirmSkin.add(entry);
+                            }
                         }
                     }
-                }
-                if (!confirmSkin.isEmpty()) {
-                    ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
-                    session.sendUpstreamPacket(confirmSkinPacket);
+                    if (!confirmSkin.isEmpty()) {
+                        ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
+                        session.sendUpstreamPacket(confirmSkinPacket);
+                    }
                 }
             }
         } else {
@@ -74,19 +76,22 @@ public class PlayerListUtils {
             packet.setAction(action);
             packet.getEntries().addAll(entries);
             session.sendUpstreamPacket(packet);
-            ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
-            for (PlayerListPacket.Entry entry : entries) {
-                if (entry.getSkin() != null) {
-                    if (!entry.getSkin().getSkinId().contains("geysermc:")) {
-                        if (!entry.getSkin().isPersona()) {
-                            confirmSkin.add(entry);
+
+            if (action.equals(PlayerListPacket.Action.ADD)) {
+                ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
+                for (PlayerListPacket.Entry entry : entries) {
+                    if (entry.getSkin() != null) {
+                        if (!entry.getSkin().getSkinId().contains("geysermc:")) {
+                            if (!entry.getSkin().isPersona()) {
+                                confirmSkin.add(entry);
+                            }
                         }
                     }
                 }
-            }
-            if (!confirmSkin.isEmpty()) {
-                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
-                session.sendUpstreamPacket(confirmSkinPacket);
+                if (!confirmSkin.isEmpty()) {
+                    ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
+                    session.sendUpstreamPacket(confirmSkinPacket);
+                }
             }
         }
     }
