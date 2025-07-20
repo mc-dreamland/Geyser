@@ -172,33 +172,6 @@ public class SkinManager {
             // 应用自己的皮肤
             ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(List.of(updatedEntry));
             session.sendUpstreamPacket(confirmSkinPacket);
-        } else {
-            if (skin.textureUrl().contains("geysermc:")) {
-                return;
-            }
-            PlayerSkinPacket packet = new PlayerSkinPacket();
-            packet.setUuid(entity.getUuid());
-            packet.setOldSkinName("");
-            packet.setNewSkinName(skin.textureUrl());
-            packet.setSkin(getSkin(session, skin.textureUrl(), skin, cape, geometry));
-            packet.setTrustedSkin(true);
-            session.sendUpstreamPacket(packet);
-
-            if (!skin.textureUrl().contains("geysermc:")) {
-                PlayerListPacket.Entry updatedEntry = buildEntryManually(
-                    session,
-                    entity.getUuid(),
-                    entity.getUsername(),
-                    entity.getGeyserId(),
-                    skin,
-                    cape,
-                    geometry
-                );
-                ArrayList<PlayerListPacket.Entry> confirmSkin = new ArrayList<>();
-                confirmSkin.add(updatedEntry);
-                ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(confirmSkin);
-                session.sendUpstreamPacket(confirmSkinPacket);
-            }
         }
     }
 

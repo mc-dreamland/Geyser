@@ -408,7 +408,7 @@ public class SkinProvider {
             return skinCompletableFuture.get();
         } catch (Exception ignored) {
         }
-        return new Skin("", ProvidedSkins.getAlexOrSteve(uuid).getData().skinData(), false, uuid.toString().replace("-", "").hashCode() <= 0 ? -uuid.toString().replace("-", "").hashCode() : uuid.toString().replace("-", "").hashCode());
+        return new Skin(textureUrl, ProvidedSkins.getAlexOrSteve(uuid).getData().skinData(), false, uuid.toString().replace("-", "").hashCode() <= 0 ? -uuid.toString().replace("-", "").hashCode() : uuid.toString().replace("-", "").hashCode());
     }
 
     public static Skin requestPCSkin(UUID uuid, String textureUrl) {
