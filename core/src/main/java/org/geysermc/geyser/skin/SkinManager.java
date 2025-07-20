@@ -172,6 +172,14 @@ public class SkinManager {
             // 应用自己的皮肤
             ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(List.of(updatedEntry));
             session.sendUpstreamPacket(confirmSkinPacket);
+        }else {
+            PlayerSkinPacket packet = new PlayerSkinPacket();
+            packet.setUuid(entity.getUuid());
+            packet.setOldSkinName("");
+            packet.setNewSkinName(skin.textureUrl());
+            packet.setSkin(getSkin(session, skin.textureUrl(), skin, cape, geometry));
+            packet.setTrustedSkin(true);
+            session.sendUpstreamPacket(packet);
         }
     }
 
