@@ -178,6 +178,7 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
 
     private GeyserServer geyserServer;
     private final PlatformType platformType;
+    @Getter
     private final GeyserBootstrap bootstrap;
 
     private final EventBus<EventRegistrar> eventBus;

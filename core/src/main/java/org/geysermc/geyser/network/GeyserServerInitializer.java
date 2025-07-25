@@ -41,15 +41,15 @@ import java.net.InetSocketAddress;
 public class GeyserServerInitializer extends BedrockServerInitializer {
     private final GeyserImpl geyser;
     // There is a constructor that doesn't require inputting threads, but older Netty versions don't have it
-    private final DefaultEventLoopGroup eventLoopGroup = new DefaultEventLoopGroup(0, new DefaultThreadFactory("Geyser player thread"));
+//    private final DefaultEventLoopGroup eventLoopGroup = new DefaultEventLoopGroup(0, new DefaultThreadFactory("Geyser player thread"));
 
     public GeyserServerInitializer(GeyserImpl geyser) {
         this.geyser = geyser;
     }
 
-    public DefaultEventLoopGroup getEventLoopGroup() {
-        return eventLoopGroup;
-    }
+//    public DefaultEventLoopGroup getEventLoopGroup() {
+//        return eventLoopGroup;
+//    }
 
     @Override
     public void initSession(@NonNull BedrockServerSession bedrockServerSession) {
@@ -62,7 +62,7 @@ public class GeyserServerInitializer extends BedrockServerInitializer {
             }
 
             bedrockServerSession.setLogging(true);
-            GeyserSession session = new GeyserSession(this.geyser, bedrockServerSession, this.eventLoopGroup.next());
+            GeyserSession session = new GeyserSession(this.geyser, bedrockServerSession, bedrockServerSession.getPeer().getChannel().eventLoop());
 
             Channel channel = bedrockServerSession.getPeer().getChannel();
             channel.pipeline().addAfter(BedrockPacketCodec.NAME, InvalidPacketHandler.NAME, new InvalidPacketHandler(session));

@@ -32,6 +32,7 @@ import org.geysermc.geyser.configuration.GeyserConfiguration;
 import org.geysermc.geyser.dump.BootstrapDumpInfo;
 import org.geysermc.geyser.level.GeyserWorldManager;
 import org.geysermc.geyser.level.WorldManager;
+import org.geysermc.geyser.network.netty.GeyserInjector;
 import org.geysermc.geyser.ping.IGeyserPingPassthrough;
 
 import java.io.InputStream;
@@ -73,6 +74,10 @@ public interface GeyserBootstrap {
      * @return The current GeyserConfiguration
      */
     GeyserConfiguration getGeyserConfig();
+
+    default GeyserInjector getGeyserInjector() {
+        return null;
+    }
 
     /**
      * Returns the current GeyserLogger

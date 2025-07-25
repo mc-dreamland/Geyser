@@ -26,6 +26,8 @@
 package org.geysermc.geyser.network.netty;
 
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import lombok.Getter;
 import org.geysermc.geyser.GeyserBootstrap;
 
@@ -45,6 +47,12 @@ public abstract class GeyserInjector {
      */
     @Getter
     protected SocketAddress serverSocketAddress;
+
+    @Getter
+    protected EventLoopGroup workerGroup;
+
+    @Getter
+    protected MultiThreadIoEventLoopGroup wrapperGroup;
 
     /**
      * @param bootstrap the bootstrap of the Geyser instance.

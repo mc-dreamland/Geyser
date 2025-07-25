@@ -41,7 +41,6 @@ import io.netty.channel.local.LocalIoHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.geysermc.geyser.GeyserBootstrap;
-import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.network.netty.GeyserInjector;
 import org.geysermc.geyser.network.netty.LocalServerChannelWrapper;
 import org.geysermc.geyser.network.netty.WatchedSingleThreadIoEventLoop;
@@ -86,9 +85,9 @@ public class GeyserVelocityInjector extends GeyserInjector {
 
         Field workerGroupField = connectionManagerClass.getDeclaredField("workerGroup");
         workerGroupField.setAccessible(true);
-        EventLoopGroup workerGroup = (EventLoopGroup) workerGroupField.get(connectionManager);
+        workerGroup = (EventLoopGroup) workerGroupField.get(connectionManager);
 
-        EventLoopGroup wrapperGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory()) {
+        wrapperGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory()) {
             @Override
             protected ThreadFactory newDefaultThreadFactory() {
                 return new DefaultThreadFactory("Geyser Backend Worker Group", Thread.MAX_PRIORITY);

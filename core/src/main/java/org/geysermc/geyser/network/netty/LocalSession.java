@@ -33,10 +33,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.mcprotocollib.network.helper.NettyHelper;
 import org.geysermc.mcprotocollib.network.netty.MinecraftChannelInitializer;
 import org.geysermc.mcprotocollib.network.packet.PacketProtocol;
@@ -45,6 +47,7 @@ import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -76,8 +79,14 @@ public final class LocalSession extends ClientNetworkSession {
 
     @Override
     protected EventLoopGroup getEventLoopGroup() {
+        Optional<MultiThreadIoEventLoopGroup> wrapperGroup = Optional.ofNullable(GeyserImpl.getInstance().getBootstrap().getGeyserInjector())
+            .map(l -> l.wrapperGroup);
+        if (wrapperGroup.isPresent()) {
+            return wrapperGroup.get();
+        }
         if (DEFAULT_EVENT_LOOP_GROUP == null) {
-            DEFAULT_EVENT_LOOP_GROUP = new DefaultEventLoopGroup(new DefaultThreadFactory(this.getClass(), true));
+            int listenCount = GeyserImpl.getInstance().getGeyserServer().getListenCount();
+            DEFAULT_EVENT_LOOP_GROUP = new DefaultEventLoopGroup(listenCount, new DefaultThreadFactory(this.getClass(), true));
             Runtime.getRuntime().addShutdownHook(new Thread(
                 () -> DEFAULT_EVENT_LOOP_GROUP.shutdownGracefully(100, 500, TimeUnit.MILLISECONDS)));
         }
