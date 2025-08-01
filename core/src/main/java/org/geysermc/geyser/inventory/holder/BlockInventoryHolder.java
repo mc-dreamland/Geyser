@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.inventory.holder;
 
+import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerType;
@@ -129,12 +130,7 @@ public class BlockInventoryHolder extends InventoryHolder {
         // Check to see if there is an existing block we can use that the player just selected.
         // First, verify that the player's position has not changed, so we don't try to select a block wildly out of range.
         // (This could be a virtual inventory that the player is opening)
-        if (checkInteractionPosition(session)
-            && (!container.getContainerType().toString().startsWith("GENERIC")
-            && !container.getContainerType().toString().equals("ENCHANTMENT")
-            && !container.getContainerType().toString().equals("ANVIL")
-            && !container.getContainerType().toString().equals("FURNACE"))
-        ) {
+        if (checkInteractionPosition(session)) {
             // Then, check to see if the interacted block is valid for this inventory by ensuring the block state identifier is valid
             // and the bedrock block is vanilla
             BlockState state = session.getGeyser().getWorldManager().blockAt(session, session.getLastInteractionBlockPosition());
@@ -160,7 +156,24 @@ public class BlockInventoryHolder extends InventoryHolder {
      * a block to hold the inventory that's wildly out of range.
      */
     protected boolean checkInteractionPosition(GeyserSession session) {
-        return session.getLastInteractionPlayerPosition().equals(session.getPlayerEntity().getPosition());
+        Vector3i lastInteractionBlockPosition = session.getLastInteractionBlockPosition();
+        Vector3f position = session.getPlayerEntity().getPosition();
+
+        float distance = position.distance(lastInteractionBlockPosition.getX(), lastInteractionBlockPosition.getY(), lastInteractionBlockPosition.getZ());
+
+        if (distance >= 5.01) {
+            return false;
+        }
+
+        BlockState state = session.getGeyser().getWorldManager().blockAt(session, lastInteractionBlockPosition);
+        if (!BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get().containsKey(state.javaId())) {
+            if (isValidBlock(state)) {
+                return true;
+            }
+        }
+
+
+        return session.getLastInteractionPlayerPosition().equals(position);
     }
 
     /**
