@@ -178,15 +178,4 @@ public class MathUtils {
     public static long chunkPositionToLong(int x, int z) {
         return ((x & 0xFFFFFFFFL) << 32L) | (z & 0xFFFFFFFFL);
     }
-
-    public static int getChunkX(long chunkPosition) {
-        // 右移 32 位把高 32 位取出，再转回 int
-        return (int) (chunkPosition >> 32);
-    }
-
-    public static int getChunkZ(long chunkPosition) {
-        // 低 32 位就是 z；先按位与再转回 int（与或不与效果相同）
-        return (int) (chunkPosition & 0xFFFFFFFFL);
-        // 也可以直接 (int) chunkPosition
-    }
 }

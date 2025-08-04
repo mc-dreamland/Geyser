@@ -65,17 +65,14 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         // If the player is already initialized and a join game packet is sent, they
         // are swapping servers
         if (session.isSpawned()) {
-            if (session.isQuickSwitchDimension()) {
-                DimensionUtils.switchDimension(session, newDimension, false);
-            } else {
-                int fakeDim = DimensionUtils.getTemporaryDimension(session.getBedrockDimension().bedrockId(), newDimension.bedrockId());
-                if (fakeDim != newDimension.bedrockId()) {
-                    // The player's current dimension and new dimension are the same
-                    // We want a dimension switch to clear old chunks out, so switch to a dimension that isn't the one we're currently in.
-                    // Another dimension switch will be required to switch back
-                    DimensionUtils.fastSwitchDimension(session, fakeDim);
-                }
-            }
+            int fakeDim = DimensionUtils.getTemporaryDimension(session.getBedrockDimension().bedrockId(), newDimension.bedrockId());
+
+//            if (fakeDim != newDimension.bedrockId()) {
+                // The player's current dimension and new dimension are the same
+                // We want a dimension switch to clear old chunks out, so switch to a dimension that isn't the one we're currently in.
+                // Another dimension switch will be required to switch back
+//                DimensionUtils.fastSwitchDimension(session, fakeDim);
+//            }
 
             // Remove all bossbars
             session.getEntityCache().removeAllBossBars();
@@ -131,7 +128,7 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         }
         session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(register, Constants.PLUGIN_MESSAGE.getBytes(StandardCharsets.UTF_8)));
 
-        if (session.getBedrockDimension().bedrockId() != newDimension.bedrockId() && !session.isQuickSwitchDimension()) {
+        if ((newDimension.bedrockId() == 0 && session.isSpawned()) || session.getBedrockDimension().bedrockId() != newDimension.bedrockId()) {
             DimensionUtils.switchDimension(session, newDimension);
         } else if (BedrockDimension.isCustomBedrockNetherId() && newDimension.isNetherLike()) {
             // If the player is spawning into the "fake" nether, send them some fog

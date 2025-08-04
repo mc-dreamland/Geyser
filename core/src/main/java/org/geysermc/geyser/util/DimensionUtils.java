@@ -47,16 +47,22 @@ public class DimensionUtils {
     public static final String BEDROCK_FOG_HELL = "minecraft:fog_hell";
 
     public static void switchDimension(GeyserSession session, JavaDimension javaDimension) {
-        switchDimension(session, javaDimension, true);
+        switchDimension(session, javaDimension, javaDimension.bedrockId());
     }
 
-    public static void switchDimension(GeyserSession session, JavaDimension javaDimension, boolean changeDimension) {
-        switchDimension(session, javaDimension, javaDimension.bedrockId(), changeDimension);
-    }
-
-    public static void switchDimension(GeyserSession session, JavaDimension javaDimension, int bedrockDimension, boolean changeDimension) {
-        session.getChunkCache().setLastChangeWorldTime(System.currentTimeMillis());
+    public static void switchDimension(GeyserSession session, JavaDimension javaDimension, int bedrockDimension) {
         @Nullable JavaDimension previousDimension = session.getDimensionType(); // previous java dimension; can be null if an online player with no saved auth token logs in.
+
+        if (session.getLastNormalDimId() == 0 && bedrockDimension == 0) {
+            session.setLastNormalDimId(3);
+            bedrockDimension = 3;
+        }
+        if (session.getLastNormalDimId() == 3 && bedrockDimension == 0) {
+            session.setLastNormalDimId(0);
+        }
+//        if (bedrockDimension == 0 || bedrockDimension == 3) {
+//            bedrockDimension = 0;
+//        }
 
         Entity player = session.getPlayerEntity();
 
@@ -86,18 +92,16 @@ public class DimensionUtils {
         session.updateRain(0);
         session.updateThunder(0);
 
-        if (session.isQuickSwitchDimension()) {
-            finalizeDimensionSwitch(session, player);
+        finalizeDimensionSwitch(session, player);
 
-            // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
-            // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
-            // thinks they are in the end dimension.
-            if (BedrockDimension.isCustomBedrockNetherId()) {
-                if (javaDimension.isNetherLike()) {
-                    session.camera().sendFog(BEDROCK_FOG_HELL);
-                } else if (previousDimension != null && previousDimension.isNetherLike()) {
-                    session.camera().removeFog(BEDROCK_FOG_HELL);
-                }
+        // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
+        // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
+        // thinks they are in the end dimension.
+        if (BedrockDimension.isCustomBedrockNetherId()) {
+            if (javaDimension.isNetherLike()) {
+                session.camera().sendFog(BEDROCK_FOG_HELL);
+            } else if (previousDimension != null && previousDimension.isNetherLike()) {
+                session.camera().removeFog(BEDROCK_FOG_HELL);
             }
         }
     }
@@ -121,22 +125,20 @@ public class DimensionUtils {
             session.getGeyser().getLogger().debug("Applying dimension switching workaround for Bedrock render distance of "
                 + session.getServerRenderDistance());
             ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
-            chunkRadiusUpdatedPacket.setRadius(10);
+            chunkRadiusUpdatedPacket.setRadius(12);
             session.sendUpstreamPacket(chunkRadiusUpdatedPacket);
             // Will be re-adjusted on spawn
         }
 
         Vector3f pos = Vector3f.from(0, Short.MAX_VALUE, 0);
 
-        if (!session.isQuickSwitchDimension()) {
-            ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
-            changeDimensionPacket.setDimension(bedrockDimension);
-            changeDimensionPacket.setRespawn(true);
-            changeDimensionPacket.setPosition(pos);
-            session.sendUpstreamPacket(changeDimensionPacket);
+        ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
+        changeDimensionPacket.setDimension(bedrockDimension);
+        changeDimensionPacket.setRespawn(true);
+        changeDimensionPacket.setPosition(pos);
+        session.sendUpstreamPacket(changeDimensionPacket);
 
-            setBedrockDimension(session, bedrockDimension);
-        }
+        setBedrockDimension(session, bedrockDimension);
 
         session.getPlayerEntity().setPosition(pos);
         session.setSpawned(false);
@@ -150,22 +152,20 @@ public class DimensionUtils {
         stopSoundPacket.setSoundName("");
         session.sendUpstreamPacket(stopSoundPacket);
 
-        if (!session.isQuickSwitchDimension()) {
-            // Kind of silly but Bedrock 1.19.50 and later requires an acknowledgement after the
-            // initial chunks are sent, prior to the client acknowledgement
-            // Note: send this before chunks are sent. Fixed https://github.com/GeyserMC/Geyser/issues/3421
-            PlayerActionPacket ackPacket = new PlayerActionPacket();
-            ackPacket.setRuntimeEntityId(player.getGeyserId());
-            ackPacket.setAction(PlayerActionType.DIMENSION_CHANGE_SUCCESS);
-            ackPacket.setBlockPosition(Vector3i.ZERO);
-            ackPacket.setResultPosition(Vector3i.ZERO);
-            ackPacket.setFace(0);
-            session.sendUpstreamPacket(ackPacket);
+        // Kind of silly but Bedrock 1.19.50 and later requires an acknowledgement after the
+        // initial chunks are sent, prior to the client acknowledgement
+        // Note: send this before chunks are sent. Fixed https://github.com/GeyserMC/Geyser/issues/3421
+        PlayerActionPacket ackPacket = new PlayerActionPacket();
+        ackPacket.setRuntimeEntityId(player.getGeyserId());
+        ackPacket.setAction(PlayerActionType.DIMENSION_CHANGE_SUCCESS);
+        ackPacket.setBlockPosition(Vector3i.ZERO);
+        ackPacket.setResultPosition(Vector3i.ZERO);
+        ackPacket.setFace(0);
+        session.sendUpstreamPacket(ackPacket);
 
-            // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
-            // The client wants sections sent to it before it can successfully respawn.
-            ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
-        }
+        // TODO - fix this hack of a fix by sending the final dimension switching logic after sections have been sent.
+        // The client wants sections sent to it before it can successfully respawn.
+//        ChunkUtils.sendEmptyChunks(session, player.getPosition().toInt(), 3, true);
     }
 
     public static void setBedrockDimension(GeyserSession session, int bedrockDimension) {

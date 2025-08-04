@@ -45,6 +45,7 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
 
     @Override
     public void translate(GeyserSession session, ClientboundRespawnPacket packet) {
+        System.out.println("JavaRespawnTranslator -> ");
         SessionPlayerEntity entity = session.getPlayerEntity();
         PlayerSpawnInfo spawnInfo = packet.getCommonPlayerSpawnInfo();
 
@@ -83,13 +84,13 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
         JavaDimension newDimension = session.getRegistryCache().registry(JavaRegistries.DIMENSION_TYPE).byId(spawnInfo.getDimension());
         if (session.getDimensionType() != newDimension || !spawnInfo.getWorldName().equals(session.getWorldName())) {
             // Switching to a new world (based off the world name change or new dimension); send a fake dimension change
-            if (session.getDimensionType().bedrockId() == newDimension.bedrockId() && !session.isQuickSwitchDimension()) {
-                int fakeDim = DimensionUtils.getTemporaryDimension(session.getDimensionType().bedrockId(), newDimension.bedrockId());
-                DimensionUtils.fastSwitchDimension(session, fakeDim);
-            }
+//            if (session.getDimensionType().bedrockId() == newDimension.bedrockId()) {
+//                int fakeDim = DimensionUtils.getTemporaryDimension(session.getDimensionType().bedrockId(), newDimension.bedrockId());
+//                DimensionUtils.fastSwitchDimension(session, fakeDim);
+//            }
             session.setWorldName(spawnInfo.getWorldName());
             session.setWorldTicks(0);
-            DimensionUtils.switchDimension(session, newDimension, session.getDimensionType() != newDimension);
+            DimensionUtils.switchDimension(session, newDimension);
 
             ChunkUtils.loadDimension(session);
         }

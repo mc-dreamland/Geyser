@@ -428,6 +428,10 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @MonotonicNonNull
     @Setter
     private JavaDimension dimensionType = null;
+
+    @Getter
+    @Setter
+    private int lastNormalDimId = 0;
     /**
      * Which dimension Bedrock understands themselves to be in.
      * This should only be set after the ChangeDimensionPacket is sent, or
@@ -701,7 +705,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Setter
     private boolean noUnloadChunk = true;
     @Setter
-    private boolean quickSwitchDimension = true;
+    private boolean quickSwitchDimension = false;
 
     @Getter(AccessLevel.MODULE)
     private MinecraftProtocol protocol;
@@ -1276,9 +1280,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                 // but this will work once we implement matching Java custom tick cycles
                 sendDownstreamGamePacket(ServerboundClientTickEndPacket.INSTANCE);
             }
-            if (chunkCache != null) {
-                chunkCache.tickCleanup(this);
-            }
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
@@ -1534,7 +1535,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     public void setServerRenderDistance(int renderDistance) {
         // Ensure render distance is not above 96 as sending a larger value at any point crashes mobile clients and 96 is the max of any bedrock platform
-        renderDistance = Math.min(renderDistance, 96);
+        renderDistance = Math.min(renderDistance, 16);
         this.serverRenderDistance = renderDistance;
 
         recalculateBedrockRenderDistance();
@@ -1549,7 +1550,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         int renderDistance = ChunkUtils.squareToCircle(this.serverRenderDistance);
         ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
 
-        chunkRadiusUpdatedPacket.setRadius(Math.min(6, renderDistance));
+        chunkRadiusUpdatedPacket.setRadius(Math.min(16, renderDistance));
         upstream.sendPacket(chunkRadiusUpdatedPacket);
     }
 

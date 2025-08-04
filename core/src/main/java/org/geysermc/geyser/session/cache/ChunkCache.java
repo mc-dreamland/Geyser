@@ -1,40 +1,51 @@
+/*
+ * Copyright (c) 2019-2022 GeyserMC. http://geysermc.org
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @author GeyserMC
+ * @link https://github.com/GeyserMC/Geyser
+ */
+
 package org.geysermc.geyser.session.cache;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongIterator;
 import lombok.Setter;
 import org.geysermc.geyser.level.block.type.Block;
 import org.geysermc.geyser.level.chunk.GeyserChunk;
 import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.geyser.util.ChunkUtils;
 import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.DataPalette;
 
 public class ChunkCache {
     private final boolean cache;
     private final Long2ObjectMap<GeyserChunk> chunks;
-    /** Chunks waiting to be deleted in a throttled manner. */
-    private final Long2ObjectMap<GeyserChunk> waitDeleteChunks;
 
     @Setter
     private int minY;
     @Setter
     private int heightY;
 
-    @Setter
-    private long lastChangeWorldTime = -1L;
-
-    /**
-     * Number of chunks purged from {@link #waitDeleteChunks} per cleanup run.
-     * Adjust according to your performance requirements.
-     */
-    private static final int CHUNKS_TO_REMOVE_PER_CLEANUP = 6;
-
     public ChunkCache(GeyserSession session) {
-        this.cache = !session.getGeyser().getWorldManager().hasOwnChunkCache();
-        this.chunks = cache ? new Long2ObjectOpenHashMap<>() : null;
-        this.waitDeleteChunks = cache ? new Long2ObjectOpenHashMap<>() : null;
+        this.cache = !session.getGeyser().getWorldManager().hasOwnChunkCache(); // To prevent Spigot from initializing
+        chunks = cache ? new Long2ObjectOpenHashMap<>() : null;
     }
 
     public void addToCache(int x, int z, DataPalette[] chunks) {
@@ -43,9 +54,6 @@ public class ChunkCache {
         }
 
         long chunkPosition = MathUtils.chunkPositionToLong(x, z);
-        // If this chunk was previously scheduled for deletion, cancel that.
-        waitDeleteChunks.remove(chunkPosition);
-
         GeyserChunk geyserChunk = GeyserChunk.from(chunks);
         this.chunks.put(chunkPosition, geyserChunk);
     }
@@ -120,7 +128,6 @@ public class ChunkCache {
 
         long chunkPosition = MathUtils.chunkPositionToLong(chunkX, chunkZ);
         chunks.remove(chunkPosition);
-        waitDeleteChunks.remove(chunkPosition);
     }
 
     /**
@@ -133,24 +140,7 @@ public class ChunkCache {
             return;
         }
 
-        if (!chunks.isEmpty()) {
-            waitDeleteChunks.putAll(chunks);
-            chunks.clear();
-        }
-    }
-    public void tickCleanup(GeyserSession session) {
-        if (!cache || waitDeleteChunks.isEmpty() || System.currentTimeMillis() - lastChangeWorldTime < 1000) {
-            return;
-        }
-
-        int removed = 0;
-        LongIterator iterator = waitDeleteChunks.keySet().iterator();
-        while (iterator.hasNext() && removed < CHUNKS_TO_REMOVE_PER_CLEANUP) {
-            long l = iterator.nextLong();
-            ChunkUtils.sendEmptyChunk(session, MathUtils.getChunkX(l), MathUtils.getChunkZ(l), false);
-            iterator.remove();
-            removed++;
-        }
+        chunks.clear();
     }
 
     public int getChunkMinY() {
