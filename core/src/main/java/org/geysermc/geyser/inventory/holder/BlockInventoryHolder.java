@@ -37,6 +37,7 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.inventory.Container;
 import org.geysermc.geyser.inventory.Inventory;
 import org.geysermc.geyser.inventory.LecternContainer;
+import org.geysermc.geyser.level.block.Blocks;
 import org.geysermc.geyser.level.block.type.Block;
 import org.geysermc.geyser.level.block.type.BlockState;
 import org.geysermc.geyser.registry.BlockRegistries;
@@ -115,6 +116,14 @@ public class BlockInventoryHolder extends InventoryHolder {
 
         UpdateBlockPacket blockPacket = new UpdateBlockPacket();
         blockPacket.setDataLayer(0);
+        Vector3i airLoc = position.clone().add(0, 1, 0);
+        blockPacket.setBlockPosition(airLoc);
+        blockPacket.setDefinition(session.getBlockMappings().getVanillaBedrockBlock(Blocks.AIR.defaultBlockState()));
+        blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
+        session.sendUpstreamPacket(blockPacket);
+
+        blockPacket = new UpdateBlockPacket();
+        blockPacket.setDataLayer(0);
         blockPacket.setBlockPosition(position);
         blockPacket.setDefinition(session.getBlockMappings().getVanillaBedrockBlock(defaultJavaBlockState));
         blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
@@ -123,6 +132,8 @@ public class BlockInventoryHolder extends InventoryHolder {
 
         setCustomName(session, position, container, defaultJavaBlockState);
 
+        session.getContainerLocs().add(airLoc);
+        session.getContainerLocs().add(position);
         return true;
     }
 
@@ -239,6 +250,7 @@ public class BlockInventoryHolder extends InventoryHolder {
 
         // Reset to correct block
         Vector3i holderPos = container.getHolderPosition();
+        Vector3i holderPosAir = holderPos.clone().add(0, 1, 0);
         int realBlock = session.getGeyser().getWorldManager().getBlockAt(session, holderPos.getX(), holderPos.getY(), holderPos.getZ());
         UpdateBlockPacket blockPacket = new UpdateBlockPacket();
         blockPacket.setDataLayer(0);
@@ -246,5 +258,14 @@ public class BlockInventoryHolder extends InventoryHolder {
         blockPacket.setDefinition(session.getBlockMappings().getBedrockBlock(realBlock));
         blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
         session.sendUpstreamPacket(blockPacket);
+
+        int realBlockAir = session.getGeyser().getWorldManager().getBlockAt(session, holderPosAir);
+        UpdateBlockPacket blockPacketAir = new UpdateBlockPacket();
+        blockPacket.setDataLayer(0);
+        blockPacket.setBlockPosition(holderPosAir);
+        blockPacket.setDefinition(session.getBlockMappings().getBedrockBlock(realBlockAir));
+        session.sendUpstreamPacket(blockPacketAir);
+
+        session.getContainerLocs().clear();
     }
 }

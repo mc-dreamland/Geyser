@@ -311,6 +311,9 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      */
     private final InventoryHolder<PlayerInventory> playerInventoryHolder;
 
+    @Getter
+    private final List<Vector3i> containerLocs = new ArrayList<>();
+
     /**
      * Stores the current open Bedrock inventory, including the correct translator.
      * Prefer using {@link InventoryUtils#getInventory(GeyserSession, int)}, as this
