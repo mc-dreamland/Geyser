@@ -45,7 +45,6 @@ public class JavaRespawnTranslator extends PacketTranslator<ClientboundRespawnPa
 
     @Override
     public void translate(GeyserSession session, ClientboundRespawnPacket packet) {
-        System.out.println("JavaRespawnTranslator -> ");
         SessionPlayerEntity entity = session.getPlayerEntity();
         PlayerSpawnInfo spawnInfo = packet.getCommonPlayerSpawnInfo();
 

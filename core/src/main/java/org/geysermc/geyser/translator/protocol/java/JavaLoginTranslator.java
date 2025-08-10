@@ -65,7 +65,7 @@ public class JavaLoginTranslator extends PacketTranslator<ClientboundLoginPacket
         // If the player is already initialized and a join game packet is sent, they
         // are swapping servers
         if (session.isSpawned()) {
-            int fakeDim = DimensionUtils.getTemporaryDimension(session.getBedrockDimension().bedrockId(), newDimension.bedrockId());
+//            int fakeDim = DimensionUtils.getTemporaryDimension(session.getBedrockDimension().bedrockId(), newDimension.bedrockId());
 
 //            if (fakeDim != newDimension.bedrockId()) {
                 // The player's current dimension and new dimension are the same
