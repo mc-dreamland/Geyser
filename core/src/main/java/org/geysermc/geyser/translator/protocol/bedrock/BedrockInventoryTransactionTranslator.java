@@ -531,7 +531,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
         double blockInteractionRange = session.getPlayerEntity().getBlockInteractionRange();
 
         // Mojmap Player#canInteractWithBlock
-        double additionalRangeCheck = blockInteractionRange + 1.0d;
+        double additionalRangeCheck = blockInteractionRange + 2;
 
         // AABB.<init>(BlockPos)
         float minX = packetBlockPosition.getX();
