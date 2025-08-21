@@ -233,13 +233,13 @@ public class BlockInventoryHolder extends InventoryHolder {
                 // Type being null indicates that the ContainerClosePacket is not effective.
                 // So we yeet away the block!
                 if (type == null) {
-                    Vector3i holderPos = container.getHolderPosition();
-                    UpdateBlockPacket blockPacket = new UpdateBlockPacket();
-                    blockPacket.setDataLayer(0);
-                    blockPacket.setBlockPosition(holderPos);
-                    blockPacket.setDefinition(session.getBlockMappings().getBedrockAir());
-                    blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
-                    session.sendUpstreamPacket(blockPacket);
+//                    Vector3i holderPos = container.getHolderPosition();
+//                    UpdateBlockPacket blockPacket = new UpdateBlockPacket();
+//                    blockPacket.setDataLayer(0);
+//                    blockPacket.setBlockPosition(holderPos);
+//                    blockPacket.setDefinition(session.getBlockMappings().getBedrockAir());
+//                    blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
+//                    session.sendUpstreamPacket(blockPacket);
                 } else {
                     // We're using a real block and are able to close the block without destroying it,
                     // so we can don't need to reset it below.
