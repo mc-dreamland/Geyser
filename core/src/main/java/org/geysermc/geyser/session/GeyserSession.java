@@ -1359,7 +1359,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     }
 
     private void switchPose(boolean value, EntityFlag flag, Pose pose) {
-        this.pose = value ? pose : (playerEntity.getFlag(EntityFlag.CRAWLING) ? Pose.SWIMMING : Pose.STANDING);
+        this.pose = value ? pose : (playerEntity.getFlag(EntityFlag.CRAWLING) ? Pose.SWIMMING : ((playerEntity.getFlag(EntityFlag.SWIMMING) ? Pose.SWIMMING : Pose.STANDING)));
         playerEntity.setDimensionsFromPose(this.pose);
         playerEntity.setFlag(flag, value);
         playerEntity.updateBedrockMetadata();
