@@ -54,7 +54,6 @@ public class JavaPlayerInfoRemoveTranslator extends PacketTranslator<Clientbound
             } else {
                 removeId = id;
             }
-            session.getCachedPlayerList().remove(removeId);
             entries.add(new PlayerListPacket.Entry(removeId));
         }
 

@@ -153,18 +153,10 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 skinData.geometry()
             );
 
-            if (session.getCachedPlayerList().containsKey(entity.getUuid())) {
-                if (session.getCachedPlayerList().get(entity.getUuid()).equals(updatedEntry.getSkin().getFullSkinId())) {
-                    return;
-                }
-            }
-
             PlayerListPacket playerAddPacket = new PlayerListPacket();
             playerAddPacket.setAction(PlayerListPacket.Action.ADD);
             playerAddPacket.getEntries().add(updatedEntry);
             session.sendUpstreamPacket(playerAddPacket);
-            //TODO 后续需修改此判断以正确的判断是否是玩家还是NPC
-            session.getCachedPlayerList().put(entity.getUuid(), updatedEntry.getSkin().getFullSkinId());
 
             ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
             confirmSkinPacket.setEntries(List.of(updatedEntry));
