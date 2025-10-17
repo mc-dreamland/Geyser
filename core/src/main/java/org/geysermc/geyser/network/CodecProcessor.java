@@ -246,7 +246,6 @@ class CodecProcessor {
             //V685
             packet.setFilteredMessage(helper.readString(buffer));
 
-            System.out.println("packet -> " + packet);
         }
     };
     private static final BedrockPacketSerializer<TextPacket> TEXT_SERIALIZER_V630_NETEASE = new TextSerializer_v554() {

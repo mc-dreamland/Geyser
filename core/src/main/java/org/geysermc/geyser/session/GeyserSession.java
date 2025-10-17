@@ -100,6 +100,7 @@ import org.cloudburstmc.protocol.bedrock.packet.ItemComponentPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelSoundEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayStatusPacket;
+import org.cloudburstmc.protocol.bedrock.packet.RemoveEntityPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetCommandsEnabledPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetTimePacket;
 import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
@@ -710,7 +711,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Setter
     private boolean noUnloadChunk = true;
     @Setter
-    private boolean quickSwitchDimension = false;
+    private boolean quickSwitchDimension = true;
 
     @Getter(AccessLevel.MODULE)
     private MinecraftProtocol protocol;
@@ -1343,8 +1344,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
             this.pose = Pose.SNEAKING;
             playerEntity.setBoundingBoxHeight(1.5f);
         }
-
-        System.out.println("sneaking poase -> " + sneaking);
 
         playerEntity.setFlag(EntityFlag.SNEAKING, sneaking);
     }
