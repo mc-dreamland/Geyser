@@ -711,7 +711,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Setter
     private boolean noUnloadChunk = true;
     @Setter
-    private boolean quickSwitchDimension = true;
+    private boolean quickSwitchDimension = false;
 
     @Getter(AccessLevel.MODULE)
     private MinecraftProtocol protocol;

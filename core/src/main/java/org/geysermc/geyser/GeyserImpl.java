@@ -544,7 +544,8 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         }
 
         if (config.getMetrics().isEnabled()) {
-            metrics = new Metrics(this, "GeyserMC", config.getMetrics().getUniqueId(), false, java.util.logging.Logger.getLogger(""));
+            logger.info("已启用bStats数据统计上报!");
+            metrics = new Metrics(this, "GeyserMC", config.getMetrics().getUniqueId(), true, java.util.logging.Logger.getLogger(""));
             metrics.addCustomChart(new Metrics.SingleLineChart("players", sessionManager::size));
             // Prevent unwanted words best we can
             metrics.addCustomChart(new Metrics.SimplePie("authMode", () -> config.getRemote().authType().toString().toLowerCase(Locale.ROOT)));

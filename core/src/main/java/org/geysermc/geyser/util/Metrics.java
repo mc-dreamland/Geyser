@@ -34,9 +34,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.geysermc.geyser.GeyserImpl;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -184,7 +189,9 @@ public class Metrics {
         new Thread(() -> {
             try {
                 // We are still in the Thread of the timer, so nothing get blocked :)
+                logger.log(Level.INFO, "Start send Metrics stats of " + name + ", dataInfo: " + data);
                 sendData(data);
+                logger.log(Level.INFO, "Success send Metrics stats of " + name);
             } catch (Exception e) {
                 // Something went wrong! :(
                 if (logFailedRequests) {
@@ -204,7 +211,69 @@ public class Metrics {
         if (data == null) {
             throw new IllegalArgumentException("Data cannot be null!");
         }
+        String hostname = "bStats.org";
+        // 1. 获取所有 IP（DNS 解析）
+        InetAddress[] addresses = InetAddress.getAllByName(hostname);
+
+        // 2. 按 ping 延迟排序
+        String bestIp = null;
+        long bestPing = Long.MAX_VALUE;
+
+        for (InetAddress addr : addresses) {
+            String ip = addr.getHostAddress();
+            long ping = pingHost(ip, 443, 2000); // TCP方式探测443端口可用性（更可靠）
+            if (ping >= 0 && ping < bestPing) {
+                bestIp = ip;
+                bestPing = ping;
+            }
+        }
+
+        if (bestIp == null) {
+            logger.warning("❌ 无法连接 bStats.org 的任何 IP！");
+            return;
+        }
+
+        logger.info("✅ 选择最快IP: " + bestIp + " (延迟≈" + bestPing + "ms)");
+
+        // 创建 SSLContext
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, null, null);
+
+        SSLSocketFactory defaultFactory = sslContext.getSocketFactory();
+
+        // 自定义 SocketFactory
+        String finalBestIp = bestIp;
+        SSLSocketFactory customFactory = new SSLSocketFactory() {
+            @Override
+            public Socket createSocket(Socket s, String host, int port, boolean autoClose) throws IOException {
+                return defaultFactory.createSocket(s, hostname, port, autoClose);
+            }
+
+            @Override
+            public Socket createSocket(String host, int port) throws IOException {
+                Socket socket = new Socket();
+                socket.connect(new InetSocketAddress(finalBestIp, port));
+                return defaultFactory.createSocket(socket, hostname, port, true);
+            }
+
+            // 其他方法保持默认
+            @Override public String[] getDefaultCipherSuites() { return defaultFactory.getDefaultCipherSuites(); }
+            @Override public String[] getSupportedCipherSuites() { return defaultFactory.getSupportedCipherSuites(); }
+            @Override public Socket createSocket(InetAddress a, int port) throws IOException { return defaultFactory.createSocket(a, port); }
+            @Override public Socket createSocket(InetAddress a, int p, InetAddress la, int lp) throws IOException { return defaultFactory.createSocket(a, p, la, lp); }
+            @Override public Socket createSocket(String h, int p, InetAddress la, int lp) throws IOException {
+                Socket socket = new Socket();
+                socket.bind(new InetSocketAddress(la, lp));
+                socket.connect(new InetSocketAddress(finalBestIp, p));
+                return defaultFactory.createSocket(socket, hostname, p, true);
+            }
+        };
+
+
         HttpsURLConnection connection = (HttpsURLConnection) new URL(URL).openConnection();
+        connection.setSSLSocketFactory(customFactory);
+        connection.setReadTimeout(60000);
+        connection.setConnectTimeout(60000);
 
         // Compress the data to save bandwidth
         byte[] compressedData = compress(data.toString());
@@ -225,7 +294,29 @@ public class Metrics {
         outputStream.flush();
         outputStream.close();
 
+        // ✅ 在写完数据之后，立刻读取响应码（此时会触发请求发送）
+        int responseCode = connection.getResponseCode();
+        if (responseCode == 200 || responseCode == 204) {
+            logger.log(Level.INFO, "bStats upload success! (HTTP " + responseCode + ")");
+        } else {
+            logger.log(Level.WARNING, "bStats upload failed! Response code: " + responseCode);
+        }
+
         connection.getInputStream().close(); // We don't care about the response - Just send our data :)
+    }
+
+    /**
+     * 用 TCP 端口探测方式“ping”服务器（比 ICMP 稳定）
+     * @return 延迟毫秒数（负数表示失败）
+     */
+    private static long pingHost(String ip, int port, int timeoutMs) {
+        try (Socket socket = new Socket()) {
+            long start = System.currentTimeMillis();
+            socket.connect(new InetSocketAddress(ip, port), timeoutMs);
+            return System.currentTimeMillis() - start;
+        } catch (IOException e) {
+            return -1;
+        }
     }
 
     /**
