@@ -217,10 +217,14 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
 
                         // Check to make sure the client isn't spamming interaction
                         // Based on Nukkit 1.0, with changes to ensure holding down still works
-                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < 75.0 &&
+
+                        float distanceRight = session.getLastInteractionPlayerPosition().distance(session.getPlayerEntity().getPosition());
+                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < (distanceRight > 0.001 ? 20 : 75) &&
                                 packetBlockPosition.distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001;
+
                         session.setLastInteractionBlockPosition(packetBlockPosition);
                         session.setLastInteractionPlayerPosition(session.getPlayerEntity().getPosition());
+
                         if (hasAlreadyClicked) {
                             break;
                         } else {
