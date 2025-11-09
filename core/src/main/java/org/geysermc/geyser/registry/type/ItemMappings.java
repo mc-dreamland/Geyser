@@ -46,13 +46,13 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Builder
 @Value
 public class ItemMappings implements DefinitionRegistry<ItemDefinition> {
 
-    Map<String, ItemMapping> cachedJavaMappings = new WeakHashMap<>();
+    Map<String, ItemMapping> cachedJavaMappings = new ConcurrentHashMap<>();
 
     ItemMapping[] items;
 
