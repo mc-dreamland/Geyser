@@ -205,9 +205,12 @@ public class Entity implements GeyserEntity {
 
         // 修复投掷物看起来太大的问题
         EntityType eType = definition.entityType();
-        if (eType.equals(EntityType.SNOWBALL) || eType.equals(EntityType.FIREBALL) || eType.equals(EntityType.ENDER_PEARL)) {
-            dirtyMetadata.put(EntityDataTypes.SCALE, 0.4F);
+        if (eType != null) {
+            if (eType.equals(EntityType.SNOWBALL) || eType.equals(EntityType.FIREBALL) || eType.equals(EntityType.ENDER_PEARL)) {
+                dirtyMetadata.put(EntityDataTypes.SCALE, 0.4F);
+            }
         }
+
         if (nametag.contains("@size_")) {
             int start = nametag.indexOf("@size_");
             int end = nametag.indexOf("@", start + 6);
@@ -222,7 +225,6 @@ public class Entity implements GeyserEntity {
                 }
             }
         }
-
 
         dirtyMetadata.apply(addEntityPacket.getMetadata());
         addAdditionalSpawnData(addEntityPacket);

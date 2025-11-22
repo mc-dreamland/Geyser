@@ -342,9 +342,21 @@ class CodecProcessor {
             packet.setRotation(Vector3f.from(x, y, z));
             long flagValue = VarInts.readUnsignedLong(buffer);
             Set<PlayerAuthInputData> flags = packet.getInputData();
-            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
-                if ((flagValue & (1L << flag.ordinal())) != 0) {
-                    flags.add(flag);
+//            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
+//                if ((flagValue & (1L << flag.ordinal())) != 0) {
+//                    flags.add(flag);
+//                }
+//            }
+            // copy from nukkit-mot :>
+            int inClientPredictedInVehicleOrdinal = PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE.ordinal();
+            for (int i = 0; i < PlayerAuthInputData.values().length; i++) {
+                int offset = 0;
+                if (i >= inClientPredictedInVehicleOrdinal) {
+                    offset = -1;
+                }
+                if ((flagValue & (1L << i)) != 0) {
+                    PlayerAuthInputData value = PlayerAuthInputData.values()[i + offset];
+                    flags.add(value);
                 }
             }
             packet.setInputMode(INPUT_MODES[VarInts.readUnsignedInt(buffer)]);
@@ -379,7 +391,6 @@ class CodecProcessor {
 
             //v662
             if (packet.getInputData().contains(PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE)) {
-                System.out.println("IN_CLIENT_PREDICTED_IN_VEHICLE");
                 packet.setVehicleRotation(helper.readVector2f(buffer));
                 packet.setPredictedVehicle(VarInts.readLong(buffer));
             }
