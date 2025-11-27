@@ -200,7 +200,6 @@ public interface GeyserConfiguration {
 
 
     interface IServiceConfiguration {
-        String getUrl();
         String getSkinurl();
         String getToken();
     }

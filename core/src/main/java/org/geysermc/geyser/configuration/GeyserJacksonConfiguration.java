@@ -363,8 +363,6 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ServiceConfiguration implements IServiceConfiguration {
 
-        @JsonProperty("url")
-        private String url = "http://localhost:8081/api";
         @JsonProperty("skinurl")
         private String skinurl = "http://skinsync.bjd-mc.com:12455";
 
