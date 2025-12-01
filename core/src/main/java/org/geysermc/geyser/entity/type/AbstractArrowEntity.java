@@ -74,4 +74,14 @@ public class AbstractArrowEntity extends Entity {
         setPitch((float) Math.toDegrees(Math.atan2(motion.getY(), horizontalSpeed)));
         setHeadYaw(getYaw());
     }
+
+    /*
+    服务端似乎并不会在箭矢的move包中附带onGround状态
+    而箭矢在水中的气泡是由entity的onGround FLAG控制
+    此处判断当moveY=0时视作onGround，避免在水中持续产生大量气泡的情况发生从而导致客户端卡顿
+     */
+    @Override
+    public void updatePositionAndRotation(double moveX, double moveY, double moveZ, float yaw, float pitch, boolean isOnGround) {
+        super.updatePositionAndRotation(moveX, moveY, moveZ, yaw, pitch, moveY == 0);
+    }
 }
