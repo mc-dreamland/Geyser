@@ -95,6 +95,7 @@ import org.cloudburstmc.protocol.bedrock.packet.GameRulesChangedPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ItemComponentPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelSoundEventPacket;
+import org.cloudburstmc.protocol.bedrock.packet.NetworkStackLatencyPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayStatusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RemoveEntityPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetCommandsEnabledPacket;
@@ -769,10 +770,10 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private boolean mounting = false;
 
     /**
-     * A cache of IDs from ClientboundKeepAlivePackets that have been sent to the Bedrock client, but haven't been returned to the server.
+     * A cache of IDs from ClientboundKeepAlivePackets or ClientboundPingPacket that have been sent to the Bedrock client, but haven't been returned to the server.
      * Only used if {@link GeyserConfig.GameplayConfig#forwardPlayerPing()} is enabled.
      */
-    private final Queue<Long> keepAliveCache = new ConcurrentLinkedQueue<>();
+    private final Queue<Runnable> latencyPingCache = new ConcurrentLinkedQueue<>();
 
     /**
      * Queued packets to be sent immediately at the end of each tick.
@@ -2623,6 +2624,18 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         sendUpstreamPacket(packet);
     }
 
+    public void sendNetworkLatencyStackPacket(long timestamp, boolean ensureEventLoop, Runnable runnable) {
+        NetworkStackLatencyPacket latencyPacket = new NetworkStackLatencyPacket();
+        latencyPacket.setFromServer(true);
+        latencyPacket.setTimestamp(timestamp);
+        if (ensureEventLoop) {
+            latencyPingCache.add(() -> ensureInEventLoop(runnable));
+        } else {
+            latencyPingCache.add(runnable);
+        }
+        sendUpstreamPacket(latencyPacket);
+    }
+  
     public String getDebugInfo() {
         return "Username: %s, DeviceOs: %s, Version: %s".formatted(bedrockUsername(), platform(), version());
     }
