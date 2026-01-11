@@ -928,10 +928,6 @@
         "id": 366
     },
     {
-        "name": "minecraft:chalkboard",
-        "id": 230
-    },
-    {
         "name": "minecraft:charcoal",
         "id": 327
     },
@@ -7150,5 +7146,29 @@
     {
         "name": "minecraft:zombie_villager_spawn_egg",
         "id": 505
+    },
+    {
+        "name": "minecraft:mod_ore",
+        "id": 230
+    },
+    {
+        "name": "minecraft:micro_block",
+        "id": -9735
+    },
+    {
+        "name": "minecraft:mod_armor",
+        "id": 1996
+    },
+    {
+        "name": "minecraft:mod",
+        "id": 1997
+    },
+    {
+        "name": "minecraft:mod_ex",
+        "id": 1998
+    },
+    {
+        "name": "minecraft:debug_stick",
+        "id": 1999
     }
 ]
