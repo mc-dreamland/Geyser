@@ -222,7 +222,11 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         ResourcePacksInfoPacket resourcePacksInfo = new ResourcePacksInfoPacket();
         resourcePacksInfo.getResourcePackInfos().addAll(this.resourcePackLoadEvent.infoPacketEntries());
-        resourcePacksInfo.getBehaviorPackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
+        if (session.protocolVersion() >= 766) {
+            resourcePacksInfo.getResourcePackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
+        } else {
+            resourcePacksInfo.getBehaviorPackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
+        }
 
 
         if (geyser.getConfig().getOptionalPacks().isEnableOptionalPacks()) {

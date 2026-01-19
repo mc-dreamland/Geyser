@@ -49,6 +49,7 @@ import org.cloudburstmc.protocol.bedrock.codec.v685.serializer.TextSerializer_v6
 import org.cloudburstmc.protocol.bedrock.codec.v712.serializer.MobArmorEquipmentSerializer_v712;
 import org.cloudburstmc.protocol.bedrock.codec.v748.serializer.InventoryContentSerializer_v748;
 import org.cloudburstmc.protocol.bedrock.codec.v748.serializer.InventorySlotSerializer_v748;
+import org.cloudburstmc.protocol.bedrock.codec.v766.serializer.ResourcePacksInfoSerializer_v766;
 import org.cloudburstmc.protocol.bedrock.codec.v776.serializer.BossEventSerializer_v776;
 import org.cloudburstmc.protocol.bedrock.data.ClientPlayMode;
 import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
@@ -85,6 +86,7 @@ import org.cloudburstmc.protocol.bedrock.packet.PlayerInputPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PurchaseReceiptPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RefreshEntitlementsPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ResourcePacksInfoPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RiderJumpPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ScriptMessagePacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityDataPacket;
@@ -97,7 +99,10 @@ import org.cloudburstmc.protocol.bedrock.packet.SubClientLoginPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
 import org.cloudburstmc.protocol.common.util.VarInts;
 
+import java.util.Collection;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Processes the Bedrock codec to remove or modify unused or unsafe packets and fields.
@@ -324,7 +329,6 @@ class CodecProcessor {
     };
 
 
-
     private static final BedrockPacketSerializer<PlayerAuthInputPacket> PLAYER_AUTH_INPUT_NETEASE = new PlayerAuthInputSerializer_v662() {
         @Override
         public void serialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
@@ -341,6 +345,7 @@ class CodecProcessor {
             float z = buffer.readFloatLE();
             packet.setRotation(Vector3f.from(x, y, z));
             long flagValue = VarInts.readUnsignedLong(buffer);
+
             Set<PlayerAuthInputData> flags = packet.getInputData();
 //            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
 //                if ((flagValue & (1L << flag.ordinal())) != 0) {
@@ -402,6 +407,93 @@ class CodecProcessor {
             packet.setReadyPosDetalDirty(buffer.readBoolean());
             packet.setOnGround(buffer.readBoolean());
             packet.setResetPosition(buffer.readByte());
+            //Netease Only End
+        }
+    };
+
+    private static final BedrockPacketSerializer<PlayerAuthInputPacket> PLAYER_AUTH_INPUT_NETEASE_766 = new PlayerAuthInputSerializer_v662() {
+        @Override
+        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
+            super.serialize(buffer, helper, packet);
+        }
+
+        @Override
+        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
+            //v388
+            float x = buffer.readFloatLE();
+            float y = buffer.readFloatLE();
+            packet.setPosition(helper.readVector3f(buffer));
+            packet.setMotion(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
+            float z = buffer.readFloatLE();
+            packet.setRotation(Vector3f.from(x, y, z));
+            long flagValue = VarInts.readUnsignedLong(buffer);
+
+            Set<PlayerAuthInputData> flags = packet.getInputData();
+//            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
+//                if ((flagValue & (1L << flag.ordinal())) != 0) {
+//                    flags.add(flag);
+//                }
+//            }
+            // copy from nukkit-mot :>
+            int inClientPredictedInVehicleOrdinal = PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE.ordinal();
+            for (int i = 0; i < PlayerAuthInputData.values().length; i++) {
+                int offset = 0;
+                if (i >= inClientPredictedInVehicleOrdinal) {
+                    offset = -1;
+                }
+                if ((flagValue & (1L << i)) != 0) {
+                    PlayerAuthInputData value = PlayerAuthInputData.values()[i + offset];
+                    flags.add(value);
+                }
+            }
+            packet.setInputMode(INPUT_MODES[VarInts.readUnsignedInt(buffer)]);
+            packet.setPlayMode(CLIENT_PLAY_MODES[VarInts.readUnsignedInt(buffer)]);
+            readInteractionModel(buffer, helper, packet);
+
+            packet.setInteractRotation(helper.readVector2f(buffer));
+
+            //v419
+            packet.setTick(VarInts.readUnsignedLong(buffer));
+            packet.setDelta(helper.readVector3f(buffer));
+
+            //v428
+            //Netease Only Start
+            packet.setCameraDeparted(buffer.readBoolean());
+            //Netease Only End
+
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_INTERACTION)) {
+                packet.setItemUseTransaction(this.readItemUseTransaction(buffer, helper));
+            }
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_STACK_REQUEST)) {
+                packet.setItemStackRequest(helper.readItemStackRequest(buffer));
+            }
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_BLOCK_ACTIONS)) {
+                helper.readArray(buffer, packet.getPlayerActions(), VarInts::readInt, this::readPlayerBlockActionData, 32); // 32 is more than enough
+            }
+
+            //v662
+            if (packet.getInputData().contains(PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE)) {
+                packet.setVehicleRotation(helper.readVector2f(buffer));
+                packet.setPredictedVehicle(VarInts.readLong(buffer));
+            }
+            packet.setAnalogMoveVector(helper.readVector2f(buffer));
+            packet.setCameraOrientation(helper.readVector3f(buffer));
+            packet.setRawMoveVector(helper.readVector2f(buffer));
+
+            //Netease Only Start
+            packet.setThirdPersonPerspective(buffer.readBoolean());
+            packet.setPlayerRotationToCamera(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
+            packet.setReadyPosDetalDirty(buffer.readBoolean());
+            packet.setOnGround(buffer.readBoolean());
+            packet.setResetPosition(buffer.readByte());
+
+            if (buffer.readableBytes() > 0) {
+                System.out.println("异常输入包!");
+                System.out.println(buffer.readableBytes());
+            }
             //Netease Only End
         }
     };
@@ -589,14 +681,6 @@ class CodecProcessor {
             inventorySlotSerializer = INVENTORY_SLOT_SERIALIZER_V407;
         }
 
-        if (protocolVersion == 630) {
-            codecBuilder
-                .updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE_V630)
-                .updateSerializer(TextPacket.class, TEXT_SERIALIZER_V630_NETEASE)
-            ;
-            return codecBuilder.build();
-        }
-
 
         codecBuilder
             // Illegal unused serverbound EDU packets
@@ -659,8 +743,10 @@ class CodecProcessor {
             codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE);
             codecBuilder.updateSerializer(TextPacket.class, TEXT_SERIALIZER_NETEASE);
         }
-        if (protocolVersion < 685) {
-            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, ILLEGAL_SERIALIZER);
+
+        if (protocolVersion == 766) {
+//            codecBuilder.updateSerializer(ResourcePacksInfoPacket.class, RESOURCE_PACKS_INFO_PACKET);
+            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE_766);
         }
 
             if (!Boolean.getBoolean("Geyser.ReceiptPackets")) {
