@@ -49,10 +49,11 @@ import org.cloudburstmc.protocol.bedrock.codec.v685.serializer.TextSerializer_v6
 import org.cloudburstmc.protocol.bedrock.codec.v712.serializer.MobArmorEquipmentSerializer_v712;
 import org.cloudburstmc.protocol.bedrock.codec.v748.serializer.InventoryContentSerializer_v748;
 import org.cloudburstmc.protocol.bedrock.codec.v748.serializer.InventorySlotSerializer_v748;
-import org.cloudburstmc.protocol.bedrock.codec.v766.serializer.ResourcePacksInfoSerializer_v766;
 import org.cloudburstmc.protocol.bedrock.codec.v776.serializer.BossEventSerializer_v776;
 import org.cloudburstmc.protocol.bedrock.data.ClientPlayMode;
 import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.ItemUseTransaction;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.LegacySetItemSlotData;
 import org.cloudburstmc.protocol.bedrock.packet.AnvilDamagePacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BossEventPacket;
@@ -86,7 +87,6 @@ import org.cloudburstmc.protocol.bedrock.packet.PlayerInputPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PurchaseReceiptPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RefreshEntitlementsPacket;
-import org.cloudburstmc.protocol.bedrock.packet.ResourcePacksInfoPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RiderJumpPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ScriptMessagePacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityDataPacket;
@@ -99,10 +99,7 @@ import org.cloudburstmc.protocol.bedrock.packet.SubClientLoginPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
 import org.cloudburstmc.protocol.common.util.VarInts;
 
-import java.util.Collection;
-import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Processes the Bedrock codec to remove or modify unused or unsafe packets and fields.
@@ -495,6 +492,37 @@ class CodecProcessor {
                 System.out.println(buffer.readableBytes());
             }
             //Netease Only End
+        }
+
+
+
+        @Override
+        protected ItemUseTransaction readItemUseTransaction(ByteBuf buffer, BedrockCodecHelper helper) {
+            ItemUseTransaction itemTransaction = new ItemUseTransaction();
+
+            int legacyRequestId = VarInts.readInt(buffer);
+            itemTransaction.setLegacyRequestId(legacyRequestId);
+
+            if (legacyRequestId < -1 && (legacyRequestId & 1) == 0) {
+                helper.readArray(buffer, itemTransaction.getLegacySlots(), (buf, packetHelper) -> {
+                    byte containerId = buf.readByte();
+                    byte[] slots = packetHelper.readByteArray(buf, 89);
+                    return new LegacySetItemSlotData(containerId, slots);
+                });
+            }
+
+            boolean hasNetIds = helper.readInventoryActions(buffer, itemTransaction.getActions());
+            itemTransaction.setActionType(VarInts.readUnsignedInt(buffer));
+            itemTransaction.setTriggerType(ItemUseTransaction.TriggerType.values()[VarInts.readUnsignedInt(buffer)]);
+            itemTransaction.setBlockPosition(helper.readBlockPosition(buffer));
+            itemTransaction.setBlockFace(VarInts.readInt(buffer));
+            itemTransaction.setHotbarSlot(VarInts.readInt(buffer));
+            itemTransaction.setItemInHand(helper.readItem(buffer));
+            itemTransaction.setPlayerPosition(helper.readVector3f(buffer));
+            itemTransaction.setClickPosition(helper.readVector3f(buffer));
+            itemTransaction.setBlockDefinition(helper.getBlockDefinitions().getDefinition(VarInts.readUnsignedInt(buffer)));
+            itemTransaction.setClientInteractPrediction(ItemUseTransaction.PredictedResult.values()[VarInts.readUnsignedInt(buffer)]);
+            return itemTransaction;
         }
     };
     private static final BedrockPacketSerializer<PlayerAuthInputPacket> PLAYER_AUTH_INPUT_NETEASE_V630 = new PlayerAuthInputSerializer_v575() {
