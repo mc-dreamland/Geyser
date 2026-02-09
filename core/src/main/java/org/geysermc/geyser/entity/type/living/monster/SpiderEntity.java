@@ -39,6 +39,13 @@ public class SpiderEntity extends MonsterEntity {
         super(session, entityId, geyserId, uuid, definition, position, motion, yaw, pitch, headYaw);
     }
 
+    @Override
+    protected void initializeMetadata() {
+        super.initializeMetadata();
+        // Allow red eyes to show when invisible
+        setFlag(EntityFlag.RENDER_WHEN_INVISIBLE, true);
+    }
+
     public void setSpiderFlags(ByteEntityMetadata entityMetadata) {
         byte xd = entityMetadata.getPrimitiveValue();
         setFlag(EntityFlag.WALL_CLIMBING, (xd & 0x01) == 0x01);
