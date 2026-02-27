@@ -43,14 +43,17 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.auth.AuthData;
 import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.geyser.skin.ProvidedSkins;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.text.GeyserLocale;
 import com.netease.mc.authlib.Profile;
 import com.netease.mc.authlib.TokenChain;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PublicKey;
+import java.util.Base64;
 import java.util.List;
 import java.util.function.BiConsumer;
 
@@ -102,6 +105,14 @@ public class LoginEncryptionUtils {
             BedrockClientData data = JSON_MAPPER.convertValue(clientDataJson, BedrockClientData.class);
             data.setOriginalString(clientData);
             session.setClientData(data);
+
+            if (data.getGeometryName() != null) {
+                String decodeGeometryName = new String(Base64.getDecoder().decode(data.getGeometryName()), StandardCharsets.UTF_8);
+                if (!decodeGeometryName.contains("geometry.humanoid.customSlim") && !decodeGeometryName.contains("geometry.humanoid.custom")) {
+                    ProvidedSkins.ProvidedSkin alexOrSteve = ProvidedSkins.getAlexOrSteve(session.getAuthData().uuid());
+                    data.setSkinData(Base64.getEncoder().encodeToString(alexOrSteve.getData().skinData()));
+                }
+            }
 
             try {
                 startEncryptionHandshake(session, identityPublicKey);

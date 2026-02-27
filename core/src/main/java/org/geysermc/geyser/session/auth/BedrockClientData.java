@@ -51,6 +51,7 @@ public final class BedrockClientData {
     @JsonProperty(value = "SkinId")
     private String skinId;
     @JsonProperty(value = "SkinData")
+    @Setter
     private String skinData;
     @JsonProperty(value = "SkinImageHeight")
     private int skinImageHeight;
