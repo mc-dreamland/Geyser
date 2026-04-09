@@ -442,6 +442,9 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         ResourcePackHolder holder = this.resourcePackLoadEvent.getPacks().get(packet.getPackId());
         if (holder == null) {
+            holder = this.behaviorPackLoadEvent.getPacks().get(packet.getPackId());
+        }
+        if (holder == null) {
             GeyserImpl.getInstance().getLogger().debug("Client {0} tried to request pack id {1} not sent to it!",
                 session.bedrockUsername(), packet.getPackId());
             chunkRequestQueue.clear();
