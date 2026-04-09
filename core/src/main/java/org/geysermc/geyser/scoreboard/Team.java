@@ -31,6 +31,7 @@ import java.util.Set;
 import net.kyori.adventure.text.Component;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.geysermc.geyser.entity.type.Entity;
+import org.geysermc.geyser.entity.type.living.ArmorStandEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.translator.text.MessageTranslator;
@@ -295,6 +296,9 @@ public final class Team {
 
     private void refreshAllEntities() {
         for (Entity entity : session().getEntityCache().getEntities().values()) {
+            if (entity instanceof ArmorStandEntity) {
+                continue;
+            }
             entity.updateNametag(scoreboard.getTeamFor(entity.teamIdentifier()));
             entity.updateBedrockMetadata();
         }

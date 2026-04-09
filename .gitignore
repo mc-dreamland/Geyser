@@ -245,7 +245,7 @@ run/
 extensions/
 config.yml
 logs/
-key.pem
+bootstrap/standalone/run/key.pem
 locales/
 /cache/
 /packs/

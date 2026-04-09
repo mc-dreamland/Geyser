@@ -73,6 +73,7 @@ public class MessageTranslatorTest {
         messages.put("{\"translate\":\"tt{''{tt\"}", "tt{''{tt");
         messages.put("{\"translate\":\"tt{{''}}tt\"}", "tt{{''}}tt");
 
+        // Netease: keep the vers/1.21.11 regression case for a trailing formatting character.
         messages.put("{\"text\":\"\",\"extra\":[{\"text\":\"Testing end of string\n formatting character§\",\"color\":\"yellow\"}]}",
             "§r§eTesting end of string\n§e formatting character");
 

@@ -230,6 +230,34 @@ advanced:
     # All Floodgate functionality (including skin uploading and account linking) will also not work when this option is disabled.
     validate-bedrock-login: true
 
+# Netease-specific configuration options
+netease:
+  # Whether to require Netease online mode authentication.
+  online-mode: false
+
+  # Whether PC clients are allowed.
+  allowed-pc: false
+
+  # Whether custom Bedrock geometry should be accepted.
+  allow-custom-geometry: false
+
+  # Skin synchronization service settings
+  service:
+    skinurl: http://skinsync.bjd-mc.com:12455
+    token: '114514'
+
+  # Optional resource pack settings
+  optional-packs:
+    enable-optional-packs: false
+    mysql-url: ''
+    mysql-user: ''
+    mysql-pass: ''
+
+  # Redis settings
+  redis:
+    url: redis-02.bjd-mc.com
+    port: 6379
+
 # If debug messages should be sent through console
 debug-mode: false
 
