@@ -153,10 +153,6 @@ public final class GameProtocol {
 
     /* Bedrock convenience methods to gatekeep features and easily remove the check on version removal */
 
-    public static boolean is1_21_100(GeyserSession session) {
-        return session.protocolVersion() == Bedrock_v827.CODEC.getProtocolVersion();
-    }
-
     public static boolean is1_21_110orHigher(GeyserSession session) {
         return is1_21_110orHigher(session.protocolVersion());
     }
