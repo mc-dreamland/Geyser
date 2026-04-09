@@ -44,4 +44,24 @@ public class ConversionHelper {
         return tagBuilder.build();
     }
 
+    static NbtMap addNeteaseCustomAppearance(NbtMap tag) {
+        NbtMapBuilder builder = tag.toBuilder();
+        if (builder.containsKey("states")) {
+            NbtMap states1 = tag.getCompound("states");
+            NbtMapBuilder builder1 = states1.toBuilder();
+
+            builder1.put("custom_appearance", (byte) 0);
+            builder.putCompound("states", builder1.build());
+
+        } else {
+            NbtMapBuilder builder1 = NbtMap.EMPTY.toBuilder();
+            builder1.put("custom_appearance", (byte) 0);
+            builder.putCompound("states", builder1.build());
+        }
+
+        NbtMap build = builder.build();
+        return build;
+
+    }
+
 }
