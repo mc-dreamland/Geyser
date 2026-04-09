@@ -53,6 +53,19 @@ public class DimensionUtils {
     public static void switchDimension(GeyserSession session, JavaDimension javaDimension, int bedrockDimension) {
         @Nullable JavaDimension previousDimension = session.getDimensionType(); // previous java dimension; can be null if an online player with no saved auth token logs in.
 
+        if (!session.isQuickSwitchDimension()) {
+            if (session.getLastNormalDimId() == 0 && bedrockDimension == 0) {
+                session.setLastNormalDimId(3);
+                bedrockDimension = 3;
+            }
+            if (session.getLastNormalDimId() == 3 && bedrockDimension == 0) {
+                session.setLastNormalDimId(0);
+            }
+        }
+//        if (bedrockDimension == 0 || bedrockDimension == 3) {
+//            bedrockDimension = 0;
+//        }
+
         Entity player = session.getPlayerEntity();
 
         session.getChunkCache().clear();
@@ -82,7 +95,9 @@ public class DimensionUtils {
         session.updateRain(0);
         session.updateThunder(0);
 
-        finalizeDimensionSwitch(session, player);
+        if (!session.isQuickSwitchDimension()) {
+            finalizeDimensionSwitch(session, player);
+        }
 
         // If the bedrock nether height workaround is enabled, meaning the client is told it's in the end dimension,
         // we check if the player is entering the nether and apply the nether fog to fake the fact that the client
@@ -115,18 +130,20 @@ public class DimensionUtils {
             session.getGeyser().getLogger().debug("Applying dimension switching workaround for Bedrock render distance of "
                 + session.getServerRenderDistance());
             ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
-            chunkRadiusUpdatedPacket.setRadius(32);
+            chunkRadiusUpdatedPacket.setRadius(8);
             session.sendUpstreamPacket(chunkRadiusUpdatedPacket);
             // Will be re-adjusted on spawn
         }
 
         Vector3f pos = Vector3f.from(0, Short.MAX_VALUE, 0);
 
-        ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
-        changeDimensionPacket.setDimension(bedrockDimension);
-        changeDimensionPacket.setRespawn(true);
-        changeDimensionPacket.setPosition(pos);
-        session.sendUpstreamPacket(changeDimensionPacket);
+        if (!session.isQuickSwitchDimension()) {
+            ChangeDimensionPacket changeDimensionPacket = new ChangeDimensionPacket();
+            changeDimensionPacket.setDimension(bedrockDimension);
+            changeDimensionPacket.setRespawn(true);
+            changeDimensionPacket.setPosition(pos);
+            session.sendUpstreamPacket(changeDimensionPacket);
+        }
 
         setBedrockDimension(session, bedrockDimension);
 

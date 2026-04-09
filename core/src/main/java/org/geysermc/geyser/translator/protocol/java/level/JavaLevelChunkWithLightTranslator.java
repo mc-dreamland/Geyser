@@ -514,13 +514,20 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             }
         }
 
+        int lastNormalDimId = session.getLastNormalDimId();
+        int dimension = session.getBedrockDimension().bedrockId();
+        if (dimension != lastNormalDimId) {
+            if (dimension == 0 || dimension == 3) {
+                dimension = lastNormalDimId;
+            }
+        }
         LevelChunkPacket levelChunkPacket = new LevelChunkPacket();
         levelChunkPacket.setSubChunksLength(sectionCount);
         levelChunkPacket.setCachingEnabled(false);
         levelChunkPacket.setChunkX(packet.getX());
         levelChunkPacket.setChunkZ(packet.getZ());
         levelChunkPacket.setData(Unpooled.wrappedBuffer(payload));
-        levelChunkPacket.setDimension(session.getBedrockDimension().bedrockId());
+        levelChunkPacket.setDimension(dimension);
         session.sendUpstreamPacket(levelChunkPacket);
 
         for (Map.Entry<Vector3i, ItemFrameEntity> entry : session.getItemFrameCache().entrySet()) {

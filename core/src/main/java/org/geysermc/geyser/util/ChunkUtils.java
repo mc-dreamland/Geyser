@@ -176,8 +176,15 @@ public class ChunkUtils {
             payload = new byte[byteBuf.readableBytes()];
             byteBuf.readBytes(payload);
 
+            int lastNormalDimId = session.getLastNormalDimId();
+            int dimension = session.getBedrockDimension().bedrockId();
+            if (dimension != lastNormalDimId) {
+                if (dimension == 0 || dimension == 3) {
+                    dimension = lastNormalDimId;
+                }
+            }
             LevelChunkPacket data = new LevelChunkPacket();
-            data.setDimension(session.getBedrockDimension().bedrockId());
+            data.setDimension(dimension);
             data.setChunkX(chunkX);
             data.setChunkZ(chunkZ);
             data.setSubChunksLength(0);

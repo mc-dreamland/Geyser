@@ -114,6 +114,22 @@ public class DoubleChestInventoryTranslator extends ChestInventoryTranslator<Con
 
         UpdateBlockPacket blockPacket = new UpdateBlockPacket();
         blockPacket.setDataLayer(0);
+        Vector3i airLoc = position.clone().add(0, 1, 0);
+        blockPacket.setBlockPosition(airLoc);
+        blockPacket.setDefinition(session.getBlockMappings().getVanillaBedrockBlock(Blocks.AIR.defaultBlockState()));
+        blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
+        session.sendUpstreamPacket(blockPacket);
+
+        blockPacket = new UpdateBlockPacket();
+        blockPacket.setDataLayer(0);
+        Vector3i pairAirLoc = pairPosition.clone().add(0, 1, 0);
+        blockPacket.setBlockPosition(pairAirLoc);
+        blockPacket.setDefinition(session.getBlockMappings().getVanillaBedrockBlock(Blocks.AIR.defaultBlockState()));
+        blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
+        session.sendUpstreamPacket(blockPacket);
+
+        blockPacket = new UpdateBlockPacket();
+        blockPacket.setDataLayer(0);
         blockPacket.setBlockPosition(position);
         blockPacket.setDefinition(definition);
         blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
@@ -152,6 +168,11 @@ public class DoubleChestInventoryTranslator extends ChestInventoryTranslator<Con
         dataPacket.setBlockPosition(pairPosition);
         session.sendUpstreamPacket(dataPacket);
 
+        session.getContainerLocs().add(airLoc);
+        session.getContainerLocs().add(pairAirLoc);
+        session.getContainerLocs().add(position);
+        session.getContainerLocs().add(pairPosition);
+
         container.setHolderPosition(position);
 
         return true;
@@ -182,7 +203,7 @@ public class DoubleChestInventoryTranslator extends ChestInventoryTranslator<Con
         }
 
         if (!container.isUsingRealBlock()) {
-            Vector3i holderPos = container.getHolderPosition();
+            Vector3i holderPos = container.getHolderPosition().clone();
             int realBlock = session.getGeyser().getWorldManager().getBlockAt(session, holderPos);
             UpdateBlockPacket blockPacket = new UpdateBlockPacket();
             blockPacket.setDataLayer(0);
@@ -197,6 +218,24 @@ public class DoubleChestInventoryTranslator extends ChestInventoryTranslator<Con
             blockPacket.setBlockPosition(holderPos);
             blockPacket.setDefinition(session.getBlockMappings().getBedrockBlock(realBlock));
             session.sendUpstreamPacket(blockPacket);
+
+            Vector3i holderPosAir = container.getHolderPosition().clone().add(0, 1, 0);
+            int realBlockAir = session.getGeyser().getWorldManager().getBlockAt(session, holderPosAir);
+            blockPacket = new UpdateBlockPacket();
+            blockPacket.setDataLayer(0);
+            blockPacket.setBlockPosition(holderPosAir);
+            blockPacket.setDefinition(session.getBlockMappings().getBedrockBlock(realBlockAir));
+            session.sendUpstreamPacket(blockPacket);
+
+            holderPosAir = holderPosAir.add(Vector3i.UNIT_X);
+            realBlockAir = session.getGeyser().getWorldManager().getBlockAt(session, holderPosAir);
+            blockPacket = new UpdateBlockPacket();
+            blockPacket.setDataLayer(0);
+            blockPacket.setBlockPosition(holderPosAir);
+            blockPacket.setDefinition(session.getBlockMappings().getBedrockBlock(realBlockAir));
+            session.sendUpstreamPacket(blockPacket);
+
+            session.getContainerLocs().clear();
         }
     }
 

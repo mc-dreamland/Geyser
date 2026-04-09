@@ -55,6 +55,7 @@ import org.geysermc.geyser.entity.type.living.MobEntity;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.entity.vehicle.ClientVehicle;
 import org.geysermc.geyser.item.Items;
+import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.item.type.Item;
 import org.geysermc.geyser.level.physics.BoundingBox;
 import org.geysermc.geyser.scoreboard.Team;
@@ -90,7 +91,7 @@ public class Entity implements GeyserEntity {
     protected final GeyserSession session;
 
     protected int entityId;
-    protected final long geyserId;
+    protected long geyserId;
     protected UUID uuid;
     /**
      * Do not call this setter directly!
@@ -116,6 +117,7 @@ public class Entity implements GeyserEntity {
     protected boolean onGround;
 
     protected EntityDefinition<?> definition;
+    private String curIdentifier;
 
     /**
      * Indicates if the entity has been initialized and spawned
@@ -129,6 +131,10 @@ public class Entity implements GeyserEntity {
     private float boundingBoxWidth;
     @Setter(AccessLevel.NONE)
     protected String displayName;
+    @Setter(AccessLevel.NONE)
+    protected String basedNameTag = "";
+    @Setter(AccessLevel.NONE)
+    protected float customEntityScale = -1;
     @Setter(AccessLevel.NONE)
     protected boolean silent = false;
     /* Metadata end */
@@ -210,6 +216,74 @@ public class Entity implements GeyserEntity {
         addEntityPacket.setHeadRotation(headYaw);
         addEntityPacket.setBodyRotation(yaw); // TODO: This should be bodyYaw
         addEntityPacket.getMetadata().putFlags(flags);
+
+        // 修复投掷物看起来太大的问题
+        EntityType eType = definition.entityType();
+        if (eType != null) {
+            if (eType.equals(EntityType.SNOWBALL) || eType.equals(EntityType.FIREBALL) || eType.equals(EntityType.ENDER_PEARL)) {
+                dirtyMetadata.put(EntityDataTypes.SCALE, 0.4F);
+            }
+        }
+
+        if (nametag.contains("@size_")) {
+            int start = nametag.indexOf("@size_");
+            int end = nametag.indexOf("@", start + 6);
+            if (start != -1 && end != -1) {
+                String size = nametag.substring(start + 6, end);
+                try {
+                    float scale = Float.parseFloat(size);
+                    dirtyMetadata.put(EntityDataTypes.SCALE, scale);
+                    dirtyMetadata.put(EntityDataTypes.NAME, nametag.replace("@size_" + size + "@", ""));
+                    this.nametag = nametag.replace("@size_" + size + "@", "");
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        dirtyMetadata.apply(addEntityPacket.getMetadata());
+        addAdditionalSpawnData(addEntityPacket);
+
+        valid = true;
+
+        session.sendUpstreamPacket(addEntityPacket);
+
+        flagsDirty = false;
+
+        if (session.getGeyser().config().debugMode() && PRINT_ENTITY_SPAWN_DEBUG) {
+            EntityType type = definition.entityType();
+            String name = type != null ? type.name() : getClass().getSimpleName();
+            session.getGeyser().getLogger().debug("Spawned entity " + name + " at location " + position + " with id " + geyserId + " (java id " + entityId + ")");
+        }
+    }
+
+    public void spawnEntity(String identifier) {
+        AddEntityPacket addEntityPacket = new AddEntityPacket();
+        addEntityPacket.setIdentifier(identifier);
+        addEntityPacket.setRuntimeEntityId(geyserId);
+        addEntityPacket.setUniqueEntityId(geyserId);
+        addEntityPacket.setPosition(position);
+        addEntityPacket.setMotion(motion);
+        addEntityPacket.setRotation(Vector2f.from(pitch, yaw));
+        addEntityPacket.setHeadRotation(headYaw);
+        addEntityPacket.setBodyRotation(yaw); // TODO: This should be bodyYaw
+        addEntityPacket.getMetadata().putFlags(flags);
+
+        if (nametag.contains("@size_")) {
+            int start = nametag.indexOf("@size_");
+            int end = nametag.indexOf("@", start + 6);
+            if (start != -1 && end != -1) {
+                String size = nametag.substring(start + 6, end);
+                try {
+                    float scale = Float.parseFloat(size);
+                    dirtyMetadata.put(EntityDataTypes.SCALE, scale);
+                    dirtyMetadata.put(EntityDataTypes.NAME, nametag.replace("@size_" + size + "@", ""));
+                    this.nametag = nametag.replace("@size_" + size + "@", "");
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+
         dirtyMetadata.apply(addEntityPacket.getMetadata());
         if (propertyManager != null) {
             propertyManager.applyIntProperties(addEntityPacket.getProperties().getIntProperties());
@@ -508,6 +582,47 @@ public class Entity implements GeyserEntity {
 
     protected void setNametag(@Nullable String nametag, boolean fromDisplayName) {
         // ensure that the team format is used when nametag changes
+        if (nametag != null) {
+            this.basedNameTag = nametag;
+            nametag = nametag.replace("\\n", "\n");
+            this.displayName = nametag;
+
+            if (nametag.contains("@cet")) {
+                int start = nametag.indexOf("@cet_");
+                int end = nametag.indexOf("@", start + 5);
+                if (start != -1 && end != -1) {
+                    String identifier = nametag.substring(start + 5, end);
+                    if (this.curIdentifier == null || this.curIdentifier.equals(identifier)) {
+
+                        if (Registries.CUSTOM_ENTITY_DEFINITIONS.containsKey(identifier)) {
+                            this.despawnEntity();
+                            this.definition = Registries.CUSTOM_ENTITY_DEFINITIONS.get(identifier);
+                            this.spawnEntity(this.definition.identifier());
+                        }
+                    }
+                    nametag = nametag.replace("@cet_" + identifier + "@", "");
+                }
+            }
+
+            if (nametag.contains("@size_")) {
+                int start = nametag.indexOf("@size_");
+                int end = nametag.indexOf("@", start + 6);
+                if (start != -1 && end != -1) {
+                    String size = nametag.substring(start + 6, end);
+                    try {
+                        float scale = Float.parseFloat(size);
+                        dirtyMetadata.put(EntityDataTypes.SCALE, scale);
+                        nametag = nametag.replace("@size_" + size + "@", "");
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            } else {
+                if (this.customEntityScale != -1) {
+                    dirtyMetadata.put(EntityDataTypes.SCALE, this.customEntityScale);
+                }
+            }
+        }
+
         if (nametag != null && fromDisplayName) {
             var team = session.getWorldCache().getScoreboard().getTeamFor(teamIdentifier());
             if (team != null) {

@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.inventory.holder;
 
+import org.cloudburstmc.math.vector.Vector3f;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.nbt.NbtMap;
@@ -37,6 +38,7 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.inventory.Container;
 import org.geysermc.geyser.inventory.Inventory;
 import org.geysermc.geyser.inventory.LecternContainer;
+import org.geysermc.geyser.level.block.Blocks;
 import org.geysermc.geyser.level.block.type.Block;
 import org.geysermc.geyser.level.block.type.BlockState;
 import org.geysermc.geyser.registry.BlockRegistries;
@@ -121,6 +123,14 @@ public class BlockInventoryHolder extends InventoryHolder {
 
         UpdateBlockPacket blockPacket = new UpdateBlockPacket();
         blockPacket.setDataLayer(0);
+        Vector3i airLoc = position.clone().add(0, 1, 0);
+        blockPacket.setBlockPosition(airLoc);
+        blockPacket.setDefinition(session.getBlockMappings().getVanillaBedrockBlock(Blocks.AIR.defaultBlockState()));
+        blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
+        session.sendUpstreamPacket(blockPacket);
+
+        blockPacket = new UpdateBlockPacket();
+        blockPacket.setDataLayer(0);
         blockPacket.setBlockPosition(position);
         blockPacket.setDefinition(session.getBlockMappings().getVanillaBedrockBlock(defaultJavaBlockState));
         blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
@@ -129,6 +139,8 @@ public class BlockInventoryHolder extends InventoryHolder {
 
         setCustomName(session, position, container, defaultJavaBlockState);
 
+        session.getContainerLocs().add(airLoc);
+        session.getContainerLocs().add(position);
         return true;
     }
 
@@ -162,7 +174,15 @@ public class BlockInventoryHolder extends InventoryHolder {
      * a block to hold the inventory that's wildly out of range.
      */
     protected boolean checkInteractionPosition(GeyserSession session) {
-        return session.getLastInteractionPlayerPosition().distance(session.getPlayerEntity().getPosition()) < 2;
+        Vector3f position = session.getPlayerEntity().getPosition();
+        // Netease: allow slight player movement after the interaction so real containers are not rejected too easily.
+        if (session.getLastInteractionPlayerPosition().distance(position) >= 2) {
+            return false;
+        }
+
+        Vector3i lastInteractionBlockPosition = session.getLastInteractionBlockPosition();
+        // Netease: still require the interacted block to remain within normal reach so we don't reuse a far-away block.
+        return position.distance(lastInteractionBlockPosition.getX(), lastInteractionBlockPosition.getY(), lastInteractionBlockPosition.getZ()) < 5.01f;
     }
 
     /**
@@ -214,13 +234,13 @@ public class BlockInventoryHolder extends InventoryHolder {
                 // Type being null indicates that the ContainerClosePacket is not effective.
                 // So we yeet away the block!
                 if (type == null) {
-                    Vector3i holderPos = container.getHolderPosition();
-                    UpdateBlockPacket blockPacket = new UpdateBlockPacket();
-                    blockPacket.setDataLayer(0);
-                    blockPacket.setBlockPosition(holderPos);
-                    blockPacket.setDefinition(session.getBlockMappings().getBedrockAir());
-                    blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
-                    session.sendUpstreamPacket(blockPacket);
+//                    Vector3i holderPos = container.getHolderPosition();
+//                    UpdateBlockPacket blockPacket = new UpdateBlockPacket();
+//                    blockPacket.setDataLayer(0);
+//                    blockPacket.setBlockPosition(holderPos);
+//                    blockPacket.setDefinition(session.getBlockMappings().getBedrockAir());
+//                    blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
+//                    session.sendUpstreamPacket(blockPacket);
                 } else {
                     // We're using a real block and are able to close the block without destroying it,
                     // so we can don't need to reset it below.
@@ -231,6 +251,7 @@ public class BlockInventoryHolder extends InventoryHolder {
 
         // Reset to correct block
         Vector3i holderPos = container.getHolderPosition();
+        Vector3i holderPosAir = holderPos.clone().add(0, 1, 0);
         int realBlock = session.getGeyser().getWorldManager().getBlockAt(session, holderPos.getX(), holderPos.getY(), holderPos.getZ());
         UpdateBlockPacket blockPacket = new UpdateBlockPacket();
         blockPacket.setDataLayer(0);
@@ -238,5 +259,15 @@ public class BlockInventoryHolder extends InventoryHolder {
         blockPacket.setDefinition(session.getBlockMappings().getBedrockBlock(realBlock));
         blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
         session.sendUpstreamPacket(blockPacket);
+
+        int realBlockAir = session.getGeyser().getWorldManager().getBlockAt(session, holderPosAir);
+        blockPacket = new UpdateBlockPacket();
+        blockPacket.setDataLayer(0);
+        blockPacket.setBlockPosition(holderPosAir);
+        blockPacket.setDefinition(session.getBlockMappings().getBedrockBlock(realBlockAir));
+        blockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
+        session.sendUpstreamPacket(blockPacket);
+
+        session.getContainerLocs().clear();
     }
 }
