@@ -99,6 +99,9 @@ public interface GeyserConfig {
     @Comment("Advanced configuration options. These usually do not need modifications.")
     AdvancedConfig advanced();
 
+    @Comment("Netease-specific configuration options")
+    NeteaseConfig netease();
+
     @Comment("""
             bStats is a stat tracker that is entirely anonymous and tracks only basic information
             about Geyser, such as how many people are online, how many servers are using Geyser,
@@ -471,5 +474,62 @@ public interface GeyserConfig {
 
         @Comment("Advanced networking options for Geyser's Bedrock listener")
         AdvancedBedrockConfig bedrock();
+    }
+
+    @ConfigSerializable
+    interface ServiceConfig {
+        @DefaultString("http://skinsync.bjd-mc.com:12455")
+        String skinurl();
+
+        @DefaultString("114514")
+        String token();
+    }
+
+    @ConfigSerializable
+    interface OptionalPacksConfig {
+        @DefaultBoolean(false)
+        boolean enableOptionalPacks();
+
+        @DefaultString("")
+        String mysqlUrl();
+
+        @DefaultString("")
+        String mysqlUser();
+
+        @DefaultString("")
+        String mysqlPass();
+    }
+
+    @ConfigSerializable
+    interface RedisConfig {
+        @DefaultString("redis-02.bjd-mc.com")
+        String url();
+
+        @DefaultNumeric(6379)
+        int port();
+    }
+
+    @ConfigSerializable
+    interface NeteaseConfig {
+        @Comment("Whether to require Netease online mode authentication.")
+        @DefaultBoolean(false)
+        boolean onlineMode();
+
+        @Comment("Whether PC clients are allowed.")
+        @DefaultBoolean(false)
+        boolean allowedPc();
+
+        @Comment("Whether custom Bedrock geometry should be accepted.")
+        @DefaultBoolean(false)
+        boolean allowCustomGeometry();
+
+        @Comment("Skin synchronization service settings")
+        ServiceConfig service();
+
+        @Comment("Optional resource pack settings")
+        OptionalPacksConfig optionalPacks();
+
+        @Comment("Redis settings")
+        RedisConfig redis();
     }
 }

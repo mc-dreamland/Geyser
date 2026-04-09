@@ -56,13 +56,41 @@ import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 
 public class WebUtils {
 
+    public static int online = -1;
+    public static long lastUpdate = -1;
+
     private static final Path REMOTE_PACK_CACHE = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("cache").resolve("remote_packs");
 
+
+    public static String getBody(String reqURL,Map<String,String> property) {
+        try {
+            URL url = new URL(reqURL);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("GET");
+            con.setRequestProperty("User-Agent", getUserAgent()); // Keep custom-header overload aligned with the shared user-agent logic
+            property.forEach(con::setRequestProperty);
+
+            con.setConnectTimeout(10000);
+            con.setReadTimeout(10000);
+            return connectionToString(con);
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
+    private static int ONLINE = 0;
+    /**
+     * 获取总在线
+     */
+    public static int getTotalOnline(){
+        return online;
+    }
     /**
      * Makes a web request to the given URL and returns the body as a string
      *

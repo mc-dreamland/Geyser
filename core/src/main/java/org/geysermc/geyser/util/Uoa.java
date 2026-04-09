@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 GeyserMC. http://geysermc.org
+ * Copyright (c) 2025 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,21 +23,12 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.session.auth;
+package org.geysermc.geyser.util;
 
-import java.util.UUID;
-
-/**
- * A class holding some basic information of the connected user.
- *
- * @param name The gamertag of the user
- * @param uuid Also known as identity
- * @param xuid The xuid of the user
- * @param uid The Bedrock UID used by skin-related flows
- * @param issuedAt The unix time (in seconds) that the JWT was issued
- */
-public record AuthData(String name, UUID uuid, String xuid, long uid, long issuedAt) {
-    public AuthData(String name, UUID uuid, String xuid) {
-        this(name, uuid, xuid, -1L, -1L);
+public class Uoa {
+    static {
+        System.loadLibrary("Uoa");
     }
+
+    public native UoaUtils.UoaResult getsockoptNative(int fd, String clientIp, int clientPort, String serverIp, int serverPort);
 }

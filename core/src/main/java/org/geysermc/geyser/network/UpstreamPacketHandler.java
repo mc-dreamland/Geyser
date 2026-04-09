@@ -30,6 +30,7 @@ import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.protocol.bedrock.BedrockDisconnectReasons;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.compat.BedrockCompat;
+import org.cloudburstmc.protocol.bedrock.data.ExperimentData;
 import org.cloudburstmc.protocol.bedrock.data.PacketCompressionAlgorithm;
 import org.cloudburstmc.protocol.bedrock.data.ResourcePackType;
 import org.cloudburstmc.protocol.bedrock.netty.codec.compression.CompressionStrategy;
@@ -60,6 +61,8 @@ import org.geysermc.geyser.api.pack.PackCodec;
 import org.geysermc.geyser.api.pack.ResourcePack;
 import org.geysermc.geyser.api.pack.ResourcePackManifest;
 import org.geysermc.geyser.api.pack.option.ResourcePackOption;
+import org.geysermc.geyser.event.type.SessionLoadBehaviorPacksEventImpl;
+import org.geysermc.geyser.event.type.SessionLoadOptionalResourcePacksEventImpl;
 import org.geysermc.geyser.event.type.SessionLoadResourcePacksEventImpl;
 import org.geysermc.geyser.pack.GeyserResourcePack;
 import org.geysermc.geyser.pack.ResourcePackHolder;
@@ -73,12 +76,15 @@ import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.LoginEncryptionUtils;
 import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.geyser.util.VersionCheckUtils;
+import redis.clients.jedis.Jedis;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Queue;
 import java.util.UUID;
@@ -97,6 +103,8 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     private final Queue<ResourcePackChunkRequestPacket> chunkRequestQueue = new ConcurrentLinkedQueue<>();
     private boolean currentlySendingChunks = false;
     private SessionLoadResourcePacksEventImpl resourcePackLoadEvent;
+    private SessionLoadOptionalResourcePacksEventImpl optionalResourcePacksEvent;
+    private SessionLoadBehaviorPacksEventImpl behaviorPackLoadEvent;
 
     public UpstreamPacketHandler(GeyserImpl geyser, GeyserSession session) {
         super(geyser, session);
@@ -210,6 +218,9 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         LoginEncryptionUtils.encryptPlayerConnection(session, loginPacket);
 
+
+        GeyserImpl.getInstance().getLogger().info(String.format("Player %s : %s connected with protocol version %s!",
+            session.bedrockUsername(), session.playerUuid(), session.protocolVersion()));
         if (session.isClosed()) {
             // Can happen if Xbox validation fails
             return PacketSignal.HANDLED;
@@ -237,8 +248,38 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         }
         session.integratedPackActive(resourcePackLoadEvent.isIntegratedPackActive());
 
+        this.behaviorPackLoadEvent = new SessionLoadBehaviorPacksEventImpl(session);
+        this.geyser.eventBus().fire(this.behaviorPackLoadEvent);
+
+
         ResourcePacksInfoPacket resourcePacksInfo = new ResourcePacksInfoPacket();
         resourcePacksInfo.getResourcePackInfos().addAll(this.resourcePackLoadEvent.infoPacketEntries());
+        if (session.protocolVersion() >= 766) {
+            resourcePacksInfo.getResourcePackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
+        } else {
+            resourcePacksInfo.getBehaviorPackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
+        }
+
+
+        if (geyser.config().netease().optionalPacks().enableOptionalPacks()) {
+            this.optionalResourcePacksEvent = new SessionLoadOptionalResourcePacksEventImpl(session);
+
+            try (Jedis resource = GeyserImpl.getPool().getResource()){
+                String packs = resource.get("HeyCore:Resource:" + session.getAuthData().uuid());
+
+                if (packs != null){
+                    Map<UUID, ResourcePackHolder> uuidResourcePackHolderMap = Registries.OPTIONAL_RESOURCE_PACKS.get();
+                    for (String packId : packs.split(",")) {
+                        UUID packUUID = UUID.fromString(GeyserImpl.getInstance().getOptionalPacks().get(Integer.valueOf(packId)));
+                        if (uuidResourcePackHolderMap.containsKey(packUUID)) {
+                            this.optionalResourcePacksEvent.getPacks().put(packUUID, uuidResourcePackHolderMap.get(packUUID));
+                        }
+                    }
+                }
+                this.geyser.eventBus().fire(this.optionalResourcePacksEvent);
+                resourcePacksInfo.getResourcePackInfos().addAll(this.optionalResourcePacksEvent.infoPacketEntries());
+            }
+        }
         resourcePacksInfo.setVibrantVisualsForceDisabled(!session.isAllowVibrantVisuals());
 
         resourcePacksInfo.setForcedToAccept(GeyserImpl.getInstance().config().gameplay().forceResourcePacks() ||
@@ -288,9 +329,15 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             case HAVE_ALL_PACKS -> {
                 ResourcePackStackPacket stackPacket = new ResourcePackStackPacket();
                 stackPacket.setExperimentsPreviouslyToggled(false);
-                stackPacket.setForcedToAccept(false); // Leaving this as false allows the player to choose to download or not
+                stackPacket.setForcedToAccept(true); // Leaving this as false allows the player to choose to download or not
                 stackPacket.setGameVersion(session.getClientData().getGameVersion());
+                stackPacket.getBehaviorPacks().addAll(this.behaviorPackLoadEvent.orderedPacks());
                 stackPacket.getResourcePacks().addAll(this.resourcePackLoadEvent.orderedPacks());
+                if (this.optionalResourcePacksEvent != null) {
+                    stackPacket.getResourcePacks().addAll(this.optionalResourcePacksEvent.orderedPacks());
+                }
+                // Allows Vibrant Visuals to be toggled in the settings
+                stackPacket.getExperiments().add(new ExperimentData("experimental_graphics", true));
 
                 session.sendUpstreamPacket(stackPacket);
             }
@@ -351,6 +398,24 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     @Override
     public PacketSignal handle(ResourcePackChunkRequestPacket packet) {
         if (session.getUpstream().isClosed() || session.isClosed()) {
+            return PacketSignal.HANDLED;
+        }
+
+        ResourcePackHolder holder = null;
+        if (this.resourcePackLoadEvent.getPacks().containsKey(packet.getPackId())) {
+            holder = this.resourcePackLoadEvent.getPacks().get(packet.getPackId());
+        }
+        if (this.optionalResourcePacksEvent != null && this.optionalResourcePacksEvent.getPacks().containsKey(packet.getPackId())) {
+            holder = this.optionalResourcePacksEvent.getPacks().get(packet.getPackId());
+        }
+        if (this.behaviorPackLoadEvent.getPacks().containsKey(packet.getPackId())) {
+            holder = this.behaviorPackLoadEvent.getPacks().get(packet.getPackId());
+        }
+
+        if (holder == null) {
+            GeyserImpl.getInstance().getLogger().debug("Client {0} tried to request pack id {1} not sent to it!",
+                session.bedrockUsername(), packet.getPackId());
+            session.disconnect("disconnectionScreen.resourcePack");
             return PacketSignal.HANDLED;
         }
 
@@ -455,8 +520,22 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             session.disconnect("disconnectionScreen.resourcePack");
             return;
         }
+        ResourcePackHolder holder = null;
+        if (this.resourcePackLoadEvent.getPacks().containsKey(packId)) {
+            holder = this.resourcePackLoadEvent.getPacks().get(packId);
+            data.setType(ResourcePackType.RESOURCES);
+        }
 
-        ResourcePackHolder holder = this.resourcePackLoadEvent.getPacks().get(packId);
+        if (this.optionalResourcePacksEvent != null && this.optionalResourcePacksEvent.getPacks().containsKey(packId)) {
+            holder = this.optionalResourcePacksEvent.getPacks().get(packId);
+            data.setType(ResourcePackType.RESOURCES);
+        }
+
+        if (this.behaviorPackLoadEvent.getPacks().containsKey(packId)) {
+            holder = this.behaviorPackLoadEvent.getPacks().get(packId);
+            data.setType(ResourcePackType.DATA_ADD_ON);
+        }
+
         if (holder == null) {
             GeyserImpl.getInstance().getLogger().debug("Client {0} tried to request pack id {1} not sent to it!",
                 session.bedrockUsername(), id);
@@ -476,11 +555,21 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         data.setHash(codec.sha256());
         data.setPackVersion(packID[1]);
         data.setPremium(false);
-        data.setType(ResourcePackType.RESOURCES);
 
         session.sendUpstreamPacket(data);
+
+        totalSentPackBytes += codec.size();
+        GeyserImpl.getInstance().getLogger().info(String.format(
+            "[Geyser] 开始下发资源包：%s（类型：%s），大小：%,d 字节，共 %d 个分片。累计发送大小: %,d 字节。",
+            header.name(),
+            data.getType(),
+            codec.size(),
+            chunkCount,
+            totalSentPackBytes
+        ));
     }
 
+    private static long totalSentPackBytes = 0L;
     private boolean isConsole() {
         BedrockPlatform platform = session.platform();
         return platform == BedrockPlatform.PS4 || platform == BedrockPlatform.XBOX || platform == BedrockPlatform.NX;

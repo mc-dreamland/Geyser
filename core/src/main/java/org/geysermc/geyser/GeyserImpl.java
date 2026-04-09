@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser;
 
+import com.zaxxer.hikari.HikariDataSource;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.netty.channel.epoll.Epoll;
@@ -36,6 +37,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import net.raphimc.minecraftauth.msa.data.MsaConstants;
 import net.raphimc.minecraftauth.msa.model.MsaApplicationConfig;
 import org.bstats.MetricsBase;
@@ -86,7 +88,10 @@ import org.geysermc.geyser.network.netty.GeyserServer;
 import org.geysermc.geyser.ping.GeyserLegacyPingPassthrough;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
+import org.geysermc.geyser.registry.loader.BehaviorPackLoader;
+import org.geysermc.geyser.registry.loader.OptionalResourcePackLoader;
 import org.geysermc.geyser.registry.loader.ResourcePackLoader;
+import org.geysermc.geyser.registry.populator.DataComponentRegistryPopulator;
 import org.geysermc.geyser.registry.provider.ProviderSupplier;
 import org.geysermc.geyser.scoreboard.ScoreboardUpdater;
 import org.geysermc.geyser.session.GeyserSession;
@@ -106,6 +111,8 @@ import org.geysermc.geyser.util.JsonUtils;
 import org.geysermc.geyser.util.NewsHandler;
 import org.geysermc.geyser.util.VersionCheckUtils;
 import org.geysermc.geyser.util.WebUtils;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 import org.geysermc.geyser.util.metrics.MetricsPlatform;
 
 import java.io.File;
@@ -118,6 +125,10 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.security.Key;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.Collections;
 import java.util.HashMap;
@@ -169,6 +180,7 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
     private ScheduledExecutorService scheduledThread;
 
     private GeyserServer geyserServer;
+    @Getter
     private final GeyserBootstrap bootstrap;
 
     private final GeyserEventBus eventBus;
@@ -194,6 +206,15 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
      */
     @Setter
     private boolean isEnabled;
+
+    /**
+     * 数据库
+     */
+    @Getter
+    private static HikariDataSource dataSource;
+    @Getter
+    private static JedisPool pool;
+    private static final HashMap<Integer, String> optionalPacks = new HashMap<>();
 
     private GeyserImpl(GeyserBootstrap bootstrap) {
         instance = this;
@@ -246,6 +267,7 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         so maintaining this order is crucial for Geyser to load.
          */
         Registries.load();
+        DataComponentRegistryPopulator.populate();
         BlockRegistries.populate();
         Registries.populate();
 
@@ -297,6 +319,54 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         }
 
         VersionCheckUtils.checkForOutdatedJava(logger);
+
+
+        if (config.netease().optionalPacks().enableOptionalPacks()) {
+            dataSource = new HikariDataSource();
+
+            dataSource.setDriverClassName("org.mariadb.jdbc.Driver");
+            dataSource.setJdbcUrl(config.netease().optionalPacks().mysqlUrl());
+            dataSource.setUsername(config.netease().optionalPacks().mysqlUser());
+            dataSource.setPassword(config.netease().optionalPacks().mysqlPass());
+            dataSource.setMaximumPoolSize(10);
+            dataSource.setMinimumIdle(1);
+
+            try (Connection connection = dataSource.getConnection()){
+                try (PreparedStatement sql = connection.prepareStatement("select * from hey_packs")){
+                    try (ResultSet set = sql.executeQuery()){
+                        while (set.next()) {
+                            int packId = set.getInt("id");
+                            String packUUID = set.getString("pack_uuid");
+                            this.getOptionalPacks().put(packId, packUUID);
+                            logger.info("资源包已加载 -> " + packId + " : " + packUUID);
+                        }
+                    }
+                }
+                logger.info("数据库加载成功, 资源包自选功能已开启");
+            } catch (SQLException throwables) {
+                logger.warning("数据库加载异常! OptionalPacks 与 CustomSkins 功能将失效.");
+                throwables.printStackTrace();
+            }
+            SkinProvider.loadCustomSkins();
+        }
+
+        initJedis();
+    }
+
+    private void initJedis() {
+        GeyserConfig geyserConfig = bootstrap.config();
+        // 配置连接池
+        GenericObjectPoolConfig<Jedis> config = new GenericObjectPoolConfig<>();
+        config.setMaxTotal(20);
+        config.setMaxIdle(20);
+        config.setMinIdle(2);
+        config.setMaxWaitMillis(3000);
+        config.setTestWhileIdle(true);
+        config.setTimeBetweenEvictionRunsMillis(30000);
+        config.setMinEvictableIdleTimeMillis(60000);
+        config.setNumTestsPerEvictionRun(-1);
+
+        pool = new JedisPool(config, geyserConfig.netease().redis().url(), geyserConfig.netease().redis().port());
     }
 
     private void startInstance() {
@@ -317,6 +387,8 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         SkinProvider.registerCacheImageTask(this);
 
         Registries.RESOURCE_PACKS.load();
+        Registries.OPTIONAL_RESOURCE_PACKS.load();
+        Registries.BEHAVIOR_PACKS.load();
 
         // Warnings to users who enable options that they might not need.
         if (config.advanced().bedrock().useHaproxyProtocol()) {
@@ -754,6 +826,8 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         }
 
         ResourcePackLoader.clear();
+        OptionalResourcePackLoader.clear();
+        BehaviorPackLoader.clear();
         CodeOfConductManager.getInstance().save();
 
         this.setEnabled(false);
@@ -844,8 +918,20 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
 
     @Override
     @NonNull
-    public Path packDirectory() {
-        return bootstrap.getConfigFolder().resolve("packs");
+    public Path resourcePackDirectory() {
+        return bootstrap.getConfigFolder().resolve("packs/ResourcePacks");
+    }
+
+    @Override
+    @NonNull
+    public Path optionalResourcePackDirectory() {
+        return bootstrap.getConfigFolder().resolve("packs/OptionalResourcePacks");
+    }
+
+    @Override
+    @NonNull
+    public Path behaviorPackDirectory() {
+        return bootstrap.getConfigFolder().resolve("packs/BehaviorPacks");
     }
 
     @Override
@@ -946,5 +1032,9 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
                 getLogger().error("Unable to write saved refresh tokens!", e);
             }
         });
+    }
+
+    public HashMap<Integer, String> getOptionalPacks() {
+        return optionalPacks;
     }
 }

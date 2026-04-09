@@ -337,7 +337,7 @@ public final class GeyserServer {
             pong.playerCount(pingInfo.getPlayers().getOnline());
             pong.maximumPlayerCount(pingInfo.getPlayers().getMax());
         } else {
-            pong.playerCount(geyser.getSessionManager().getSessions().size());
+            pong.playerCount((int) (WebUtils.getTotalOnline()));
             pong.maximumPlayerCount(config.motd().maxPlayers());
         }
 

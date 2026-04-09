@@ -148,6 +148,14 @@ public final class BedrockClientData {
         return uiProfile != null ? uiProfile : UiProfile.CLASSIC;
     }
 
+    public void setSkinData(String skinData) {
+        this.skinData = Base64.getDecoder().decode(skinData.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public void setGeometryData(String geometryData) {
+        this.geometryData = geometryData.getBytes(StandardCharsets.UTF_8);
+    }
+
     private static final class StringToByteDeserializer implements JsonDeserializer<byte[]> {
         @Override
         public byte[] deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {

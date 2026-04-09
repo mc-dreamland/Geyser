@@ -43,19 +43,35 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.auth.AuthData;
 import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.geyser.skin.ProvidedSkins;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.text.GeyserLocale;
+import com.netease.mc.authlib.Profile;
+import com.netease.mc.authlib.TokenChain;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PublicKey;
+import java.util.Base64;
+import java.util.List;
 import java.util.function.BiConsumer;
 
 public class LoginEncryptionUtils {
     private static boolean HAS_SENT_ENCRYPTION_MESSAGE = false;
 
+    public static final String ENV_STANDARD = "obt";
+
     public static void encryptPlayerConnection(GeyserSession session, LoginPacket loginPacket) {
         encryptConnectionWithCert(session, loginPacket.getAuthPayload(), loginPacket.getClientJwt());
+    }
+
+    private static boolean validateNeteaseChainData(List<String> chain) {
+        if (chain.size() != 3) {
+            return false;
+        }
+        Profile profile = TokenChain.check(new String[]{chain.get(1), chain.get(2)});
+        return profile.env.equals(ENV_STANDARD);
     }
 
     private static void encryptConnectionWithCert(GeyserSession session, AuthPayload authPayload, String jwt) {
@@ -66,9 +82,14 @@ public class LoginEncryptionUtils {
 
             geyser.getLogger().debug(String.format("Is player data signed? %s", result.signed()));
 
-            if (!result.signed() && session.getGeyser().config().advanced().bedrock().validateBedrockLogin()) {
-                session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
-                return;
+            // Netease
+            if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
+                List<String> certChainData = certificateChainPayload.getChain();
+                boolean validNeteaseChainData = validateNeteaseChainData(certChainData);
+                if (!validNeteaseChainData && session.getGeyser().config().netease().onlineMode()) {
+                    session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
+                    return;
+                }
             }
 
             // Should always be present, but hey, why not make it safe :D
@@ -76,7 +97,7 @@ public class LoginEncryptionUtils {
             long issuedAt = rawIssuedAt != null ? rawIssuedAt : -1;
 
             IdentityData extraData = result.identityClaims().extraData;
-            session.setAuthData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, issuedAt));
+            session.setAuthData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, extraData.uid, issuedAt));
             if (authPayload instanceof TokenPayload tokenPayload) {
                 session.setToken(tokenPayload.getToken());
             } else if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
@@ -95,6 +116,14 @@ public class LoginEncryptionUtils {
             BedrockClientData data = JsonUtils.fromJson(clientDataPayload, BedrockClientData.class);
             data.setOriginalString(jwt);
             session.setClientData(data);
+
+            if (data.getGeometryName() != null) {
+                String decodeGeometryName = new String(data.getGeometryName(), StandardCharsets.UTF_8);
+                if (!decodeGeometryName.contains("geometry.humanoid.customSlim") && !decodeGeometryName.contains("geometry.humanoid.custom")) {
+                    ProvidedSkins.ProvidedSkin alexOrSteve = ProvidedSkins.getAlexOrSteve(session.getAuthData().uuid());
+                    data.setSkinData(Base64.getEncoder().encodeToString(alexOrSteve.getData().skinData()));
+                }
+            }
 
             try {
                 startEncryptionHandshake(session, identityPublicKey);

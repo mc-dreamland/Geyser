@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 GeyserMC. http://geysermc.org
+ * Copyright (c) 2025 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,21 +23,34 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.session.auth;
+package org.geysermc.geyser.util;
 
-import java.util.UUID;
+public class UoaUtils {
+    public static class UoaResult {
+        private String realSourceIp;
+        private int realSourcePort;
 
-/**
- * A class holding some basic information of the connected user.
- *
- * @param name The gamertag of the user
- * @param uuid Also known as identity
- * @param xuid The xuid of the user
- * @param uid The Bedrock UID used by skin-related flows
- * @param issuedAt The unix time (in seconds) that the JWT was issued
- */
-public record AuthData(String name, UUID uuid, String xuid, long uid, long issuedAt) {
-    public AuthData(String name, UUID uuid, String xuid) {
-        this(name, uuid, xuid, -1L, -1L);
+        public UoaResult() {
+            // 默认构造函数，JNI 代码中使用 NewObject 调用
+        }
+
+        public String getRealSourceIp() {
+            return realSourceIp;
+        }
+
+        public void setRealSourceIp(String realSourceIp) {
+            this.realSourceIp = realSourceIp;
+        }
+
+        public int getRealSourcePort() {
+            return realSourcePort;
+        }
+
+        public void setRealSourcePort(int realSourcePort) {
+            this.realSourcePort = realSourcePort;
+        }
+        public String toString() {
+            return "realSourceIp:" + realSourceIp + ", realSourcePort:" + realSourcePort;
+        }
     }
 }

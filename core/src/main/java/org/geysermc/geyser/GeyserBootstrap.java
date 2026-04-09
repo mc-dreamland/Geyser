@@ -34,6 +34,7 @@ import org.geysermc.geyser.configuration.GeyserConfig;
 import org.geysermc.geyser.dump.BootstrapDumpInfo;
 import org.geysermc.geyser.level.GeyserWorldManager;
 import org.geysermc.geyser.level.WorldManager;
+import org.geysermc.geyser.network.netty.GeyserInjector;
 import org.geysermc.geyser.ping.IGeyserPingPassthrough;
 import org.geysermc.geyser.util.metrics.MetricsPlatform;
 import org.geysermc.geyser.util.metrics.ProvidedMetricsPlatform;

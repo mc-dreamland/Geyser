@@ -66,7 +66,10 @@ public class JavaLoginFinishedTranslator extends PacketTranslator<ClientboundLog
             // because otherwise the global server returns the data too fast.
             // We upload it after we know for sure that the target server
             // is ready to handle the result of the global server.
-            session.getGeyser().getSkinUploader().uploadSkin(session);
+            session.getGeyser().getSkinUploader().syncSkin(session, session.getClientData());
+
+            // sync skin
+//            PluginMessageUtils.sendMessage(session, PluginMessageChannels.SKIN, FloodgateSkinUploader.syncSkinData(session));
         }
 
         // We no longer need these variables; they're just taking up space in memory now

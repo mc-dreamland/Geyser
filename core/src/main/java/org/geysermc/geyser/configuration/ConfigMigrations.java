@@ -150,6 +150,14 @@ public class ConfigMigrations {
             .addAction(path("bedrock", "proxy-protocol-whitelisted-ips"), renameAndMove("advanced", "bedrock", "haproxy-protocol-whitelisted-ips"))
             .addAction(path("mtu"), moveTo("advanced", "bedrock"))
 
+            // Netease
+            .addAction(path("online-mode"), moveTo("netease"))
+            .addAction(path("allowed-pc"), moveTo("netease"))
+            .addAction(path("allow-custom-geometry"), moveTo("netease"))
+            .addAction(path("service"), moveTo("netease"))
+            .addAction(path("optional-packs"), moveTo("netease"))
+            .addAction(path("redis"), moveTo("netease"))
+
             // Java
             .addAction(path("remote", "use-proxy-protocol"), renameAndMove("advanced", "java", "use-haproxy-protocol"))
             .addAction(path("disable-compression"), moveTo("advanced", "java"))
