@@ -25,6 +25,11 @@
 
 package org.geysermc.geyser.util;
 
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import com.google.gson.stream.MalformedJsonException;
 import org.geysermc.geyser.GeyserBootstrap;
 import org.geysermc.geyser.GeyserImpl;
 import org.spongepowered.configurate.ConfigurationNode;
@@ -57,7 +62,20 @@ public final class FileUtils {
 
     public static <T> T loadJson(InputStream src, Class<T> valueType) {
         // Read specifically with UTF-8 to allow any non-UTF-encoded JSON to read
-        return GeyserImpl.GSON.fromJson(new InputStreamReader(src, StandardCharsets.UTF_8), valueType);
+        JsonReader reader = new JsonReader(new InputStreamReader(src, StandardCharsets.UTF_8));
+        reader.setLenient(true);
+
+        T value = GeyserImpl.GSON.fromJson(reader, valueType);
+        try {
+            if (reader.peek() != JsonToken.END_DOCUMENT) {
+                throw new JsonSyntaxException("JSON document was not fully consumed.");
+            }
+        } catch (MalformedJsonException e) {
+            throw new JsonSyntaxException(e);
+        } catch (IOException e) {
+            throw new JsonIOException(e);
+        }
+        return value;
     }
 
     /**
