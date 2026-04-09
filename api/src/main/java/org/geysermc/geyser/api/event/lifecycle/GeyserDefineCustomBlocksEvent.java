@@ -64,6 +64,8 @@ public abstract class GeyserDefineCustomBlocksEvent implements Event {
      */
     public abstract void registerItemOverride(@NonNull String javaIdentifier, @NonNull CustomBlockData customBlockData);
 
+    public abstract void registerBlockHeadOverride(@NonNull String headOwnerName, @NonNull CustomBlockData customBlockData);
+
     /**
      * Registers the given {@link CustomBlockState} as an override for the
      * given {@link JavaBlockState}

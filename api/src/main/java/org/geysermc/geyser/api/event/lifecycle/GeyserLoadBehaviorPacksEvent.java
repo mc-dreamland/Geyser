@@ -23,25 +23,17 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.registry.mappings.util;
+package org.geysermc.geyser.api.event.lifecycle;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.geysermc.geyser.api.block.custom.CustomBlockData;
+import org.geysermc.event.Event;
 
-import java.util.Map;
+import java.nio.file.Path;
+import java.util.List;
 
 /**
- * This class is used to store a custom block mappings, which contain all of the 
- * data required to register a custom block that overrides a group of java block
- * states.
- * 
- * @param data The custom block data
- * @param states The custom block state mappings
- * @param javaIdentifier The java identifier of the block
- * @param overrideItem Whether the custom block should override the java item
+ * @deprecated Use the {@link GeyserDefineResourcePacksEvent} instead.
  */
-public record CustomBlockMapping(@NonNull CustomBlockData data, @NonNull Map<String, CustomBlockStateMapping> states, @NonNull String javaIdentifier, boolean overrideItem, boolean replaceSkull) {
-    public CustomBlockMapping(@NonNull CustomBlockData data, @NonNull Map<String, CustomBlockStateMapping> states, @NonNull String javaIdentifier, boolean overrideItem) {
-        this(data, states, javaIdentifier, overrideItem, false);
-    }
+@Deprecated
+public record GeyserLoadBehaviorPacksEvent(@NonNull List<Path> resourcePacks) implements Event {
 }

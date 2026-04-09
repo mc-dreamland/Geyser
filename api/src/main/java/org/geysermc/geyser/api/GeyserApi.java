@@ -127,7 +127,12 @@ public interface GeyserApi extends GeyserApiBase {
      * @return the path to the Geyser packs directory
      */
     @NonNull
-    Path packDirectory();
+    Path resourcePackDirectory();
+    @NonNull
+    Path optionalResourcePackDirectory();
+
+    @NonNull
+    Path behaviorPackDirectory();
 
     /**
      * Gets {@link PlatformType} the extension is running on

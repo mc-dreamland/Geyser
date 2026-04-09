@@ -130,6 +130,10 @@ public class Block {
         updateBlockPacket.setDefinition(definition);
         updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NEIGHBORS);
         updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
+
+        if (session.getContainerLocs().contains(position)) {
+            return;
+        }
         session.sendUpstreamPacket(updateBlockPacket);
 
         UpdateBlockPacket waterPacket = new UpdateBlockPacket();

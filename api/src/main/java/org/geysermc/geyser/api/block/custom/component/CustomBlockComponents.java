@@ -152,6 +152,22 @@ public interface CustomBlockComponents {
      */
     @NonNull Set<String> tags();
 
+    Integer neteaseFaceDirectional();
+
+    boolean rotatable();
+
+    List<NeteaseBoxComponent> neteaseAabbCollision();
+
+    List<NeteaseBoxComponent> neteaseAabbClip();
+
+    boolean neteaseBlockEntity();
+
+    String neteaseTier();
+
+    boolean neteaseSolid();
+
+    String neteaseRenderLayer();
+
     /**
      * Create a Builder for CustomBlockComponents
      *
@@ -193,6 +209,22 @@ public interface CustomBlockComponents {
         Builder placeAir(boolean placeAir);
 
         Builder tags(@Nullable Set<String> tags);
+
+        Builder rotatable(boolean rotatable);
+
+        Builder neteaseFaceDirectional(int netease_face_directional);
+
+        Builder neteaseAabbCollision(List<NeteaseBoxComponent> netease_aabb_collision);
+
+        Builder neteaseAabbClip(List<NeteaseBoxComponent> netease_aabb_clip);
+
+        Builder neteaseBlockEntity(boolean netease_block_entity);
+
+        Builder neteaseTier(String netease_tier);
+
+        Builder neteaseSolid(boolean netease_solid);
+
+        Builder neteaseRenderLayer(String text);
 
         CustomBlockComponents build();
     }
