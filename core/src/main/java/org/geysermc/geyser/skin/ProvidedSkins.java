@@ -40,28 +40,41 @@ import java.util.UUID;
 
 public final class ProvidedSkins {
     private static final ProvidedSkin[] PROVIDED_SKINS = {
-            new ProvidedSkin("textures/entity/player/slim/alex.png", true),
-            new ProvidedSkin("textures/entity/player/slim/ari.png", true),
-            new ProvidedSkin("textures/entity/player/slim/efe.png", true),
-            new ProvidedSkin("textures/entity/player/slim/kai.png", true),
-            new ProvidedSkin("textures/entity/player/slim/makena.png", true),
-            new ProvidedSkin("textures/entity/player/slim/noor.png", true),
-            new ProvidedSkin("textures/entity/player/slim/steve.png", true),
-            new ProvidedSkin("textures/entity/player/slim/sunny.png", true),
-            new ProvidedSkin("textures/entity/player/slim/zuri.png", true),
-            new ProvidedSkin("textures/entity/player/wide/alex.png", false),
-            new ProvidedSkin("textures/entity/player/wide/ari.png", false),
-            new ProvidedSkin("textures/entity/player/wide/efe.png", false),
-            new ProvidedSkin("textures/entity/player/wide/kai.png", false),
-            new ProvidedSkin("textures/entity/player/wide/makena.png", false),
-            new ProvidedSkin("textures/entity/player/wide/noor.png", false),
-            new ProvidedSkin("textures/entity/player/wide/steve.png", false),
-            new ProvidedSkin("textures/entity/player/wide/sunny.png", false),
-            new ProvidedSkin("textures/entity/player/wide/zuri.png", false)
+        new ProvidedSkin("textures/entity/player/slim/alex.png", true),
+        new ProvidedSkin("textures/entity/player/slim/ari.png", true),
+        new ProvidedSkin("textures/entity/player/slim/efe.png", true),
+        new ProvidedSkin("textures/entity/player/slim/kai.png", true),
+        new ProvidedSkin("textures/entity/player/slim/makena.png", true),
+        new ProvidedSkin("textures/entity/player/slim/noor.png", true),
+        new ProvidedSkin("textures/entity/player/slim/steve.png", true),
+        new ProvidedSkin("textures/entity/player/slim/sunny.png", true),
+        new ProvidedSkin("textures/entity/player/slim/zuri.png", true),
+        new ProvidedSkin("textures/entity/player/wide/alex.png", false),
+        new ProvidedSkin("textures/entity/player/wide/ari.png", false),
+        new ProvidedSkin("textures/entity/player/wide/efe.png", false),
+        new ProvidedSkin("textures/entity/player/wide/kai.png", false),
+        new ProvidedSkin("textures/entity/player/wide/makena.png", false),
+        new ProvidedSkin("textures/entity/player/wide/noor.png", false),
+        new ProvidedSkin("textures/entity/player/wide/steve.png", false),
+        new ProvidedSkin("textures/entity/player/wide/sunny.png", false),
+        new ProvidedSkin("textures/entity/player/wide/zuri.png", false)
     };
 
     public static ProvidedSkin getDefaultPlayerSkin(UUID uuid) {
         return PROVIDED_SKINS[Math.floorMod(uuid.hashCode(), PROVIDED_SKINS.length)];
+    }
+
+    public static ProvidedSkin getSteveSkin() {
+        return PROVIDED_SKINS[15];
+    }
+
+    public static ProvidedSkin getAlexSkin() {
+        return PROVIDED_SKINS[0];
+    }
+
+    public static ProvidedSkin getAlexOrSteve(UUID uuid) {
+        // If the UUID is even, return Alex, otherwise return Steve
+        return uuid.hashCode() % 2 == 0 ? getAlexSkin() : getSteveSkin();
     }
 
     private ProvidedSkins() {
@@ -75,13 +88,31 @@ public final class ProvidedSkins {
             this.slim = slim;
 
             Path folder = GeyserImpl.getInstance().getBootstrap().getConfigFolder()
-                    .resolve("cache")
-                    .resolve("default_player_skins")
-                    .resolve(slim ? "slim" : "wide");
+                .resolve("cache")
+                .resolve("default_player_skins")
+                .resolve(slim ? "slim" : "wide");
             String assetName = asset.substring(asset.lastIndexOf('/') + 1);
 
             Path location = folder.resolve(assetName);
-            AssetUtils.addTask(!Files.exists(location), new AssetUtils.ClientJarTask("assets/minecraft/" + asset,
+
+            if (Files.exists(location)) {
+                try {
+                    // TODO lazy initialize?
+                    BufferedImage image;
+                    try (InputStream stream = Files.newInputStream(location)) {
+                        image = ImageIO.read(stream);
+                    }
+
+                    byte[] byteData = SkinProvider.bufferedImageToImageData(image);
+                    image.flush();
+
+                    String identifier = "geysermc:" + assetName + "_" + (slim ? "slim" : "wide");
+                    this.data = new Skin(identifier, byteData);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                AssetUtils.addTask(!Files.exists(location), new AssetUtils.ClientJarTask("assets/minecraft/" + asset,
                     (stream) -> AssetUtils.saveFile(location, stream),
                     () -> {
                         try {
@@ -99,12 +130,13 @@ public final class ProvidedSkins {
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-            }));
+                    }));
+            }
         }
 
         public Skin getData() {
             // Fall back to the default skin if we can't load our skins, or it's not loaded yet.
-            return Objects.requireNonNullElse(data, SkinProvider.EMPTY_SKIN);
+            return Objects.requireNonNullElse(data, ProvidedSkins.getSteveSkin().data);
         }
 
         public boolean isSlim() {
@@ -118,8 +150,8 @@ public final class ProvidedSkins {
 
     static {
         Path folder = GeyserImpl.getInstance().getBootstrap().getConfigFolder()
-                .resolve("cache")
-                .resolve("default_player_skins");
+            .resolve("cache")
+            .resolve("default_player_skins");
         folder.toFile().mkdirs();
         // Two directories since there are two skins for each model: one slim, one wide
         folder.resolve("slim").toFile().mkdir();

@@ -27,11 +27,13 @@ package org.geysermc.geyser.translator.protocol.java.entity.player;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.skin.SkinManager;
+import org.geysermc.geyser.skin.SkinProvider;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.PlayerListUtils;
@@ -40,13 +42,22 @@ import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
 
+import java.awt.Color;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 @Translator(packet = ClientboundPlayerInfoUpdatePacket.class)
 public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<ClientboundPlayerInfoUpdatePacket> {
+
+    private String encodeSkinUrl(UUID uuid) {
+        String url = "{\"pe\":true,\"alex\":\"false\",\"data\":\"" + GeyserImpl.getInstance().config().netease().service().skinurl() + "/skin/" + uuid.toString() + "?pe\"}";
+        return Base64.getEncoder().encodeToString(url.getBytes(StandardCharsets.UTF_8));
+    }
+
     @Override
     public void translate(GeyserSession session, ClientboundPlayerInfoUpdatePacket packet) {
         Set<PlayerListEntryAction> actions = packet.getActions();
@@ -91,6 +102,9 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                     session.getEntityCache().addPlayerEntity(playerEntity);
                 }
                 playerEntity.setUsername(name);
+                if (id.toString().startsWith("00000000")) {
+                    playerEntity.setTexturesProperty(encodeSkinUrl(id));
+                }
 
                 if (self) {
                     playerEntity.setSkin(profile, true,
@@ -128,5 +142,32 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 PlayerListUtils.batchSendPlayerList(session, toRemove, PlayerListPacket.Action.REMOVE);
             }
         }
+    }
+
+
+    private void sendAddPlayerList(GeyserSession session, PlayerEntity entity) {
+        SkinProvider.requestSkinData(entity, session).whenCompleteAsync((skinData, throwable) -> {
+
+            PlayerListPacket.Entry updatedEntry = SkinManager.buildEntryManually(
+                session,
+                entity.getUuid(),
+                entity.getUsername(),
+                entity.getGeyserId(),
+                skinData.skin(),
+                skinData.cape(),
+                skinData.geometry(),
+                session.getWaypointCache().getWaypointColor(entity.getUuid()).orElse(Color.WHITE)
+            );
+
+            PlayerListPacket playerAddPacket = new PlayerListPacket();
+            playerAddPacket.setAction(PlayerListPacket.Action.ADD);
+            playerAddPacket.getEntries().add(updatedEntry);
+            session.sendUpstreamPacket(playerAddPacket);
+
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+            confirmSkinPacket.setEntries(List.of(updatedEntry));
+
+            session.sendUpstreamPacket(confirmSkinPacket);
+        });
     }
 }

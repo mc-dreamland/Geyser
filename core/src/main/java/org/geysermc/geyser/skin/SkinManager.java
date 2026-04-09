@@ -34,6 +34,7 @@ import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.skin.ImageData;
 import org.cloudburstmc.protocol.bedrock.data.skin.SerializedSkin;
+import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
 import org.geysermc.geyser.GeyserImpl;
@@ -96,7 +97,8 @@ public class SkinManager {
             // Otherwise, grab the default player skin
             SkinData fallbackSkinData = SkinProvider.determineFallbackSkinData(playerEntity.getUuid());
             if (skin == null) {
-                skin = fallbackSkinData.skin();
+//                skin = fallbackSkinData.skin();
+                skin = ProvidedSkins.getSteveSkin().getData();
                 geometry = fallbackSkinData.geometry();
             }
             if (cape == null) {
@@ -108,14 +110,14 @@ public class SkinManager {
         Color color = session.getWaypointCache().getWaypointColor(playerEntity.getUuid()).orElse(Color.WHITE);
 
         return buildEntryManually(
-                session,
-                playerEntity.getUuid(),
-                playerEntity.getUsername(),
-                playerEntity.getGeyserId(),
-                skin,
-                cape,
-                geometry,
-                color
+            session,
+            playerEntity.getUuid(),
+            playerEntity.getUsername(),
+            playerEntity.getGeyserId(),
+            skin,
+            cape,
+            geometry,
+            color
         );
     }
 
@@ -123,9 +125,12 @@ public class SkinManager {
      * With all the information needed, build a Bedrock player entry with translated skin information.
      */
     public static PlayerListPacket.Entry buildEntryManually(GeyserSession session, UUID uuid, String username, long geyserId,
-                                                            Skin skin,
-                                                            Cape cape,
-                                                            SkinGeometry geometry, Color color) {
+                                                             Skin skin,
+                                                             Cape cape,
+                                                             SkinGeometry geometry, Color color) {
+        if (skin.textureUrl() == null || skin.textureUrl().isEmpty()) {
+            skin = new Skin("steve", skin.skinData());
+        }
         SerializedSkin serializedSkin = getSkin(session, skin.textureUrl(), skin, cape, geometry);
 
         // This attempts to find the XUID of the player so profile images show up for Xbox accounts
@@ -156,6 +161,14 @@ public class SkinManager {
         entry.setPlatformChatId("");
         entry.setTeacher(false);
         entry.setTrustedSkin(true);
+        long uid = skin.uid();
+        if (uid <= 0) {
+            uid = uuid.toString().replace("-", "").hashCode();
+            if (uid < 0) {
+                uid = -uid;
+            }
+        }
+        entry.setUid(uid);
         entry.setColor(color);
         return entry;
     }
@@ -168,21 +181,25 @@ public class SkinManager {
 
         if (entity.getUuid().equals(session.getPlayerEntity().getUuid())) {
             PlayerListPacket.Entry updatedEntry = buildEntryManually(
-                    session,
-                    entity.getUuid(),
-                    entity.getUsername(),
-                    entity.getGeyserId(),
-                    skin,
-                    cape,
-                    geometry,
-                    color
+                session,
+                entity.getUuid(),
+                entity.getUsername(),
+                entity.getGeyserId(),
+                skin,
+                cape,
+                geometry,
+                color
             );
 
             PlayerListPacket playerAddPacket = new PlayerListPacket();
             playerAddPacket.setAction(PlayerListPacket.Action.ADD);
             playerAddPacket.getEntries().add(updatedEntry);
             session.sendUpstreamPacket(playerAddPacket);
-        } else {
+
+            // 应用自己的皮肤
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(List.of(updatedEntry));
+            session.sendUpstreamPacket(confirmSkinPacket);
+        }else {
             PlayerSkinPacket packet = new PlayerSkinPacket();
             packet.setUuid(entity.getUuid());
             packet.setOldSkinName("");
@@ -203,6 +220,7 @@ public class SkinManager {
             .premium(true)
             .capeId(cape.capeId())
             .fullSkinId(skinId)
+            .persona(false)
             .geometryDataEngineVersion(session.getClientData().getGameVersion())
             .build();
     }
@@ -305,8 +323,9 @@ public class SkinManager {
 
     public static void handleBedrockSkin(AvatarEntity playerEntity, BedrockClientData clientData) {
         GeyserImpl geyser = GeyserImpl.getInstance();
+        UUID uuid = playerEntity.getUuid();
         if (geyser.config().debugMode()) {
-            geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.skin.bedrock.register", playerEntity.getUsername(), playerEntity.getUuid()));
+            geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.skin.bedrock.register", playerEntity.getUsername(), uuid));
         }
 
         try {
@@ -317,8 +336,14 @@ public class SkinManager {
             byte[] geometryBytes = clientData.getGeometryData();
 
             if (skinBytes.length <= (128 * 128 * 4) && !clientData.isPersonaSkin()) {
-                SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);
-                SkinProvider.storeBedrockGeometry(playerEntity.getUuid(), geometryNameBytes, geometryBytes);
+                SkinProvider.storeBedrockSkin(uuid, clientData.getSkinId(), skinBytes);
+                String geoName = new String(geometryNameBytes);
+                // 仅使用本地缓存
+                if (!GeyserImpl.getInstance().config().netease().allowCustomGeometry()) {
+                    SkinGeometry customSlim = geoName.contains("customSlim") ? SkinGeometry.SLIM : uuid.hashCode() % 2 == 0 ? SkinGeometry.SLIM : SkinGeometry.WIDE;
+                    clientData.setGeometryData(customSlim.geometryData());
+                }
+                SkinProvider.storeBedrockGeometry(uuid, geometryNameBytes, geometryBytes);
             } else if (geyser.config().debugMode()) {
                 geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.skin.bedrock.fail", playerEntity.getUsername()));
                 geyser.getLogger().debug("The size of '" + playerEntity.getUsername() + "' skin is: " + clientData.getSkinImageWidth() + "x" + clientData.getSkinImageHeight());
@@ -403,6 +428,18 @@ public class SkinManager {
             } catch (IllegalArgumentException e) {
                 GeyserImpl.getInstance().getLogger().debug("Invalid base64 encoded skin entry: " + encodedJson);
                 return null;
+            }
+
+            if (skinObject.has("pe") && !skinObject.get("pe").isJsonNull()) {
+                if (!(skinObject.get("data") instanceof JsonPrimitive skinUrlNode) || !skinUrlNode.isString()) {
+                    return null;
+                }
+
+                String skinUrl = skinUrlNode.getAsString();
+                boolean isAlex = skinObject.has("alex")
+                    && !skinObject.get("alex").isJsonNull()
+                    && skinObject.get("alex").getAsBoolean();
+                return new GameProfileData(skinUrl, SkinProvider.EMPTY_CAPE.textureUrl(), isAlex);
             }
 
             if (!(skinObject.get("textures") instanceof JsonObject textures)) {

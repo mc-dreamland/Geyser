@@ -28,6 +28,7 @@ package org.geysermc.geyser.session;
 import com.google.gson.JsonObject;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -60,6 +61,7 @@ import org.cloudburstmc.netty.channel.raknet.RakChildChannel;
 import org.cloudburstmc.netty.handler.codec.raknet.common.RakSessionCodec;
 import org.cloudburstmc.protocol.bedrock.BedrockDisconnectReasons;
 import org.cloudburstmc.protocol.bedrock.BedrockServerSession;
+import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.data.Ability;
 import org.cloudburstmc.protocol.bedrock.data.AbilityLayer;
 import org.cloudburstmc.protocol.bedrock.data.AuthoritativeMovementMode;
@@ -81,6 +83,7 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.CraftingRecipeData;
 import org.cloudburstmc.protocol.bedrock.packet.AvailableEntityIdentifiersPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
+import org.cloudburstmc.protocol.bedrock.packet.BedrockPacketType;
 import org.cloudburstmc.protocol.bedrock.packet.BiomeDefinitionListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.CameraPresetsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ChunkRadiusUpdatedPacket;
@@ -92,6 +95,7 @@ import org.cloudburstmc.protocol.bedrock.packet.ItemComponentPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelSoundEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayStatusPacket;
+import org.cloudburstmc.protocol.bedrock.packet.RemoveEntityPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetCommandsEnabledPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetTimePacket;
@@ -105,6 +109,7 @@ import org.cloudburstmc.protocol.bedrock.packet.UpdateAttributesPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateClientInputLocksPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateSoftEnumPacket;
 import org.cloudburstmc.protocol.common.util.OptionalBoolean;
+import org.cloudburstmc.protocol.common.util.VarInts;
 import org.geysermc.api.util.BedrockPlatform;
 import org.geysermc.api.util.InputMode;
 import org.geysermc.api.util.UiProfile;
@@ -233,6 +238,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -320,6 +326,9 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * Stores the player inventory and player inventory translator
      */
     private final InventoryHolder<PlayerInventory> playerInventoryHolder;
+
+    @Getter
+    private final List<Vector3i> containerLocs = new ArrayList<>();
 
     /**
      * Stores the current open Bedrock inventory, including the correct translator.
@@ -466,6 +475,10 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @MonotonicNonNull
     @Setter
     private JavaDimension dimensionType = null;
+
+    @Getter
+    @Setter
+    private int lastNormalDimId = 0;
     /**
      * Which dimension Bedrock understands themselves to be in.
      * This should only be set after the ChangeDimensionPacket is sent, or
@@ -644,7 +657,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     /**
      * If the current player is flying
      */
-    @Setter
     private boolean flying = false;
 
     /**
@@ -722,6 +734,14 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Setter
     private ScheduledFuture<?> mountVehicleScheduledFuture = null;
 
+    @Setter
+    @Getter
+    private boolean leavingVehicle;
+
+    @Setter
+    @Getter
+    private boolean mounting = false;
+
     /**
      * A cache of IDs from ClientboundKeepAlivePackets that have been sent to the Bedrock client, but haven't been returned to the server.
      * Only used if {@link GeyserConfig.GameplayConfig#forwardPlayerPing()} is enabled.
@@ -744,6 +764,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     private final GeyserEntityData entityData;
 
+    @Setter
+    private boolean noUnloadChunk = true;
+    @Setter
+    private boolean quickSwitchDimension = false;
+
     @Getter(AccessLevel.MODULE)
     private MinecraftProtocol protocol;
 
@@ -756,6 +781,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Setter
     private int stepTicks = 0;
 
+    //Netease OnGround
+    @Getter
+    @Setter
+    private boolean sdkOnGround;
+
+    private final HashMap<UUID, String> cachedPlayerList;
     @Setter
     private boolean allowVibrantVisuals = true;
 
@@ -817,6 +848,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         geyser.getSessionManager().getSessions().values().forEach(player -> this.emotes.addAll(player.getEmotes()));
 
         this.remoteServer = geyser.defaultRemoteServer();
+
+        this.cachedPlayerList = new HashMap<>();
     }
 
     /**
@@ -852,9 +885,15 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         sentSpawnPacket = true;
         syncEntityProperties();
 
-        ItemComponentPacket componentPacket = new ItemComponentPacket();
-        componentPacket.getItems().addAll(itemMappings.getItemDefinitions().values());
-        upstream.sendPacket(componentPacket);
+        if (GameProtocol.isPreCreativeInventoryRewrite(this.protocolVersion())) {
+            ItemComponentPacket componentPacket = new ItemComponentPacket();
+            componentPacket.getItems().addAll(itemMappings.getComponentItemData());
+            upstream.sendPacket(componentPacket);
+        } else {
+            ItemComponentPacket componentPacket = new ItemComponentPacket();
+            componentPacket.getItems().addAll(itemMappings.getItemDefinitions().values());
+            upstream.sendPacket(componentPacket);
+        }
 
         ChunkUtils.sendEmptyChunks(this, playerEntity.getPosition().toInt(), 0, false);
 
@@ -1353,6 +1392,29 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         }
     }
 
+    private void setSneakingPose(boolean sneaking) {
+        if (this.pose == Pose.SNEAKING && !sneaking) {
+            this.pose = Pose.STANDING;
+            playerEntity.setBoundingBoxHeight(playerEntity.getDefinition().height());
+        } else if (sneaking) {
+            this.pose = Pose.SNEAKING;
+            playerEntity.setBoundingBoxHeight(1.5f);
+        }
+
+        playerEntity.setFlag(EntityFlag.SNEAKING, sneaking);
+    }
+
+    public void setSwimming(boolean swimming) {
+        if (!swimming && playerEntity.getFlag(EntityFlag.CRAWLING)) {
+            // Do not update bounding box.
+            playerEntity.setFlag(EntityFlag.SWIMMING, false);
+            playerEntity.updateBedrockMetadata();
+            return;
+        }
+
+        switchPose(swimming, EntityFlag.SWIMMING, Pose.SWIMMING);
+    }
+
     public void setNoClip(boolean noClip) {
         if (this.noClip == noClip) {
             return;
@@ -1360,6 +1422,27 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
         this.noClip = noClip;
         this.sendAdventureSettings();
+    }
+
+    public void setCrawling(boolean crawling) {
+        switchPose(crawling, EntityFlag.CRAWLING, Pose.SWIMMING);
+    }
+
+    private void switchPose(boolean value, EntityFlag flag, Pose pose) {
+        this.pose = value ? pose : (playerEntity.getFlag(EntityFlag.CRAWLING) ? Pose.SWIMMING : ((playerEntity.getFlag(EntityFlag.SWIMMING) ? Pose.SWIMMING : Pose.STANDING)));
+        playerEntity.setDimensionsFromPose(this.pose);
+        playerEntity.setFlag(flag, value);
+        playerEntity.updateBedrockMetadata();
+    }
+
+    public void setFlying(boolean flying) {
+        this.flying = flying;
+
+        if (sneaking) {
+            // update bounding box as it is not reduced when flying
+            setSneakingPose(!flying);
+            playerEntity.updateBedrockMetadata();
+        }
     }
 
     public void setGameMode(GameMode newGamemode) {
@@ -1619,7 +1702,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
 
     public void setServerRenderDistance(int renderDistance) {
         // Ensure render distance is not above 96 as sending a larger value at any point crashes mobile clients and 96 is the max of any bedrock platform
-        renderDistance = Math.min(renderDistance, 96);
+        renderDistance = Math.min(renderDistance, 16);
         this.serverRenderDistance = renderDistance;
 
         recalculateBedrockRenderDistance();
@@ -1633,7 +1716,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private void recalculateBedrockRenderDistance() {
         int renderDistance = ChunkUtils.squareToCircle(this.serverRenderDistance);
         ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
-        chunkRadiusUpdatedPacket.setRadius(renderDistance);
+
+        chunkRadiusUpdatedPacket.setRadius(Math.min(16, renderDistance));
         upstream.sendPacket(chunkRadiusUpdatedPacket);
     }
 
@@ -1826,7 +1910,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         startGamePacket.setOwnerId("");
 
         upstream.sendPacket(startGamePacket);
+
+//        testBytes(this);
     }
+
+
 
     private void syncEntityProperties() {
         for (NbtMap nbtMap : Registries.BEDROCK_ENTITY_PROPERTIES.get()) {

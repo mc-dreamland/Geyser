@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 GeyserMC. http://geysermc.org
+ * Copyright (c) 2025 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,22 +23,23 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.api.skin;
+package org.geysermc.geyser.command.defaults;
 
-/**
- * Represents a skin.
- *
- * @param textureUrl The URL/ID of the skin texture
- * @param skinData The raw skin image data in ARGB
- * @param failed If the skin failed to load, this is for things like fallback skins
- */
-public record Skin(String textureUrl, byte[] skinData, boolean failed, long uid) {
-    public Skin(String textureUrl, byte[] skinData) {
-        this(textureUrl, skinData, false);
+import org.geysermc.geyser.api.util.TriState;
+import org.geysermc.geyser.command.GeyserCommand;
+import org.geysermc.geyser.command.GeyserCommandSource;
+import org.geysermc.geyser.skin.SkinProvider;
+import org.incendo.cloud.context.CommandContext;
+
+public class ReloadSkinCommand extends GeyserCommand {
+    public ReloadSkinCommand(String name, String description, String permission) {
+        super(name, description, permission, TriState.NOT_SET);
     }
 
-    public Skin(String textureUrl, byte[] skinData, boolean failed) {
-        this(textureUrl, skinData, false, -1);
+    @Override
+    public void execute(CommandContext<GeyserCommandSource> context) {
+        GeyserCommandSource source = context.sender();
+        SkinProvider.loadCustomSkins();
+        source.sendMessage("自定义皮肤加载完毕!");
     }
-
 }
