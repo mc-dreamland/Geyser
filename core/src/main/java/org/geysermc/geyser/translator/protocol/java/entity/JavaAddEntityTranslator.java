@@ -72,7 +72,7 @@ public class JavaAddEntityTranslator extends PacketTranslator<ClientboundAddEnti
             PlayerEntity entity;
             if (packet.getUuid().equals(session.getPlayerEntity().getUuid())) {
                 // Server is sending a fake version of the current player
-                entity = new PlayerEntity(session, packet.getEntityId(), session.getEntityCache().getNextEntityId().incrementAndGet(),
+                entity = new PlayerEntity(session, packet.getEntityId(), -10,
                         session.getPlayerEntity().getUuid(), position, motion, yaw, pitch, headYaw, session.getPlayerEntity().getUsername(),
                         session.getPlayerEntity().getTexturesProperty());
             } else {
@@ -85,6 +85,7 @@ public class JavaAddEntityTranslator extends PacketTranslator<ClientboundAddEnti
                 }
 
                 entity.setEntityId(packet.getEntityId());
+                entity.setGeyserId(packet.getEntityId());
                 entity.setPosition(position);
                 entity.setYaw(yaw);
                 entity.setPitch(pitch);
@@ -103,7 +104,7 @@ public class JavaAddEntityTranslator extends PacketTranslator<ClientboundAddEnti
 
         Entity entity;
         if (packet.getType() == EntityType.FALLING_BLOCK) {
-            entity = new FallingBlockEntity(session, packet.getEntityId(), session.getEntityCache().getNextEntityId().incrementAndGet(), packet.getUuid(),
+            entity = new FallingBlockEntity(session, packet.getEntityId(), packet.getEntityId(), packet.getUuid(),
                     position, motion, yaw, pitch, headYaw, ((FallingBlockData) packet.getData()).getId());
         } else if (packet.getType() == EntityType.FISHING_BOBBER) {
             // Fishing bobbers need the owner for the line
@@ -111,13 +112,13 @@ public class JavaAddEntityTranslator extends PacketTranslator<ClientboundAddEnti
             Entity owner = session.getEntityCache().getEntityByJavaId(ownerEntityId);
             // Java clients only spawn fishing hooks with a player as its owner
             if (owner instanceof PlayerEntity) {
-                entity = new FishingHookEntity(session, packet.getEntityId(), session.getEntityCache().getNextEntityId().incrementAndGet(), packet.getUuid(),
+                entity = new FishingHookEntity(session, packet.getEntityId(), packet.getEntityId(), packet.getUuid(),
                         position, motion, yaw, pitch, headYaw, (PlayerEntity) owner);
             } else {
                 return;
             }
         } else {
-            entity = definition.factory().create(session, packet.getEntityId(), session.getEntityCache().getNextEntityId().incrementAndGet(),
+            entity = definition.factory().create(session, packet.getEntityId(), packet.getEntityId(),
                     packet.getUuid(), definition, position, motion, yaw, pitch, headYaw);
 
             // This is done over entity metadata in modern versions, but is still sent over network in the spawn packet

@@ -51,6 +51,7 @@ public abstract class TemperatureVariantAnimal extends AnimalEntity implements V
 
     @Override
     public void setBedrockVariant(BuiltInVariant variant) {
+        // Netease: keep the vers/1.21.11 enum-property variant sync path.
         TEMPERATE_VARIANT_PROPERTY.apply(propertyManager, variant);
         updateBedrockEntityProperties();
     }

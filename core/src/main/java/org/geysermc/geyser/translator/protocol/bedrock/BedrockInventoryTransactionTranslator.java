@@ -212,10 +212,14 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
 
                         // Check to make sure the client isn't spamming interaction
                         // Based on Nukkit 1.0, with changes to ensure holding down still works
-                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < 110.0 &&
+
+                        float distanceRight = session.getLastInteractionPlayerPosition().distance(session.getPlayerEntity().getPosition());
+                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < (distanceRight > 0.001 ? 20 : 75) &&
                                 packetBlockPosition.distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001;
+
                         session.setLastInteractionBlockPosition(packetBlockPosition);
                         session.setLastInteractionPlayerPosition(session.getPlayerEntity().getPosition());
+
                         if (hasAlreadyClicked) {
                             break;
                         } else {
@@ -257,9 +261,14 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                             return;
                         }
 
-                        double clickPositionFullX = (double) packetBlockPosition.getX() + (double) packet.getClickPosition().getX();
-                        double clickPositionFullY = (double) packetBlockPosition.getY() + (double) packet.getClickPosition().getY();
-                        double clickPositionFullZ = (double) packetBlockPosition.getZ() + (double) packet.getClickPosition().getZ();
+                        float cursorX = fixCursorValue(packet.getClickPosition().getX());
+                        float cursorY = fixCursorValue(packet.getClickPosition().getY());
+                        float cursorZ = fixCursorValue(packet.getClickPosition().getZ());
+
+
+                        double clickPositionFullX = (double) packetBlockPosition.getX() + (double) cursorX;
+                        double clickPositionFullY = (double) packetBlockPosition.getY() + (double) cursorY;
+                        double clickPositionFullZ = (double) packetBlockPosition.getZ() + (double) cursorZ;
 
                         Vector3f blockCenter = Vector3f.from(packetBlockPosition.getX() + 0.5f, packetBlockPosition.getY() + 0.5f, packetBlockPosition.getZ() + 0.5f);
 
@@ -302,7 +311,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                                 packet.getBlockPosition(),
                                 Direction.getUntrusted(packet, InventoryTransactionPacket::getBlockFace).mcpl(),
                                 Hand.MAIN_HAND,
-                                packet.getClickPosition().getX(), packet.getClickPosition().getY(), packet.getClickPosition().getZ(),
+                                cursorX, cursorY, cursorZ,
                                 false,
                                 false,
                                 sequence);
@@ -522,6 +531,21 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
         }
     }
 
+    /*
+     * 基岩版特性放置方块时，光标packet.getClickPosition()是取的玩家脚部所在位置。
+     * 在特性跑跳搭路时，如果对向有墙，并且最后1-3个方块即将或与墙接触时，clickpos对应方向的位置会变为-1,-1.5,-2,2,3的情况。
+     * 而正常值的范围应当是-0.5~1.5之间。所以临时限制处理。
+     */
+    private float fixCursorValue(float value) {
+        if (value <= -0.5f) {
+            return -0.25f;
+        } else if (value >= 2.0f) {
+            return 1.25f;
+        } else {
+            return value;
+        }
+    }
+
     private void processEntityInteraction(GeyserSession session, InventoryTransactionPacket packet, Entity entity) {
         Vector3f entityPosition = entity.getPosition();
         if (!session.getWorldBorder().isInsideBorderBoundaries(entityPosition)) {
@@ -567,7 +591,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
         double blockInteractionRange = session.getPlayerEntity().getBlockInteractionRange();
 
         // Mojmap Player#canInteractWithBlock
-        double additionalRangeCheck = blockInteractionRange + 1.0d;
+        double additionalRangeCheck = blockInteractionRange + 2;
 
         // AABB.<init>(BlockPos)
         float minX = packetBlockPosition.getX();

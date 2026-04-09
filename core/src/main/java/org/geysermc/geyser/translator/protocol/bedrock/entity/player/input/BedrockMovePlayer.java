@@ -28,13 +28,9 @@ package org.geysermc.geyser.translator.protocol.bedrock.entity.player.input;
 import org.cloudburstmc.math.vector.Vector3d;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
-import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.geysermc.geyser.entity.EntityDefinitions;
-import org.geysermc.geyser.entity.type.BoatEntity;
-import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
-import org.geysermc.geyser.level.physics.BoundingBox;
 import org.geysermc.geyser.level.physics.CollisionResult;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.ChatColor;
@@ -112,49 +108,12 @@ final class BedrockMovePlayer {
 
         // Client is telling us it wants to move down, but something is blocking it from doing so.
         boolean isOnGround;
-        if (hasVehicle || session.isNoClip()) {
+        if (hasVehicle) {
             // VERTICAL_COLLISION is not accurate while in a vehicle (as of 1.21.62)
             // If the player is riding a vehicle or is in spectator mode, onGround is always set to false for the player
-            // Also do this if player have no clip ability since they shouldn't be able to collide with anything.
             isOnGround = false;
         } else {
-            isOnGround = packet.getInputData().contains(PlayerAuthInputData.VERTICAL_COLLISION) && entity.getLastTickEndVelocity().getY() < 0;
-        }
-
-        // Resolve https://github.com/GeyserMC/Geyser/issues/3521, no void floor on java so player not supposed to collide with anything.
-        // Therefore, we're fixing this by allowing player to no clip to clip through the floor, not only this fixed the issue but
-        // player y velocity should match java perfectly, much better than teleport player right down :)
-        // Shouldn't mess with anything because beyond this point there is nothing to collide and not even entities since they're prob dead.
-        if (packet.getPosition().getY() - EntityDefinitions.PLAYER.offset() < session.getBedrockDimension().minY() - 5) {
-            // Ensuring that we still can collide with collidable entity that are also in the void (eg: boat, shulker)
-            boolean possibleOnGround = false;
-
-            BoundingBox boundingBox = session.getCollisionManager().getPlayerBoundingBox().clone();
-
-            // Extend down by y velocity subtract by 2 so that we are a "little" ahead and can send no clip in time before player hit the entity.
-            boundingBox.extend(0, packet.getDelta().getY() - 2, 0);
-
-            for (Entity other : session.getEntityCache().getEntities().values()) {
-                if (!other.getFlag(EntityFlag.COLLIDABLE)) {
-                    continue;
-                }
-
-                if (other == entity) {
-                    continue;
-                }
-
-                final BoundingBox entityBoundingBox = new BoundingBox(0, 0, 0, other.getBoundingBoxWidth(), other.getBoundingBoxHeight(), other.getBoundingBoxWidth());
-
-                // Also offset the position down for boat as their position is offset.
-                entityBoundingBox.translate(other.getPosition().down(other instanceof BoatEntity ? other.getDefinition().offset() : 0).toDouble());
-
-                if (entityBoundingBox.checkIntersection(boundingBox)) {
-                    possibleOnGround = true;
-                    break;
-                }
-            }
-
-            session.setNoClip(!possibleOnGround);
+            isOnGround = packet.isOnGround();
         }
 
         entity.setLastTickEndVelocity(packet.getDelta());
@@ -175,8 +134,11 @@ final class BedrockMovePlayer {
             entity.setJavaYaw(javaYaw);
             entity.setPitch(pitch);
             entity.setHeadYaw(headYaw);
-
-            session.sendDownstreamGamePacket(playerRotationPacket);
+            if (!session.isLeavingVehicle()) {
+                session.sendDownstreamGamePacket(playerRotationPacket);
+            } else {
+                session.setLeavingVehicle(false);
+            }
 
             // Player position MUST be updated on our end, otherwise e.g. chunk loading breaks
             if (hasVehicle) {
@@ -185,11 +147,12 @@ final class BedrockMovePlayer {
             }
         } else if (positionChangedAndShouldUpdate) {
             if (isValidMove(session, entity.getPosition(), packet.getPosition())) {
-                CollisionResult result = session.getCollisionManager().adjustBedrockPosition(packet.getPosition(), isOnGround, packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
-                if (result != null) { // A null return value cancels the packet
-                    Vector3d position = result.correctedMovement();
+                if (!session.getWorldBorder().isPassingIntoBorderBoundaries(packet.getPosition(), true)) {
+                    // TODO voidFloor logic is removed on upstream, check if is still needed
+                    CollisionResult result = session.getCollisionManager().adjustBedrockPosition(packet.getPosition(), isOnGround, packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
+                    if (result != null) { // A null return value cancels the packet
+                        Vector3d position = result.correctedMovement();
 
-                    if (!session.getWorldBorder().isPassingIntoBorderBoundaries(position.toFloat(), true)) {
                         Packet movePacket;
                         if (rotationChanged) {
                             // Send rotation updates as well
@@ -215,8 +178,6 @@ final class BedrockMovePlayer {
 
                         session.getInputCache().markPositionPacketSent();
                         session.getSkullCache().updateVisibleSkulls();
-                    } else {
-                        session.getCollisionManager().recalculatePosition();
                     }
                 }
             } else {

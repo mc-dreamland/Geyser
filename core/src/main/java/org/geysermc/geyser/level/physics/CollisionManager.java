@@ -54,6 +54,7 @@ import org.geysermc.geyser.util.BlockUtils;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.Arrays;
 import java.util.Locale;
 
 public class CollisionManager {
@@ -168,8 +169,12 @@ public class CollisionManager {
         // lose precision and thus, causes players to get stuck when walking near walls
         double javaY = Double.parseDouble(Float.toString(bedrockPosition.getY())) - EntityDefinitions.PLAYER.offset();
 
-        Vector3d position = Vector3d.from(Double.parseDouble(Float.toString(bedrockPosition.getX())), javaY,
-                Double.parseDouble(Float.toString(bedrockPosition.getZ())));
+//        Vector3d position = Vector3d.from(Double.parseDouble(Float.toString(bedrockPosition.getX())), javaY,
+//                Double.parseDouble(Float.toString(bedrockPosition.getZ())));
+
+
+        Vector3d position = Vector3d.from(bedrockPosition.getX(), javaY,
+            bedrockPosition.getZ());
 
         // Don't correct position if controlling a vehicle
         if (session.getPlayerEntity().getVehicle() instanceof ClientVehicle clientVehicle && clientVehicle.isClientControlled()) {

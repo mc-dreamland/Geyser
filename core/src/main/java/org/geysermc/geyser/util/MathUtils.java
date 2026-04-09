@@ -25,7 +25,7 @@
 
 package org.geysermc.geyser.util;
 
-import org.cloudburstmc.math.GenericMath;
+import org.cloudburstmc.math.imaginary.Quaternionf;
 import org.cloudburstmc.math.TrigMath;
 import org.cloudburstmc.math.vector.Vector3f;
 
@@ -198,6 +198,26 @@ public class MathUtils {
         return value;
     }
 
+
+    public static Vector3f toEuler(Quaternionf q) {
+        Vector3f v;
+        float sqw = q.getW() * q.getW();
+        float sqx = q.getX() * q.getX();
+        float sqy = q.getY() * q.getY();
+        float sqz = q.getZ() * q.getZ();
+        float unit = sqx + sqy + sqz + sqw;
+
+        float test = q.getX() * q.getY() + q.getZ() * q.getW();
+        if (test > 0.499 * unit) { // singularity at north pole
+            v = Vector3f.from(0.0, 2 * Math.atan2(q.getX(), q.getW()), Math.PI / 2);
+        } else if (test < -0.499 * unit) { // singularity at south pole
+            v = Vector3f.from(0.0, -2 * Math.atan2(q.getX(), q.getW()), -(Math.PI / 2));
+        } else {
+            v = Vector3f.from(Math.atan2(2 * q.getX() * q.getW() - 2 * q.getY() * q.getZ(), -sqx + sqy - sqz + sqw), Math.atan2(2 * q.getY() * q.getW() - 2 * q.getX() * q.getZ(), sqx - sqy - sqz + sqw), Math.asin(2 * test / unit));
+        }
+        return v;
+    }
+
     /**
      * Packs a chunk's X and Z coordinates into a single {@code long}.
      *
@@ -207,5 +227,9 @@ public class MathUtils {
      */
     public static long chunkPositionToLong(int x, int z) {
         return ((x & 0xFFFFFFFFL) << 32L) | (z & 0xFFFFFFFFL);
+    }
+
+    public static float clampOne(float value) {
+        return clamp(value, -1, 1);
     }
 }

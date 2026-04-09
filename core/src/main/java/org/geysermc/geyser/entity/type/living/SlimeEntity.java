@@ -40,6 +40,7 @@ public class SlimeEntity extends MobEntity {
 
     public void setSlimeScale(IntEntityMetadata entityMetadata) {
         setScale(0.10f + entityMetadata.getPrimitiveValue());
+        this.customEntityScale = 0.10f + entityMetadata.getPrimitiveValue();
     }
 
     @Override
