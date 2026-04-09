@@ -139,7 +139,7 @@ public class LoomInventoryTranslator extends AbstractBlockInventoryTranslator<Co
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        return switch (slotInfoData.getContainerName().getContainer()) {
+        return switch (slotInfoData.getContainer()) {
             case LOOM_INPUT -> 0;
             case LOOM_DYE -> 1;
             case LOOM_MATERIAL -> 2;

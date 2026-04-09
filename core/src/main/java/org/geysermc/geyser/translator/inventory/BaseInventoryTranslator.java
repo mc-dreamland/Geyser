@@ -46,7 +46,7 @@ public abstract class BaseInventoryTranslator<Type extends Container> extends In
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
         int slotnum = slotInfoData.getSlot();
-        switch (slotInfoData.getContainerName().getContainer()) {
+        switch (slotInfoData.getContainer()) {
             case HOTBAR_AND_INVENTORY:
             case HOTBAR:
             case INVENTORY:

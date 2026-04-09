@@ -239,7 +239,7 @@ public class InventoryUtils {
         BedrockDimension dimension = session.getBedrockDimension();
         int minY = dimension.minY(), maxY = minY + dimension.height();
         Vector3i flatPlayerPosition = session.getPlayerEntity().getPosition().toInt();
-        Vector3i position = flatPlayerPosition.add(Vector3i.UP);
+        Vector3i position = flatPlayerPosition.add(0, 2, 0);
         if (position.getY() < minY) {
             return null;
         }

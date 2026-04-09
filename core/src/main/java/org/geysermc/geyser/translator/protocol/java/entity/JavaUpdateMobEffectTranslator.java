@@ -66,7 +66,7 @@ public class JavaUpdateMobEffectTranslator extends PacketTranslator<ClientboundU
 
         MobEffectPacket mobEffectPacket = new MobEffectPacket();
         mobEffectPacket.setAmplifier(packet.getAmplifier());
-        mobEffectPacket.setDuration(packet.getDuration());
+        mobEffectPacket.setDuration(packet.getDuration() == -1 ? Integer.MAX_VALUE : packet.getDuration());
         mobEffectPacket.setEvent(event);
         mobEffectPacket.setRuntimeEntityId(entity.getGeyserId());
         mobEffectPacket.setParticles(packet.isShowParticles());

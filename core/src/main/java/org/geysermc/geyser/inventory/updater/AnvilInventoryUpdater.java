@@ -316,7 +316,7 @@ public class AnvilInventoryUpdater extends InventoryUpdater {
 
             List<Enchantment> incompatibleEnchantments = enchantment.exclusiveSet().resolve(session);
             for (Enchantment incompatible : incompatibleEnchantments) {
-                if (combinedEnchantments.containsKey(incompatible)) {
+                if (!Objects.equals(incompatible, enchantment) && combinedEnchantments.containsKey(incompatible)) {
                     canApply = false;
                     if (!bedrock) {
                         cost++;
@@ -425,7 +425,7 @@ public class AnvilInventoryUpdater extends InventoryUpdater {
 
     private boolean hasDurability(GeyserItemStack itemStack) {
         if (itemStack.asItem().defaultMaxDamage() > 0) {
-            return itemStack.getComponent(DataComponentTypes.UNBREAKABLE) != null;
+            return itemStack.getComponent(DataComponentTypes.UNBREAKABLE) == null;
         }
         return false;
     }

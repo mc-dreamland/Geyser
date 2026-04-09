@@ -38,6 +38,8 @@ import org.cloudburstmc.nbt.NbtMapBuilder;
 import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
+import org.geysermc.geyser.Constants;
+import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.entity.attribute.GeyserAttributeType;
 import org.geysermc.geyser.inventory.GeyserItemStack;
@@ -53,6 +55,7 @@ import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.registry.type.CustomSkull;
 import org.geysermc.geyser.registry.type.ItemMapping;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.SkullCache;
 import org.geysermc.geyser.skin.SkinManager;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.text.MinecraftLocale;
@@ -516,7 +519,7 @@ public final class ItemTranslator {
      */
     @NonNull
     public static ItemDefinition getBedrockItemDefinition(GeyserSession session, @NonNull GeyserItemStack itemStack) {
-        if (itemStack.isEmpty()) {
+        if (itemStack == null || itemStack.isEmpty()) {
             return ItemDefinition.AIR;
         }
 
@@ -533,6 +536,17 @@ public final class ItemTranslator {
             CustomSkull customSkull = getCustomSkull(itemStack.getComponent(DataComponentTypes.PROFILE));
             if (customSkull != null) {
                 itemDefinition = session.getItemMappings().getCustomBlockItemDefinitions().get(customSkull.getCustomBlockData());
+            } else {
+                @Nullable NbtMap nbt = itemStack.getItemData(session).getTag();
+
+                String customSkullBlockName = SkullCache.getCustomSkullBlockName(nbt);
+                if (customSkullBlockName != null) {
+                    CustomBlockData cd = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.getOrDefault(customSkullBlockName, null);
+                    if (cd != null) {
+                        itemDefinition = session.getItemMappings().getCustomBlockItemDefinitions().get(cd);
+                        return itemDefinition;
+                    }
+                }
             }
         }
 
@@ -626,6 +640,10 @@ public final class ItemTranslator {
         if (profile == null) {
             return null;
         }
+        String name = profile.getProfile().getName();
+        if (Constants.isHeyPixelCustom(name)) {
+            return null;
+        }
 
         // Ideally we'd update the item once the profile has been resolved, but this isn't really possible,
         // also see comments in PlayerHeadItem for full explanation
@@ -641,7 +659,22 @@ public final class ItemTranslator {
         return BlockRegistries.CUSTOM_SKULLS.get(skinTexture.getHash());
     }
 
+    // Netease: keep custom skull head overrides when the profile name carries a custom block identifier.
     private static void translatePlayerHead(GeyserSession session, ResolvableProfile profile, ItemData.Builder builder) {
+        if (profile != null) {
+            String customSkullBlockName = profile.getProfile().getName();
+            if (customSkullBlockName != null && Constants.isHeyPixelCustom(customSkullBlockName)) {
+                CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.getOrDefault(customSkullBlockName, null);
+                if (customBlockData != null) {
+                    ItemDefinition itemDefinition = session.getItemMappings().getCustomBlockItemDefinitions().get(customBlockData);
+                    BlockDefinition blockDefinition = session.getBlockMappings().getCustomBlockStateDefinitions().get(customBlockData.defaultBlockState());
+                    builder.definition(itemDefinition);
+                    builder.blockDefinition(blockDefinition);
+                    return;
+                }
+            }
+        }
+
         CustomSkull customSkull = getCustomSkull(profile);
         if (customSkull != null) {
             CustomBlockData customBlockData = customSkull.getCustomBlockData();

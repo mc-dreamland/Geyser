@@ -202,6 +202,10 @@ public class JavaLevelParticlesTranslator extends PacketTranslator<ClientboundLe
                     return particlePacket;
                 };
             }
+            case EFFECT -> {
+                // TODO Should Fix later!!
+                return null;
+            }
             default -> {
                 ParticleMapping particleMapping = Registries.PARTICLES.get(particle.getType());
                 if (particleMapping == null) { //TODO ensure no particle can be null

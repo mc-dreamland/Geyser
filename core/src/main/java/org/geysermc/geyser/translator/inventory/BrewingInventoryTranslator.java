@@ -75,11 +75,11 @@ public class BrewingInventoryTranslator extends AbstractBlockInventoryTranslator
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        if (slotInfoData.getContainerName().getContainer() == ContainerSlotType.BREWING_INPUT) {
+        if (slotInfoData.getContainer() == ContainerSlotType.BREWING_INPUT) {
             // Ingredient
             return 3;
         }
-        if (slotInfoData.getContainerName().getContainer() == ContainerSlotType.BREWING_RESULT) {
+        if (slotInfoData.getContainer() == ContainerSlotType.BREWING_RESULT) {
             // Potions
             return slotInfoData.getSlot() - 1;
         }

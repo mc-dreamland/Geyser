@@ -323,7 +323,7 @@ public final class BundleInventoryTranslator {
     }
 
     static boolean isBundle(ItemStackRequestSlotData slotData) {
-        return slotData.getContainerName().getContainer() == ContainerSlotType.DYNAMIC_CONTAINER;
+        return slotData.getContainer() == ContainerSlotType.DYNAMIC_CONTAINER;
     }
 
     static boolean isBundle(ClickPlan plan, int slot) {

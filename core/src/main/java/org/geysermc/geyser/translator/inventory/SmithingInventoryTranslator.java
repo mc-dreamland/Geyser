@@ -45,7 +45,7 @@ public class SmithingInventoryTranslator extends AbstractBlockInventoryTranslato
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        return switch (slotInfoData.getContainerName().getContainer()) {
+        return switch (slotInfoData.getContainer()) {
             case SMITHING_TABLE_TEMPLATE -> TEMPLATE;
             case SMITHING_TABLE_INPUT -> INPUT;
             case SMITHING_TABLE_MATERIAL -> MATERIAL;
