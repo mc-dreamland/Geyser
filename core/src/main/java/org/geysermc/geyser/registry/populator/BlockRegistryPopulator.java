@@ -72,6 +72,7 @@ import org.geysermc.geyser.registry.populator.conversion.Conversion776_766;
 import org.geysermc.geyser.registry.populator.conversion.Conversion786_776;
 import org.geysermc.geyser.registry.populator.conversion.Conversion800_786;
 import org.geysermc.geyser.registry.populator.conversion.Conversion827_819;
+import org.geysermc.geyser.registry.populator.conversion.Conversion827_819_netease;
 import org.geysermc.geyser.registry.populator.conversion.Conversion844_827;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
@@ -143,7 +144,7 @@ public final class BlockRegistryPopulator {
                 .put(ObjectIntPair.of("1_21_70", Bedrock_v786.CODEC.getProtocolVersion()), Conversion800_786::remapBlock)
                 .put(ObjectIntPair.of("1_21_80", Bedrock_v800.CODEC.getProtocolVersion()), Conversion827_819::remapBlock)
                 .put(ObjectIntPair.of("1_21_90", Bedrock_v818.CODEC.getProtocolVersion()), Conversion827_819::remapBlock)
-                .put(ObjectIntPair.of("1_21_90", Bedrock_v819.CODEC.getProtocolVersion()), Conversion827_819::remapBlock)
+                .put(ObjectIntPair.of("1_21_93", Bedrock_v819.CODEC.getProtocolVersion()), Conversion827_819_netease::remapBlock)
                 .put(ObjectIntPair.of("1_21_100", Bedrock_v827.CODEC.getProtocolVersion()), Conversion844_827::remapBlock)
                 .put(ObjectIntPair.of("1_21_110", Bedrock_v844.CODEC.getProtocolVersion()), tag -> tag)
                 // 1.21.110 -> 1.21.12x doesn't change the block palette
@@ -174,6 +175,7 @@ public final class BlockRegistryPopulator {
                     builder.remove("name_hash"); // Quick workaround - was added in 1.19.20
                     builder.remove("network_id"); // Added in 1.19.80
                     builder.remove("block_id"); // Added in 1.20.60
+                    builder.remove("val"); // Netease Client Dump
                     //noinspection UnstableApiUsage
                     builder.putCompound("states", statesInterner.intern((NbtMap) builder.remove("states")));
                     vanillaBlockStates.set(i, builder.build());

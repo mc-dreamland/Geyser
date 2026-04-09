@@ -143,7 +143,7 @@ public class ItemRegistryPopulator {
         paletteVersions.add(new PaletteVersion("1_21_70", Bedrock_v786.CODEC.getProtocolVersion(), Conversion800_786::remapItem));
         paletteVersions.add(new PaletteVersion("1_21_80", Bedrock_v800.CODEC.getProtocolVersion(), Conversion818_800::remapItem));
         paletteVersions.add(new PaletteVersion("1_21_90", Bedrock_v818.CODEC.getProtocolVersion(), Conversion819_818::remapItem));
-        paletteVersions.add(new PaletteVersion("1_21_90", Bedrock_v819.CODEC.getProtocolVersion(), Conversion827_819::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_93", Bedrock_v819.CODEC.getProtocolVersion(), Conversion827_819::remapItem));
         paletteVersions.add(new PaletteVersion("1_21_100", Bedrock_v827.CODEC.getProtocolVersion(), Conversion844_827::remapItem));
         paletteVersions.add(new PaletteVersion("1_21_110", Bedrock_v844.CODEC.getProtocolVersion(), Conversion859_844::remapItem));
         paletteVersions.add(new PaletteVersion("1_21_120", Bedrock_v859.CODEC.getProtocolVersion(), Conversion859_844::remapItem));
