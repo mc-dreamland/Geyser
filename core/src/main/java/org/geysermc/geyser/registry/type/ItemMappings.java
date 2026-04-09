@@ -46,14 +46,13 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Builder
 @Value
 public class ItemMappings implements DefinitionRegistry<ItemDefinition> {
 
-    Map<String, ItemMapping> cachedJavaMappings = new WeakHashMap<>();
+    Map<String, ItemMapping> cachedJavaMappings = new ConcurrentHashMap<>();
 
     ItemMapping[] items;
 
@@ -67,8 +66,9 @@ public class ItemMappings implements DefinitionRegistry<ItemDefinition> {
     List<CreativeItemData> creativeItems;
     Int2ObjectMap<ItemDefinition> itemDefinitions;
 
+    List<ItemDefinition> componentItemData;
+
     StoredItemMappings storedItems;
-    Set<Item> javaOnlyItems;
 
     List<ItemDefinition> buckets;
     List<ItemDefinition> boats;
@@ -169,7 +169,7 @@ public class ItemMappings implements DefinitionRegistry<ItemDefinition> {
                         continue;
                     }
                 }
-                if (!this.javaOnlyItems.contains(mapping.getJavaItem())) {
+                if (!mapping.hasTranslation()) {
                     // From a Bedrock item data, we aren't getting one of these items
                     return mapping;
                 }

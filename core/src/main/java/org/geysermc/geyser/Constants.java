@@ -27,6 +27,7 @@ package org.geysermc.geyser;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Locale;
 
 public final class Constants {
     public static final URI GLOBAL_API_WS_URI;
@@ -39,6 +40,7 @@ public final class Constants {
     static final String SAVED_AUTH_CHAINS_FILE = "saved-auth-chains.json";
 
     public static final String GEYSER_CUSTOM_NAMESPACE = "geyser_custom";
+    public static final String HEYPIXEL_CUSTOM_NAMESPACE = "heypixel";
 
     public static final String MINECRAFT_SKIN_SERVER_URL = "https://textures.minecraft.net/texture/";
 
@@ -49,10 +51,31 @@ public final class Constants {
     static {
         URI wsUri = null;
         try {
-            wsUri = new URI("wss://api.geysermc.org/ws");
+
+            String os = System.getProperty("os.name").toLowerCase();
+            String skinurl = GeyserImpl.getInstance().config().netease().service().skinurl();
+            if (os.contains("win")) {
+                skinurl = skinurl.replace("skinsync.bjd-mc.com", "42.186.61.161").replace("10.191.171.36", "42.186.61.161");
+            }
+            wsUri = new URI("ws://"+ skinurl
+                .replace("http://","")
+                .replace("https://","") + "/geyser");
         } catch (URISyntaxException e) {
+            GeyserImpl.getInstance().getLogger().error("Unable to resolve api.geysermc.org! Check your internet connection.");
+
             e.printStackTrace();
         }
         GLOBAL_API_WS_URI = wsUri;
+    }
+
+    public static boolean isHeyPixelCustom(String name) {
+        return name != null && name.toLowerCase(Locale.ROOT).startsWith(HEYPIXEL_CUSTOM_NAMESPACE + ":");
+    }
+
+    public static String getCustomName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.replace(HEYPIXEL_CUSTOM_NAMESPACE + ":", "").toLowerCase(Locale.ROOT);
     }
 }

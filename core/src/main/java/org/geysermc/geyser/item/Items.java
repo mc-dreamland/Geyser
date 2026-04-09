@@ -1587,4 +1587,8 @@ public final class Items {
 
     private Items() {
     }
+
+    public static void load() {
+
+    }
 }

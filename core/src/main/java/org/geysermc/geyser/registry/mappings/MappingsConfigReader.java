@@ -33,6 +33,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.registry.mappings.util.CustomBlockMapping;
+import org.geysermc.geyser.registry.mappings.util.CustomEntityMapping;
 import org.geysermc.geyser.registry.mappings.versions.MappingsReader;
 import org.geysermc.geyser.registry.mappings.versions.MappingsReader_v1;
 
@@ -95,6 +96,34 @@ public class MappingsConfigReader {
         for (Path mappingsFile : mappingsFiles) {
             this.readBlockMappingsFromJson(mappingsFile, consumer);
         }
+    }
+
+    // Netease: keep custom entity mappings on the Gson-based custom mappings loader path.
+    public void loadEntityMappingsFromJson(BiConsumer<String, CustomEntityMapping> consumer) {
+        if (!ensureMappingsDirectory(this.customMappingsDirectory)) {
+            return;
+        }
+
+        Path[] mappingsFiles = this.getCustomMappingsFiles();
+        for (Path mappingsFile : mappingsFiles) {
+            this.readEntityMappingsFromJson(mappingsFile, consumer);
+        }
+    }
+
+    public void readEntityMappingsFromJson(Path file, BiConsumer<String, CustomEntityMapping> consumer) {
+        JsonObject mappingsRoot = getMappingsRoot(file);
+
+        if (mappingsRoot == null) {
+            return;
+        }
+
+        int formatVersion = getFormatVersion(mappingsRoot, file);
+
+        if (formatVersion < 0) {
+            return;
+        }
+
+        this.mappingReaders.get(formatVersion).readEntityMappings(file, mappingsRoot, consumer);
     }
 
     public @Nullable JsonObject getMappingsRoot(Path file) {

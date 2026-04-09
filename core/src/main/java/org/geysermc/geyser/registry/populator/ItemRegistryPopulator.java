@@ -45,6 +45,13 @@ import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.nbt.NbtUtils;
+import org.cloudburstmc.protocol.bedrock.codec.v766.Bedrock_v766;
+import org.cloudburstmc.protocol.bedrock.codec.v776.Bedrock_v776;
+import org.cloudburstmc.protocol.bedrock.codec.v786.Bedrock_v786;
+import org.cloudburstmc.protocol.bedrock.codec.v800.Bedrock_v800;
+import org.cloudburstmc.protocol.bedrock.codec.v818.Bedrock_v818;
+import org.cloudburstmc.protocol.bedrock.codec.v819.Bedrock_v819;
+import org.cloudburstmc.protocol.bedrock.codec.v827.Bedrock_v827;
 import org.cloudburstmc.protocol.bedrock.codec.v844.Bedrock_v844;
 import org.cloudburstmc.protocol.bedrock.codec.v859.Bedrock_v859;
 import org.cloudburstmc.protocol.bedrock.codec.v860.Bedrock_v860;
@@ -71,8 +78,17 @@ import org.geysermc.geyser.item.Items;
 import org.geysermc.geyser.item.type.BlockItem;
 import org.geysermc.geyser.item.type.Item;
 import org.geysermc.geyser.level.block.property.Properties;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
+import org.geysermc.geyser.registry.populator.conversion.Conversion776_766;
+import org.geysermc.geyser.registry.populator.conversion.Conversion786_776;
+import org.geysermc.geyser.registry.populator.conversion.Conversion818_800;
+import org.geysermc.geyser.registry.populator.conversion.Conversion819_818;
+import org.geysermc.geyser.registry.populator.conversion.Conversion800_786;
+import org.geysermc.geyser.registry.populator.conversion.Conversion827_819;
+import org.geysermc.geyser.registry.populator.conversion.Conversion844_827;
+import org.geysermc.geyser.registry.populator.conversion.Conversion859_844;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
 import org.geysermc.geyser.registry.type.GeyserMappingItem;
@@ -87,7 +103,6 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -99,18 +114,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ItemRegistryPopulator {
 
-    record PaletteVersion(String version, int protocolVersion, Map<Item, Item> javaOnlyItems, Remapper remapper) {
+    record PaletteVersion(String version, int protocolVersion, Remapper remapper) {
 
         public PaletteVersion(String version, int protocolVersion) {
-            this(version, protocolVersion, Collections.emptyMap(), (item, mapping) -> mapping);
-        }
-
-        public PaletteVersion(String version, int protocolVersion, Map<Item, Item> javaOnlyItems) {
-            this(version, protocolVersion, javaOnlyItems, (item, mapping) -> mapping);
+            this(version, protocolVersion, (item, mapping) -> mapping);
         }
 
         public PaletteVersion(String version, int protocolVersion, Remapper remapper) {
-            this(version, protocolVersion, Collections.emptyMap(), remapper);
+            this.version = version;
+            this.protocolVersion = protocolVersion;
+            this.remapper = remapper;
         }
     }
 
@@ -121,29 +134,20 @@ public class ItemRegistryPopulator {
     }
 
     public static void populate() {
-        Map<Item, Item> eightFourFourFallbacks = new HashMap<>();
-        eightFourFourFallbacks.put(Items.WOODEN_SPEAR, Items.WOODEN_SWORD);
-        eightFourFourFallbacks.put(Items.STONE_SPEAR, Items.STONE_SWORD);
-        eightFourFourFallbacks.put(Items.COPPER_SPEAR, Items.COPPER_SWORD);
-        eightFourFourFallbacks.put(Items.IRON_SPEAR, Items.IRON_SWORD);
-        eightFourFourFallbacks.put(Items.GOLDEN_SPEAR, Items.GOLDEN_SWORD);
-        eightFourFourFallbacks.put(Items.DIAMOND_SPEAR, Items.DIAMOND_SWORD);
-        eightFourFourFallbacks.put(Items.NETHERITE_SPEAR, Items.NETHERITE_SWORD);
-        eightFourFourFallbacks.put(Items.COPPER_NAUTILUS_ARMOR, Items.COPPER_HORSE_ARMOR);
-        eightFourFourFallbacks.put(Items.IRON_NAUTILUS_ARMOR, Items.IRON_HORSE_ARMOR);
-        eightFourFourFallbacks.put(Items.GOLDEN_NAUTILUS_ARMOR, Items.GOLDEN_HORSE_ARMOR);
-        eightFourFourFallbacks.put(Items.DIAMOND_NAUTILUS_ARMOR, Items.DIAMOND_HORSE_ARMOR);
-        eightFourFourFallbacks.put(Items.NETHERITE_NAUTILUS_ARMOR, Items.DIAMOND_HORSE_ARMOR); // Any version without nautilus armor won't have netherite horse armor either
-        eightFourFourFallbacks.put(Items.NETHERITE_HORSE_ARMOR, Items.DIAMOND_HORSE_ARMOR);
-        eightFourFourFallbacks.put(Items.NAUTILUS_SPAWN_EGG, Items.PUFFERFISH_SPAWN_EGG);
-        eightFourFourFallbacks.put(Items.ZOMBIE_NAUTILUS_SPAWN_EGG, Items.PUFFERFISH_SPAWN_EGG);
-        eightFourFourFallbacks.put(Items.CAMEL_HUSK_SPAWN_EGG, Items.CAMEL_SPAWN_EGG);
-        eightFourFourFallbacks.put(Items.PARCHED_SPAWN_EGG, Items.SKELETON_SPAWN_EGG);
+        // Items statically register into Registries.JAVA_ITEM_IDENTIFIERS on class initialization.
+        Items.load();
 
-        List<PaletteVersion> paletteVersions = new ArrayList<>(6);
-        paletteVersions.add(new PaletteVersion("1_21_110", Bedrock_v844.CODEC.getProtocolVersion(), eightFourFourFallbacks));
-        paletteVersions.add(new PaletteVersion("1_21_120", Bedrock_v859.CODEC.getProtocolVersion(), eightFourFourFallbacks));
-        paletteVersions.add(new PaletteVersion("1_21_120", Bedrock_v860.CODEC.getProtocolVersion(), eightFourFourFallbacks));
+        List<PaletteVersion> paletteVersions = new ArrayList<>(11);
+        paletteVersions.add(new PaletteVersion("1_21_50", Bedrock_v766.CODEC.getProtocolVersion(), Conversion776_766::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_60", Bedrock_v776.CODEC.getProtocolVersion(), Conversion786_776::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_70", Bedrock_v786.CODEC.getProtocolVersion(), Conversion800_786::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_80", Bedrock_v800.CODEC.getProtocolVersion(), Conversion818_800::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_90", Bedrock_v818.CODEC.getProtocolVersion(), Conversion819_818::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_90", Bedrock_v819.CODEC.getProtocolVersion(), Conversion827_819::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_100", Bedrock_v827.CODEC.getProtocolVersion(), Conversion844_827::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_110", Bedrock_v844.CODEC.getProtocolVersion(), Conversion859_844::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_120", Bedrock_v859.CODEC.getProtocolVersion(), Conversion859_844::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_120", Bedrock_v860.CODEC.getProtocolVersion(), Conversion859_844::remapItem));
         paletteVersions.add(new PaletteVersion("1_21_130", Bedrock_v898.CODEC.getProtocolVersion()));
 
         GeyserBootstrap bootstrap = GeyserImpl.getInstance().getBootstrap();
@@ -193,6 +197,7 @@ public class ItemRegistryPopulator {
 
             // Used for custom items
             int nextFreeBedrockId = 0;
+            List<ItemDefinition> componentItemData = new ObjectArrayList<>();
             Int2ObjectMap<ItemDefinition> registry = new Int2ObjectOpenHashMap<>();
             Map<String, ItemDefinition> definitions = new Object2ObjectLinkedOpenHashMap<>();
 
@@ -262,17 +267,13 @@ public class ItemRegistryPopulator {
                 }
             });
 
-            List<CreativeItemGroup> creativeItemGroups = CreativeItemRegistryPopulator.readCreativeItemGroups(palette, creativeItems);
-            BlockMappings blockMappings = BlockRegistries.BLOCKS.forVersion(palette.protocolVersion());
-
-            Set<Item> javaOnlyItems = new ObjectOpenHashSet<>();
-            Collections.addAll(javaOnlyItems, Items.SPECTRAL_ARROW, Items.DEBUG_STICK,
-                    Items.KNOWLEDGE_BOOK, Items.TIPPED_ARROW);
-            if (!customItemsAllowed) {
-                javaOnlyItems.add(Items.FURNACE_MINECART);
+            List<CreativeItemGroup> creativeItemGroups;
+            if (GameProtocol.isPreCreativeInventoryRewrite(palette.protocolVersion())) {
+                creativeItemGroups = new ArrayList<>();
+            } else {
+                creativeItemGroups = CreativeItemRegistryPopulator.readCreativeItemGroups(palette, creativeItems);
             }
-            // Java-only items for this version
-            javaOnlyItems.addAll(palette.javaOnlyItems().keySet());
+            BlockMappings blockMappings = BlockRegistries.BLOCKS.forVersion(palette.protocolVersion());
 
             Int2ObjectMap<String> customIdMappings = new Int2ObjectOpenHashMap<>();
             Set<String> registeredItemNames = new ObjectOpenHashSet<>(); // This is used to check for duplicate item names
@@ -282,13 +283,29 @@ public class ItemRegistryPopulator {
                 if (javaItem == null) {
                     throw new RuntimeException("Extra item in mappings? " + entry.getKey());
                 }
-                GeyserMappingItem mappingItem;
-                Item replacementItem = palette.javaOnlyItems().get(javaItem);
-                if (replacementItem != null) {
-                    mappingItem = items.get(replacementItem.javaIdentifier()); // java only item, a java id fallback has been provided
-                } else {
-                    // check if any mapping changes need to be made on this version
-                    mappingItem = palette.remapper().remap(javaItem, entry.getValue());
+                GeyserMappingItem baseMappingItem = switch (javaItem.javaIdentifier()) {
+                    case "minecraft:spectral_arrow", "minecraft:tipped_arrow" -> entry.getValue().withFallbackIdentifier("minecraft:arrow");
+                    case "minecraft:knowledge_book" -> entry.getValue().withFallbackIdentifier("minecraft:book");
+                    case "minecraft:debug_stick" -> entry.getValue().withFallbackIdentifier("minecraft:stick");
+                    case "minecraft:furnace_minecart" -> customItemsAllowed ? entry.getValue() : entry.getValue().withFallbackIdentifier("minecraft:hopper_minecart");
+                    default -> entry.getValue();
+                };
+                GeyserMappingItem mappingItem = palette.remapper().remap(javaItem, baseMappingItem);
+                boolean aliasedItem = mappingItem.getFallbackIdentifier() != null;
+                if (aliasedItem && customItemsAllowed && javaItem == Items.FURNACE_MINECART) {
+                    aliasedItem = false;
+                }
+                while (mappingItem.getFallbackIdentifier() != null) {
+                    Item fallbackItem = Registries.JAVA_ITEM_IDENTIFIERS.get(mappingItem.getFallbackIdentifier());
+                    GeyserMappingItem fallbackMapping = items.get(mappingItem.getFallbackIdentifier());
+                    GeyserMappingItem baseFallbackMapping = switch (fallbackItem.javaIdentifier()) {
+                        case "minecraft:spectral_arrow", "minecraft:tipped_arrow" -> fallbackMapping.withFallbackIdentifier("minecraft:arrow");
+                        case "minecraft:knowledge_book" -> fallbackMapping.withFallbackIdentifier("minecraft:book");
+                        case "minecraft:debug_stick" -> fallbackMapping.withFallbackIdentifier("minecraft:stick");
+                        case "minecraft:furnace_minecart" -> customItemsAllowed ? fallbackMapping : fallbackMapping.withFallbackIdentifier("minecraft:hopper_minecart");
+                        default -> fallbackMapping;
+                    };
+                    mappingItem = palette.remapper().remap(fallbackItem, baseFallbackMapping);
                 }
 
                 if (customItemsAllowed && javaItem == Items.FURNACE_MINECART) {
@@ -479,7 +496,7 @@ public class ItemRegistryPopulator {
                     mappingBuilder = mappingBuilder.toolType(mappingItem.getToolType().intern());
                 }
 
-                if (javaOnlyItems.contains(javaItem)) {
+                if (aliasedItem) {
                     // These items don't exist on Bedrock, so set up a variable that indicates they should have custom names
                     mappingBuilder = mappingBuilder.translationString((javaItem instanceof BlockItem ? "block." : "item.") + entry.getKey().replace(":", "."));
                     GeyserImpl.getInstance().getLogger().debug("Adding " + entry.getKey() + " as an item that needs to be translated.");
@@ -494,7 +511,7 @@ public class ItemRegistryPopulator {
                     for (CustomItemData customItem : customItemsToLoad) {
                         int customProtocolId = nextFreeBedrockId++;
 
-                        String customItemName = customItem instanceof NonVanillaCustomItemData nonVanillaItem ? nonVanillaItem.identifier() : Constants.GEYSER_CUSTOM_NAMESPACE + ":" + customItem.name();
+                        String customItemName = customItem instanceof NonVanillaCustomItemData nonVanillaItem ? nonVanillaItem.identifier() : Constants.HEYPIXEL_CUSTOM_NAMESPACE + ":" + customItem.name();
                         if (!registeredItemNames.add(customItemName)) {
                             if (firstMappingsPass) {
                                 GeyserImpl.getInstance().getLogger().error("Custom item name '" + customItemName + "' already exists and was registered again! Skipping...");
@@ -515,6 +532,7 @@ public class ItemRegistryPopulator {
                                     .build(), creativeNetId.get(), customItem.creativeCategory().getAsInt());
                             creativeItems.add(creativeItemData);
                         }
+                        componentItemData.add(customMapping.itemDefinition());
                         customItemOptions.add(Pair.of(customItem.customItemOptions(), customMapping.itemDefinition()));
                         registry.put(customMapping.integerId(), customMapping.itemDefinition());
 
@@ -579,6 +597,7 @@ public class ItemRegistryPopulator {
                 ItemDefinition definition = new SimpleItemDefinition("geysermc:furnace_minecart", furnaceMinecartId, ItemVersion.DATA_DRIVEN, true, registerFurnaceMinecart(furnaceMinecartId));
                 definitions.put("geysermc:furnace_minecart", definition);
                 registry.put(definition.getRuntimeId(), definition);
+                componentItemData.add(definition);
 
                 mappings.set(Items.FURNACE_MINECART.javaId(), ItemMapping.builder()
                         .javaItem(Items.FURNACE_MINECART)
@@ -617,6 +636,7 @@ public class ItemRegistryPopulator {
                     }
                     mappings.set(javaItem.javaId(), mapping);
                     registry.put(customItemId, mapping.getBedrockDefinition());
+                    componentItemData.add(mapping.getBedrockDefinition());
 
                     if (customItem.creativeCategory().isPresent()) {
                         CreativeItemData creativeItemData = new CreativeItemData(ItemData.builder()
@@ -671,8 +691,8 @@ public class ItemRegistryPopulator {
                     .creativeItems(creativeItems)
                     .creativeItemGroups(creativeItemGroups)
                     .itemDefinitions(registry)
+                    .componentItemData(componentItemData)
                     .storedItems(new StoredItemMappings(javaItemToMapping))
-                    .javaOnlyItems(javaOnlyItems)
                     .buckets(buckets)
                     .lightBlocks(lightBlocks)
                     .lodestoneCompass(lodestoneEntry)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 GeyserMC. http://geysermc.org
+ * Copyright (c) 2025 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,34 +23,23 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.registry.type;
+package org.geysermc.geyser.registry.populator.conversion;
 
-import com.google.gson.annotations.SerializedName;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-import lombok.With;
+import org.geysermc.geyser.item.Items;
+import org.geysermc.geyser.item.type.Item;
+import org.geysermc.geyser.registry.type.GeyserMappingItem;
 
-/**
- * Represents Geyser's own serialized item information before being processed per-version
- */
-@ToString
-@EqualsAndHashCode
-@Getter
-@With
-@NoArgsConstructor
-@AllArgsConstructor
-public class GeyserMappingItem {
-    @SerializedName("bedrock_identifier") String bedrockIdentifier;
-    @SerializedName("bedrock_data") int bedrockData;
-    @SerializedName("fallback_identifier") String fallbackIdentifier;
-    Integer firstBlockRuntimeId;
-    Integer lastBlockRuntimeId;
-    @SerializedName("tool_type") String toolType;
-    @SerializedName("armor_type") String armorType;
-    @SerializedName("protection_value") int protectionValue;
-    @SerializedName("is_edible") boolean edible = false;
-    @SerializedName("is_entity_placer") boolean entityPlacer = false;
+public class Conversion818_800 {
+
+    public static GeyserMappingItem remapItem(Item item, GeyserMappingItem mapping) {
+        mapping = Conversion819_818.remapItem(item, mapping);
+
+        if (item == Items.MUSIC_DISC_TEARS) {
+            return mapping.withFallbackIdentifier("minecraft:music_disc_5");
+        }
+        if (item == Items.MUSIC_DISC_LAVA_CHICKEN) {
+            return mapping.withFallbackIdentifier("minecraft:music_disc_chirp");
+        }
+        return mapping;
+    }
 }

@@ -49,6 +49,7 @@ import org.geysermc.geyser.registry.loader.RegistryLoaders;
 import org.geysermc.geyser.registry.loader.SoundEventsRegistryLoader;
 import org.geysermc.geyser.registry.loader.SoundRegistryLoader;
 import org.geysermc.geyser.registry.loader.SoundTranslatorRegistryLoader;
+import org.geysermc.geyser.registry.populator.CustomEntityRegistryPopulator;
 import org.geysermc.geyser.registry.populator.DataComponentRegistryPopulator;
 import org.geysermc.geyser.registry.populator.ItemRegistryPopulator;
 import org.geysermc.geyser.registry.populator.PacketRegistryPopulator;
@@ -71,6 +72,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.particle.ParticleType
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -125,6 +127,8 @@ public final class Registries {
      */
     public static final SimpleMappedRegistry<EntityType, EntityDefinition<?>> ENTITY_DEFINITIONS = SimpleMappedRegistry.create(RegistryLoaders.empty(() -> new EnumMap<>(EntityType.class)));
 
+    public static final HashMap<String, EntityDefinition<?>> CUSTOM_ENTITY_DEFINITIONS = new HashMap<>();
+
     /**
      * A registry holding a list of all the known entity properties to be sent to the client after start game.
      */
@@ -177,7 +181,9 @@ public final class Registries {
     /**
      * A mapped registry holding {@link ResourcePackHolder}'s with the pack uuid as keys.
      */
-    public static final SimpleMappedDeferredRegistry<UUID, ResourcePackHolder> RESOURCE_PACKS = SimpleMappedDeferredRegistry.create(GeyserImpl.getInstance().packDirectory(), RegistryLoaders.RESOURCE_PACKS);
+    public static final SimpleMappedDeferredRegistry<UUID, ResourcePackHolder> RESOURCE_PACKS = SimpleMappedDeferredRegistry.create(GeyserImpl.getInstance().resourcePackDirectory(), RegistryLoaders.RESOURCE_PACKS);
+    public static final SimpleMappedDeferredRegistry<UUID, ResourcePackHolder> OPTIONAL_RESOURCE_PACKS = SimpleMappedDeferredRegistry.create(GeyserImpl.getInstance().optionalResourcePackDirectory(), RegistryLoaders.OPTIONAL_RESOURCE_PACKS);
+    public static final SimpleMappedDeferredRegistry<UUID, ResourcePackHolder> BEHAVIOR_PACKS = SimpleMappedDeferredRegistry.create(GeyserImpl.getInstance().behaviorPackDirectory(), RegistryLoaders.BEHAVIOR_PACKS);
 
     /**
      * A versioned registry holding most Bedrock tags, with the Java item list (sorted) being the key, and the tag name as the value.
@@ -241,9 +247,9 @@ public final class Registries {
 
     public static void populate() {
         PacketRegistryPopulator.populate();
-        DataComponentRegistryPopulator.populate();
         ItemRegistryPopulator.populate();
         TagRegistryPopulator.populate();
+        CustomEntityRegistryPopulator.populate();
 
         // potion mixes depend on other registries
         POTION_MIXES.load();
