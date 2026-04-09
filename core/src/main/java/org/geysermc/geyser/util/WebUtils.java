@@ -25,26 +25,40 @@
 
 package org.geysermc.geyser.util;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.stream.JsonReader;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.GeyserLogger;
 
 import javax.naming.directory.Attribute;
 import javax.naming.directory.InitialDirContext;
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.ConnectException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.SocketTimeoutException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
+import java.util.zip.ZipFile;
 
 public class WebUtils {
 
@@ -59,7 +73,7 @@ public class WebUtils {
             URL url = new URL(reqURL);
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("GET");
-            con.setRequestProperty("User-Agent", "Geyser-" + GeyserImpl.getInstance().getPlatformType().toString() + "/" + GeyserImpl.VERSION); // Otherwise Java 8 fails on checking updates
+            con.setRequestProperty("User-Agent", getUserAgent()); // Keep custom-header overload aligned with the shared user-agent logic
             property.forEach(con::setRequestProperty);
 
             con.setConnectTimeout(10000);
@@ -92,7 +106,7 @@ public class WebUtils {
             con.setRequestProperty("User-Agent", getUserAgent()); // Otherwise Java 8 fails on checking updates
             con.setConnectTimeout(10000);
             con.setReadTimeout(10000);
-
+            checkResponseCode(con);
             return connectionToString(con);
         } catch (UnknownHostException e) {
             throw new IllegalStateException("Unable to resolve requested url (%s)! Are you offline?".formatted(reqURL), e);
@@ -100,17 +114,22 @@ public class WebUtils {
     }
 
     /**
-     * Makes a web request to the given URL and returns the body as a {@link JsonNode}.
+     * Makes a web request to the given URL and returns the body as a {@link JsonObject}.
      *
      * @param reqURL URL to fetch
      * @return the response as JSON
      */
-    public static JsonNode getJson(String reqURL) throws IOException {
+    public static JsonObject getJson(String reqURL) throws IOException {
         HttpURLConnection con = (HttpURLConnection) new URL(reqURL).openConnection();
         con.setRequestProperty("User-Agent", getUserAgent());
         con.setConnectTimeout(10000);
         con.setReadTimeout(10000);
-        return GeyserImpl.JSON_MAPPER.readTree(con.getInputStream());
+        checkResponseCode(con);
+        try (InputStreamReader isr = new InputStreamReader(con.getInputStream());
+             JsonReader reader = GeyserImpl.GSON.newJsonReader(isr)) {
+            //noinspection deprecation
+            return new JsonParser().parse(reader).getAsJsonObject();
+        }
     }
 
     /**
@@ -120,13 +139,24 @@ public class WebUtils {
      * @param fileLocation Location to save on disk
      */
     public static void downloadFile(String reqURL, String fileLocation) {
+        downloadFile(reqURL, Paths.get(fileLocation));
+    }
+
+    /**
+     * Downloads a file from the given URL and saves it to disk
+     *
+     * @param reqURL File to fetch
+     * @param path Location to save on disk as a path
+     */
+    public static void downloadFile(String reqURL, Path path) {
         try {
             HttpURLConnection con = (HttpURLConnection) new URL(reqURL).openConnection();
             con.setRequestProperty("User-Agent", getUserAgent());
+            checkResponseCode(con);
             InputStream in = con.getInputStream();
-            Files.copy(in, Paths.get(fileLocation), StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(in, path, StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {
-            throw new RuntimeException("Unable to download and save file: " + fileLocation + " (" + reqURL + ")", e);
+            throw new RuntimeException("Unable to download and save file: " + path.toAbsolutePath() + " (" + reqURL + ")", e);
         }
     }
 
@@ -146,7 +176,7 @@ public class WebUtils {
 
             con.setConnectTimeout(10000);
             con.setReadTimeout(10000);
-            con.setRequestProperty("User-Agent", "Geyser-" + GeyserImpl.getInstance().getPlatformType().platformName() + "/" + GeyserImpl.VERSION);
+            con.setRequestProperty("User-Agent", "Geyser-" + GeyserImpl.getInstance().platformType().platformName() + "/" + GeyserImpl.VERSION);
             con.setInstanceFollowRedirects(true);
 
             int responseCode = con.getResponseCode();
@@ -212,6 +242,27 @@ public class WebUtils {
             }
 
             try {
+                boolean shouldDeleteEnclosing = false;
+                var originalZip = downloadLocation;
+                try (ZipFile zip = new ZipFile(downloadLocation.toFile())) {
+                    // This can (or should???) contain a zip
+                    if (zip.stream().allMatch(name -> name.getName().endsWith(".zip"))) {
+                        // Unzip the pack, as that's what we're after
+                        downloadLocation = REMOTE_PACK_CACHE.resolve(url.hashCode() + "_" + System.currentTimeMillis() + "_unzipped.zip");
+                        Files.copy(zip.getInputStream(zip.entries().nextElement()), downloadLocation, StandardCopyOption.REPLACE_EXISTING);
+                        shouldDeleteEnclosing = true;
+                    }
+                } finally {
+                    if (shouldDeleteEnclosing) {
+                        // We don't need the original zip anymore
+                        Files.delete(originalZip);
+                    }
+                }
+            } catch (IOException e) {
+                throw new IllegalArgumentException("Encountered exception while reading downloaded resource pack at url: %s".formatted(url), e);
+            }
+
+            try {
                 Files.write(
                         packMetadata,
                         Arrays.asList(
@@ -219,7 +270,9 @@ public class WebUtils {
                                 con.getHeaderField("ETag"),
                                 String.valueOf(con.getLastModified()),
                                 downloadLocation.getFileName().toString()
-                        ));
+                        ),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING);
                 packMetadata.toFile().setLastModified(System.currentTimeMillis());
             } catch (IOException e) {
                 Files.delete(packMetadata);
@@ -263,24 +316,38 @@ public class WebUtils {
     }
 
     /**
-     * Get the string output from the passed {@link HttpURLConnection}
-     *
-     * @param con The connection to get the string from
-     * @return The body of the returned page
-     * @throws IOException If the request fails
+     * Gets the string output from the passed {@link HttpURLConnection},
+     * or logs the error message.
      */
     private static String connectionToString(HttpURLConnection con) throws IOException {
+        checkResponseCode(con);
+        return inputStreamToString(con.getInputStream(), con::disconnect);
+    }
+
+    /**
+     * Throws an exception if there is an error stream to avoid further issues
+     */
+    private static void checkResponseCode(HttpURLConnection con) throws IOException {
         // Send the request (we dont use this but its required for getErrorStream() to work)
         con.getResponseCode();
 
         // Read the error message if there is one if not just read normally
-        InputStream inputStream = con.getErrorStream();
-        if (inputStream == null) {
-            inputStream = con.getInputStream();
+        InputStream errorStream = con.getErrorStream();
+        if (errorStream != null) {
+            throw new IOException(inputStreamToString(errorStream, null));
         }
+    }
 
+    /**
+     * Get the string output from the passed {@link InputStream}
+     *
+     * @param stream The input stream to get the string from
+     * @return The body of the returned page
+     * @throws IOException If the request fails
+     */
+    private static String inputStreamToString(InputStream stream, @Nullable Runnable onFinish) throws IOException {
         StringBuilder content = new StringBuilder();
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(inputStream))) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(stream))) {
             String inputLine;
 
             while ((inputLine = in.readLine()) != null) {
@@ -288,7 +355,9 @@ public class WebUtils {
                 content.append("\n");
             }
 
-            con.disconnect();
+            if (onFinish != null) {
+                onFinish.run();
+            }
         }
 
         return content.toString();
@@ -337,7 +406,7 @@ public class WebUtils {
                 return ((String) attr.get(0)).split(" ");
             }
         } catch (Exception | NoClassDefFoundError ex) { // Check for a NoClassDefFoundError to prevent Android crashes
-            if (geyser.getConfig().isDebugMode()) {
+            if (geyser.config().debugMode()) {
                 geyser.getLogger().debug("Exception while trying to find an SRV record for the remote host.");
                 ex.printStackTrace(); // Otherwise we can get a stack trace for any domain that doesn't have an SRV record
             }
@@ -368,6 +437,6 @@ public class WebUtils {
     }
 
     public static String getUserAgent() {
-        return "Geyser-" + GeyserImpl.getInstance().getPlatformType().platformName() + "/" + GeyserImpl.VERSION;
+        return "Geyser-" + GeyserImpl.getInstance().platformType().platformName() + "/" + GeyserImpl.VERSION;
     }
 }

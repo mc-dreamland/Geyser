@@ -44,12 +44,16 @@ public final class Constants {
 
     public static final String MINECRAFT_SKIN_SERVER_URL = "https://textures.minecraft.net/texture/";
 
+    public static final int CONFIG_VERSION = 5;
+
+    public static final int BSTATS_ID = 5273;
+
     static {
         URI wsUri = null;
         try {
 
             String os = System.getProperty("os.name").toLowerCase();
-            String skinurl = GeyserImpl.getInstance().getConfig().getService().getSkinurl();
+            String skinurl = GeyserImpl.getInstance().config().netease().service().skinurl();
             if (os.contains("win")) {
                 skinurl = skinurl.replace("skinsync.bjd-mc.com", "42.186.61.161").replace("10.191.171.36", "42.186.61.161");
             }

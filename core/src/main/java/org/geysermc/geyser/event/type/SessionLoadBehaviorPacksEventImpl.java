@@ -54,7 +54,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-public class SessionLoadBehaviorPacksEventImpl extends SessionLoadResourcePacksEvent {
+public class SessionLoadBehaviorPacksEventImpl extends SessionLoadResourcePacksEvent  {
 
     /**
      * The packs for this Session. A {@link ResourcePackHolder} may contain resource pack options registered
@@ -70,8 +70,11 @@ public class SessionLoadBehaviorPacksEventImpl extends SessionLoadResourcePacksE
      */
     private final Map<UUID, OptionHolder> sessionPackOptionOverrides;
 
+    private final GeyserSession session;
+
     public SessionLoadBehaviorPacksEventImpl(GeyserSession session) {
         super(session);
+        this.session = session;
         this.packs = new Object2ObjectLinkedOpenHashMap<>(Registries.BEHAVIOR_PACKS.get());
         this.sessionPackOptionOverrides = new Object2ObjectOpenHashMap<>();
     }
@@ -158,6 +161,11 @@ public class SessionLoadBehaviorPacksEventImpl extends SessionLoadResourcePacksE
     public boolean unregister(@NonNull UUID uuid) {
         sessionPackOptionOverrides.remove(uuid);
         return packs.remove(uuid) != null;
+    }
+
+    @Override
+    public void allowVibrantVisuals(boolean enabled) {
+        session.setAllowVibrantVisuals(enabled);
     }
 
     private void attemptRegisterOptions(@NonNull GeyserResourcePack pack, @Nullable ResourcePackOption<?>... options) {

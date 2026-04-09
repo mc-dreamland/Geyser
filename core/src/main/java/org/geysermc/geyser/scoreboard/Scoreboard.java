@@ -79,6 +79,7 @@ import static org.geysermc.geyser.scoreboard.UpdateType.REMOVE;
  * This fact is the biggest contributor for the class being structured like it is.
  */
 public final class Scoreboard {
+    // Netease: 千飞夏 2025/6/20 23:53 优化玩家皮肤处理和实体ID管理
     private static final boolean SHOW_SCOREBOARD_LOGS = Boolean.parseBoolean(System.getProperty("Geyser.ShowScoreboardLogs", "false"));
     private static final boolean ADD_TEAM_SUGGESTIONS = Boolean.parseBoolean(System.getProperty("Geyser.AddTeamSuggestions", "false"));
 

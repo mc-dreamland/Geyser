@@ -26,11 +26,9 @@
 package org.geysermc.geyser.translator.protocol.java;
 
 import net.kyori.adventure.key.Key;
-import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.geyser.skin.FloodgateSkinUploader;
 import org.geysermc.geyser.skin.SkinManager;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
@@ -76,7 +74,11 @@ public class JavaLoginFinishedTranslator extends PacketTranslator<ClientboundLog
 
         // We no longer need these variables; they're just taking up space in memory now
         session.setCertChainData(null);
+        session.setToken(null);
         session.getClientData().setOriginalString(null);
+
+        // Reset code of conduct accepted state, mirrors Java Edition
+        session.hasAcceptedCodeOfConduct(false);
 
         // configuration phase stuff that the vanilla client replies with after receiving the GameProfilePacket
         session.sendDownstreamPacket(new ServerboundCustomPayloadPacket(Key.key("brand"), PluginMessageUtils.getGeyserBrandData()), ProtocolState.CONFIGURATION);

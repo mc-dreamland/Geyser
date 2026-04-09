@@ -32,9 +32,9 @@ import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
 import org.geysermc.geyser.level.physics.CollisionResult;
-import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.ChatColor;
+import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket;
@@ -50,13 +50,18 @@ final class BedrockMovePlayer {
         SessionPlayerEntity entity = session.getPlayerEntity();
         if (!session.isSpawned()) return;
 
+        // We need to save player interact rotation value, as this rotation is used for Touch device and indicate where the player is touching.
+        // This is needed so that we can interact with where player actually touch on the screen on Bedrock and not just from the center of the screen.
+        entity.setBedrockInteractRotation(packet.getInteractRotation());
+
         // Ignore movement packets until Bedrock's position matches the teleported position
         if (session.getUnconfirmedTeleport() != null) {
-            session.confirmTeleport(packet.getPosition().toDouble().sub(0, EntityDefinitions.PLAYER.offset(), 0));
+            session.confirmTeleport(packet.getPosition().sub(0, EntityDefinitions.PLAYER.offset(), 0));
             return;
         }
 
-        boolean actualPositionChanged = !entity.getPosition().equals(packet.getPosition());
+        // This is vanilla behaviour, LocalPlayer#sendPosition 1.21.8.
+        boolean actualPositionChanged = entity.getPosition().distanceSquared(packet.getPosition()) > 4e-8;
 
         if (actualPositionChanged) {
             // Send book update before the player moves
@@ -74,17 +79,20 @@ final class BedrockMovePlayer {
         float pitch = packet.getRotation().getX();
         float headYaw = packet.getRotation().getY();
 
+        // Even though on Java Edition the yaw rotation should never get wrapped and can get larger than 180, on Bedrock Edition
+        // the client always seems to wrap and limit it to -180 and 180, which is not vanilla behaviour, and doesn't cause problems
+        // on the surface - however, some anticheat checks for this, so we account for it
+        float javaYaw = entity.getJavaYaw() + MathUtils.wrapDegrees(yaw - entity.getJavaYaw());
+
         boolean hasVehicle = entity.getVehicle() != null;
 
         // shouldSendPositionReminder also increments a tick counter, so make sure it's always called unless the player is on a vehicle.
         boolean positionChangedAndShouldUpdate = !hasVehicle && (session.getInputCache().shouldSendPositionReminder() || actualPositionChanged);
-        boolean rotationChanged = hasVehicle || (entity.getYaw() != yaw || entity.getPitch() != pitch || entity.getHeadYaw() != headYaw);
+        boolean rotationChanged = hasVehicle || (entity.getJavaYaw() != javaYaw || entity.getPitch() != pitch);
 
-        if (session.getLookBackScheduledFuture() != null) {
-            // Resend the rotation if it was changed by Geyser
-            rotationChanged |= !session.getLookBackScheduledFuture().isDone();
-            session.getLookBackScheduledFuture().cancel(false);
-            session.setLookBackScheduledFuture(null);
+        // Drop invalid rotation packets
+        if (isInvalidNumber(yaw) || isInvalidNumber(pitch) || isInvalidNumber(headYaw)) {
+            return;
         }
 
         // Simulate jumping since it happened this tick, not from the last tick end.
@@ -109,6 +117,7 @@ final class BedrockMovePlayer {
         }
 
         entity.setLastTickEndVelocity(packet.getDelta());
+        entity.setMotion(packet.getDelta());
 
         // This takes into account no movement sent from the client, but the player is trying to move anyway.
         // (Press into a wall in a corner - you're trying to move but nothing actually happens)
@@ -119,9 +128,10 @@ final class BedrockMovePlayer {
         // This isn't needed, but it makes the packets closer to vanilla
         // It also means you can't "lag back" while only looking, in theory
         if (!positionChangedAndShouldUpdate && rotationChanged) {
-            ServerboundMovePlayerRotPacket playerRotationPacket = new ServerboundMovePlayerRotPacket(isOnGround, horizontalCollision, yaw, pitch);
+            ServerboundMovePlayerRotPacket playerRotationPacket = new ServerboundMovePlayerRotPacket(isOnGround, horizontalCollision, javaYaw, pitch);
 
             entity.setYaw(yaw);
+            entity.setJavaYaw(javaYaw);
             entity.setPitch(pitch);
             entity.setHeadYaw(headYaw);
             if (!session.isLeavingVehicle()) {
@@ -138,38 +148,10 @@ final class BedrockMovePlayer {
         } else if (positionChangedAndShouldUpdate) {
             if (isValidMove(session, entity.getPosition(), packet.getPosition())) {
                 if (!session.getWorldBorder().isPassingIntoBorderBoundaries(packet.getPosition(), true)) {
-                    CollisionResult result;
-                    result = session.getCollisionManager().adjustBedrockPosition(packet.getPosition(), isOnGround, packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
+                    // TODO voidFloor logic is removed on upstream, check if is still needed
+                    CollisionResult result = session.getCollisionManager().adjustBedrockPosition(packet.getPosition(), isOnGround, packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
                     if (result != null) { // A null return value cancels the packet
                         Vector3d position = result.correctedMovement();
-                        boolean isBelowVoid = entity.isVoidPositionDesynched();
-                        boolean teleportThroughVoidFloor, mustResyncPosition;
-                        // Compare positions here for void floor fix below before the player's position variable is set to the packet position
-                        if (entity.getPosition().getY() >= packet.getPosition().getY() && !isBelowVoid) {
-                            int floorY = position.getFloorY();
-                            int voidFloorLocation = entity.voidFloorPosition();
-                            teleportThroughVoidFloor = floorY <= (voidFloorLocation + 1) && floorY >= voidFloorLocation;
-                        } else {
-                            teleportThroughVoidFloor = false;
-                        }
-
-                        if (teleportThroughVoidFloor || isBelowVoid) {
-                            // https://github.com/GeyserMC/Geyser/issues/3521 - no void floor in Java so we cannot be on the ground.
-                            isOnGround = false;
-                        }
-
-                        if (isBelowVoid) {
-                            int floorY = position.getFloorY();
-                            int voidFloorLocation = entity.voidFloorPosition();
-                            mustResyncPosition = floorY < voidFloorLocation && floorY >= voidFloorLocation - 1;
-                        } else {
-                            mustResyncPosition = false;
-                        }
-
-                        double yPosition = position.getY();
-                        if (entity.isVoidPositionDesynched()) { // not using the cached variable on purpose
-                            yPosition += 4; // We are de-synched since we had to teleport below the void floor.
-                        }
 
                         Packet movePacket;
                         if (rotationChanged) {
@@ -177,27 +159,22 @@ final class BedrockMovePlayer {
                             movePacket = new ServerboundMovePlayerPosRotPacket(
                                 isOnGround,
                                 horizontalCollision,
-                                position.getX(), yPosition, position.getZ(),
-                                yaw, pitch
+                                position.getX(), position.getY(), position.getZ(),
+                                javaYaw, pitch
                             );
                             entity.setYaw(yaw);
+                            entity.setJavaYaw(javaYaw);
                             entity.setPitch(pitch);
                             entity.setHeadYaw(headYaw);
                         } else {
                             // Rotation did not change; don't send an update with rotation
-                            movePacket = new ServerboundMovePlayerPosPacket(isOnGround, horizontalCollision, position.getX(), yPosition, position.getZ());
+                            movePacket = new ServerboundMovePlayerPosPacket(isOnGround, horizontalCollision, position.getX(), position.getY(), position.getZ());
                         }
 
                         entity.setPositionManual(packet.getPosition());
 
                         // Send final movement changes
                         session.sendDownstreamGamePacket(movePacket);
-
-                        if (teleportThroughVoidFloor) {
-                            entity.teleportVoidFloorFix(false);
-                        } else if (mustResyncPosition) {
-                            entity.teleportVoidFloorFix(true);
-                        }
 
                         session.getInputCache().markPositionPacketSent();
                         session.getSkullCache().updateVisibleSkulls();
@@ -242,4 +219,3 @@ final class BedrockMovePlayer {
         return true;
     }
 }
-

@@ -39,17 +39,22 @@ import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.TextDisplayEntity;
 import org.geysermc.geyser.entity.type.living.ArmorStandEntity;
 import org.geysermc.geyser.entity.type.living.animal.AnimalEntity;
+import org.geysermc.geyser.entity.type.living.animal.HappyGhastEntity;
 import org.geysermc.geyser.entity.type.living.animal.horse.CamelEntity;
 import org.geysermc.geyser.inventory.GeyserItemStack;
 import org.geysermc.geyser.item.Items;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.registry.JavaRegistries;
+import org.geysermc.geyser.session.cache.tags.GeyserHolderSet;
 import org.geysermc.geyser.text.MinecraftLocale;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.Equippable;
 
 import java.util.Locale;
+import java.util.UUID;
 
 public final class EntityUtils {
     /**
@@ -90,6 +95,7 @@ public final class EntityUtils {
             case OOZING -> 34;
             case INFESTED -> 35;
             case RAID_OMEN -> 36;
+            case BREATH_OF_THE_NAUTILUS -> 37;
             default -> effect.ordinal() + 1;
         };
     }
@@ -169,7 +175,7 @@ public final class EntityUtils {
     /**
      * Adjust an entity's height if they have mounted/dismounted an entity.
      */
-    public static void updateMountOffset(Entity passenger, Entity mount, boolean rider, boolean riding, boolean moreThanOneEntity) {
+    public static void updateMountOffset(Entity passenger, Entity mount, boolean rider, boolean riding, int index, int passengers) {
         passenger.setFlag(EntityFlag.RIDING, riding);
         if (riding) {
             // Without the Y offset, Bedrock players will find themselves in the floor when mounting
@@ -182,7 +188,7 @@ public final class EntityUtils {
             switch (mount.getDefinition().entityType()) {
                 case CAMEL -> {
                     zOffset = 0.5f;
-                    if (moreThanOneEntity) {
+                    if (passengers > 1) {
                         if (!rider) {
                             zOffset = -0.7f;
                         }
@@ -224,12 +230,18 @@ public final class EntityUtils {
                         }
                     }
                 }
+                case HAPPY_GHAST -> {
+                    int seatingIndex = Math.min(index, 4);
+                    xOffset = HappyGhastEntity.X_OFFSETS[seatingIndex];
+                    yOffset = 3.4f;
+                    zOffset = HappyGhastEntity.Z_OFFSETS[seatingIndex];
+                }
             }
             if (mount instanceof ChestBoatEntity) {
                 xOffset = 0.15F;
             } else if (mount instanceof BoatEntity) {
                 // Without the X offset, more than one entity on a boat is stacked on top of each other
-                if (moreThanOneEntity) {
+                if (passengers > 1) {
                     xOffset = rider ? 0.2f : -0.6f;
                     if (passenger instanceof AnimalEntity) {
                         xOffset += 0.2f;
@@ -252,13 +264,14 @@ public final class EntityUtils {
                 case MINECART, HOPPER_MINECART, TNT_MINECART, CHEST_MINECART, FURNACE_MINECART, SPAWNER_MINECART,
                         COMMAND_BLOCK_MINECART -> yOffset -= mount.getDefinition().height() * 0.5f;
             }
+            // Netease: keep the null entity-type guard while restoring the 1.21.11 shulker/falling-block offset fixes.
             if (passenger.getDefinition().entityType() == null) {
                 yOffset += passenger.getDefinition().height() * 0.5f;
             } else {
                 switch (passenger.getDefinition().entityType()) {
                     case MINECART, HOPPER_MINECART, TNT_MINECART, CHEST_MINECART, FURNACE_MINECART, SPAWNER_MINECART,
-                         COMMAND_BLOCK_MINECART -> yOffset += passenger.getDefinition().height() * 0.5f;
-                    case FALLING_BLOCK -> yOffset += 0.5f;
+                         COMMAND_BLOCK_MINECART, SHULKER -> yOffset += passenger.getDefinition().height() * 0.5f;
+                    case FALLING_BLOCK -> yOffset += 0.995f;
                 }
             }
             if (mount instanceof BoatEntity) {
@@ -293,14 +306,14 @@ public final class EntityUtils {
      * Determine if an action would result in a successful bucketing of the given entity.
      */
     public static boolean attemptToBucket(GeyserItemStack itemInHand) {
-        return itemInHand.asItem() == Items.WATER_BUCKET;
+        return itemInHand.is(Items.WATER_BUCKET);
     }
 
     /**
      * Attempt to determine the result of saddling the given entity.
      */
     public static InteractionResult attemptToSaddle(Entity entityToSaddle, GeyserItemStack itemInHand) {
-        if (itemInHand.asItem() == Items.SADDLE) {
+        if (itemInHand.is(Items.SADDLE)) {
             if (!entityToSaddle.getFlag(EntityFlag.SADDLED) && !entityToSaddle.getFlag(EntityFlag.BABY)) {
                 // Saddle
                 return InteractionResult.SUCCESS;
@@ -347,6 +360,25 @@ public final class EntityUtils {
         // this works at least with all 1.20.5 entities, except the killer bunny since that's not an entity type.
         String typeName = type.name().toLowerCase(Locale.ROOT);
         return translatedEntityName("minecraft", typeName, session);
+    }
+
+    public static boolean equipmentUsableByEntity(GeyserSession session, Equippable equippable, EntityType entity) {
+        if (equippable.allowedEntities() == null) {
+            return true;
+        }
+
+        GeyserHolderSet<EntityType> holderSet = GeyserHolderSet.fromHolderSet(JavaRegistries.ENTITY_TYPE, equippable.allowedEntities());
+        return holderSet.contains(session, entity);
+    }
+
+    // From ViaVersion! thank u!!
+    public static UUID uuidFromIntArray(int[] uuid) {
+        if (uuid != null && uuid.length == 4) {
+            // thank u viaversion
+            return new UUID((long) uuid[0] << 32 | ((long) uuid[1] & 0xFFFFFFFFL),
+                (long) uuid[2] << 32 | ((long) uuid[3] & 0xFFFFFFFFL));
+        }
+        return null;
     }
 
     private EntityUtils() {

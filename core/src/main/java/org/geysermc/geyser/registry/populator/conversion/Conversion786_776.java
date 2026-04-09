@@ -26,6 +26,8 @@
 package org.geysermc.geyser.registry.populator.conversion;
 
 import org.cloudburstmc.nbt.NbtMap;
+import org.geysermc.geyser.item.type.Item;
+import org.geysermc.geyser.registry.type.GeyserMappingItem;
 
 import static org.geysermc.geyser.registry.populator.conversion.ConversionHelper.withName;
 import static org.geysermc.geyser.registry.populator.conversion.ConversionHelper.withoutStates;
@@ -33,28 +35,33 @@ import static org.geysermc.geyser.registry.populator.conversion.ConversionHelper
 public class Conversion786_776 {
 
     public static NbtMap remapBlock(NbtMap nbtMap) {
+        nbtMap = Conversion800_786.remapBlock(nbtMap);
 
         final String name = nbtMap.getString("name");
-        if (name.equals("minecraft:bush")) {
-            return withName(nbtMap, "fern");
-        }
+        return switch (name) {
+            case "minecraft:bush" -> withName(nbtMap, "fern");
+            case "minecraft:firefly_bush" -> withName(nbtMap, "deadbush");
+            case "minecraft:tall_dry_grass", "minecraft:short_dry_grass" -> withName(nbtMap, "short_grass");
+            case "minecraft:cactus_flower" -> withName(nbtMap, "unknown");
+            case "minecraft:leaf_litter", "minecraft:wildflowers" -> withoutStates("unknown");
+            default -> nbtMap;
+        };
+    }
 
-        if (name.equals("minecraft:firefly_bush")) {
-            return withName(nbtMap, "deadbush");
-        }
+    public static GeyserMappingItem remapItem(Item item, GeyserMappingItem mapping) {
+        mapping = Conversion800_786.remapItem(item, mapping);
 
-        if (name.equals("minecraft:tall_dry_grass") || name.equals("minecraft:short_dry_grass")) {
-            return withName(nbtMap, "short_grass");
-        }
-
-        if (name.equals("minecraft:cactus_flower")) {
-            return withName(nbtMap, "unknown");
-        }
-
-        if (name.equals("minecraft:leaf_litter") || name.equals("minecraft:wildflowers")) {
-            return withoutStates("unknown");
-        }
-
-        return nbtMap;
+        return switch (item.javaIdentifier()) {
+            case "minecraft:bush" -> mapping.withFallbackIdentifier("minecraft:short_grass");
+            case "minecraft:cactus_flower" -> mapping.withFallbackIdentifier("minecraft:bubble_coral_fan");
+            case "minecraft:firefly_bush" -> mapping.withFallbackIdentifier("minecraft:short_grass");
+            case "minecraft:leaf_litter", "minecraft:wildflowers" -> mapping.withFallbackIdentifier("minecraft:pink_petals");
+            case "minecraft:short_dry_grass" -> mapping.withFallbackIdentifier("minecraft:dead_bush");
+            case "minecraft:tall_dry_grass" -> mapping.withFallbackIdentifier("minecraft:tall_grass");
+            case "minecraft:test_block" -> mapping.withFallbackIdentifier("minecraft:structure_block");
+            case "minecraft:test_instance_block" -> mapping.withFallbackIdentifier("minecraft:jigsaw");
+            case "minecraft:blue_egg", "minecraft:brown_egg" -> mapping.withFallbackIdentifier("minecraft:egg");
+            default -> mapping;
+        };
     }
 }

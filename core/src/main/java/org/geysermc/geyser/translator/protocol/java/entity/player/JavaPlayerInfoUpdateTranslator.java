@@ -42,6 +42,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
 
+import java.awt.Color;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -53,7 +54,7 @@ import java.util.UUID;
 public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<ClientboundPlayerInfoUpdatePacket> {
 
     private String encodeSkinUrl(UUID uuid) {
-        String url = "{\"pe\":true,\"alex\":\"false\",\"data\":\"" + GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/" + uuid.toString() + "?pe\"}";
+        String url = "{\"pe\":true,\"alex\":\"false\",\"data\":\"" + GeyserImpl.getInstance().config().netease().service().skinurl() + "/skin/" + uuid.toString() + "?pe\"}";
         return Base64.getEncoder().encodeToString(url.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -106,8 +107,8 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (self) {
-                    SkinManager.requestAndHandleSkinAndCape(playerEntity, session, skinAndCape ->
-                            GeyserImpl.getInstance().getLogger().debug("Loaded Local Bedrock Java Skin Data for " + session.getClientData().getUsername()));
+                    playerEntity.setSkin(profile, true,
+                        () -> GeyserImpl.getInstance().getLogger().debug("Loaded Local Bedrock Java Skin Data for " + session.getClientData().getUsername()));
                 }
             }
         }
@@ -124,10 +125,14 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (entry.isListed()) {
-                    sendAddPlayerList(session, entity);
+                    PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
+                    toAdd.add(playerListEntry);
+                    session.getWaypointCache().listPlayer(entity);
                 } else {
                     toRemove.add(new PlayerListPacket.Entry(entity.getTabListUuid()));
+                    session.getWaypointCache().unlistPlayer(entity);
                 }
+                entity.setListed(entry.isListed());
             }
 
             if (!toAdd.isEmpty()) {
@@ -150,7 +155,8 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 entity.getGeyserId(),
                 skinData.skin(),
                 skinData.cape(),
-                skinData.geometry()
+                skinData.geometry(),
+                session.getWaypointCache().getWaypointColor(entity.getUuid()).orElse(Color.WHITE)
             );
 
             PlayerListPacket playerAddPacket = new PlayerListPacket();

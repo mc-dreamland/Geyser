@@ -333,11 +333,12 @@ public class BehaviorPackLoader implements RegistryLoader<Path, Map<UUID, Resour
         }
     }
 
-    public static CompletableFuture<@NonNull PathPackCodec> downloadPack(String url, boolean testing) throws IllegalArgumentException {
+    // Netease: align remote pack download semantics with WebUtils force-refresh behavior.
+    public static CompletableFuture<@NonNull PathPackCodec> downloadPack(String url, boolean force) throws IllegalArgumentException {
         return CompletableFuture.supplyAsync(() -> {
             Path path;
             try {
-                path = WebUtils.downloadRemotePack(url, testing);
+                path = WebUtils.downloadRemotePack(url, force);
             } catch (Throwable e) {
                 throw new CompletionException(e);
             }

@@ -4,7 +4,7 @@
 * 注意JavaSectionBlocksUpdateTranslator是否使用UpdateSubChunkBlocksPacket处理过大的包，老版本会将每个方块都发一次updateblock包。
 * 在后续更新版本时，可视情况移除SkullBlockEntityTranslator
 * 网易针对物品的Enchant有新增字段GeyserEnchantOption#
-* 注意网易的AuthInput包，在CodecProcessor中的PLAYER_AUTH_INPUT_NETEASE
+* 注意网易的AuthInput包，在CodecProcessor中的网易专用 PlayerAuthInput 处理逻辑
 * 检查是否实现PC/PE皮肤是否正确显示
 * 检查是否实现自定义头颅方块
 * 检查是否实现自定义实体功能

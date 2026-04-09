@@ -45,6 +45,7 @@ import org.geysermc.geyser.api.util.TriState;
 import org.geysermc.geyser.command.defaults.AdvancedTooltipsCommand;
 import org.geysermc.geyser.command.defaults.AdvancementsCommand;
 import org.geysermc.geyser.command.defaults.ConnectionTestCommand;
+import org.geysermc.geyser.command.defaults.CustomOptionsCommand;
 import org.geysermc.geyser.command.defaults.DumpCommand;
 import org.geysermc.geyser.command.defaults.ExtensionsCommand;
 import org.geysermc.geyser.command.defaults.HelpCommand;
@@ -52,6 +53,7 @@ import org.geysermc.geyser.command.defaults.ListCommand;
 import org.geysermc.geyser.command.defaults.LoadPacksCommand;
 import org.geysermc.geyser.command.defaults.OffhandCommand;
 import org.geysermc.geyser.command.defaults.PingCommand;
+import org.geysermc.geyser.command.defaults.QuickActionsCommand;
 import org.geysermc.geyser.command.defaults.ReloadCommand;
 import org.geysermc.geyser.command.defaults.ReloadSkinCommand;
 import org.geysermc.geyser.command.defaults.SettingsCommand;
@@ -99,8 +101,8 @@ public class CommandRegistry implements EventRegistrar {
 
     private static final String GEYSER_ROOT_PERMISSION = "geyser.command";
 
-    public final static boolean STANDALONE_COMMAND_MANAGER = GeyserImpl.getInstance().getPlatformType() == PlatformType.STANDALONE ||
-        GeyserImpl.getInstance().getPlatformType() == PlatformType.VIAPROXY;
+    public final static boolean STANDALONE_COMMAND_MANAGER = GeyserImpl.getInstance().platformType() == PlatformType.STANDALONE ||
+        GeyserImpl.getInstance().platformType() == PlatformType.VIAPROXY;
 
     protected final GeyserImpl geyser;
     private final CommandManager<GeyserCommandSource> cloud;
@@ -170,7 +172,10 @@ public class CommandRegistry implements EventRegistrar {
         registerBuiltInCommand(new PingCommand("ping", "geyser.commands.ping.desc", "geyser.command.ping"));
         registerBuiltInCommand(new ReloadSkinCommand("loadskin", "重载自定义皮肤", "geyser.command.loadskin"));
         registerBuiltInCommand(new LoadPacksCommand(geyser, "loadpacks", "重载材质包", "geyser.command.loadPacks"));
-        if (this.geyser.getPlatformType() == PlatformType.STANDALONE) {
+        registerBuiltInCommand(new CustomOptionsCommand("options", "geyser.commands.options.desc", "geyser.command.options"));
+        registerBuiltInCommand(new QuickActionsCommand("quickactions", "geyser.commands.quickactions.desc", "geyser.command.quickactions"));
+
+        if (this.geyser.platformType() == PlatformType.STANDALONE) {
             registerBuiltInCommand(new StopCommand(geyser, "stop", "geyser.commands.stop.desc", "geyser.command.stop"));
         }
 
@@ -286,7 +291,7 @@ public class CommandRegistry implements EventRegistrar {
                 help.execute(source);
             } else if (STANDALONE_COMMAND_MANAGER && source instanceof GeyserSession session) {
                 // If we are on an appropriate platform, forward the command to the backend
-                session.sendCommand(context.rawInput().input());
+                session.sendCommandPacket(context.rawInput().input());
             } else {
                 source.sendLocaleString(ExceptionHandlers.PERMISSION_FAIL_LANG_KEY);
             }

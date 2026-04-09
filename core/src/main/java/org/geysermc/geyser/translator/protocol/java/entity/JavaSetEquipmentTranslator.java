@@ -35,7 +35,7 @@ import org.geysermc.geyser.skin.FakeHeadProvider;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Equipment;
-import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.ResolvableProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEquipmentPacket;
 
@@ -58,15 +58,12 @@ public class JavaSetEquipmentTranslator extends PacketTranslator<ClientboundSetE
         boolean mainHandUpdated = false;
         boolean offHandUpdated = false;
         for (Equipment equipment : packet.getEquipment()) {
-            ItemStack stack = equipment.getItem();
+            GeyserItemStack stack = GeyserItemStack.from(equipment.getItem());
             switch (equipment.getSlot()) {
                 case HELMET -> {
-                    ItemStack javaItem = equipment.getItem();
-                    if (livingEntity instanceof PlayerEntity
-                            && javaItem != null
-                            && javaItem.getId() == Items.PLAYER_HEAD.javaId()
-                            && javaItem.getDataComponentsPatch() != null) {
-                        FakeHeadProvider.setHead(session, (PlayerEntity) livingEntity, GeyserItemStack.from(javaItem).getComponent(DataComponentTypes.PROFILE));
+                    ResolvableProfile profile = stack.getComponent(DataComponentTypes.PROFILE);
+                    if (livingEntity instanceof PlayerEntity && stack.is(Items.PLAYER_HEAD) && profile != null) {
+                        FakeHeadProvider.setHead(session, (PlayerEntity) livingEntity, profile);
                     } else {
                         FakeHeadProvider.restoreOriginalSkin(session, livingEntity);
                     }
@@ -107,13 +104,13 @@ public class JavaSetEquipmentTranslator extends PacketTranslator<ClientboundSetE
         }
 
         if (armorUpdated) {
-            livingEntity.updateArmor(session);
+            livingEntity.updateArmor();
         }
         if (mainHandUpdated) {
-            livingEntity.updateMainHand(session);
+            livingEntity.updateMainHand();
         }
         if (offHandUpdated) {
-            livingEntity.updateOffHand(session);
+            livingEntity.updateOffHand();
         }
     }
 }

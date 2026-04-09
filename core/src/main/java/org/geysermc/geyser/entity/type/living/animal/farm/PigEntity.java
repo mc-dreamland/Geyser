@@ -29,10 +29,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3f;
-import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.geysermc.geyser.entity.EntityDefinition;
 import org.geysermc.geyser.entity.type.Tickable;
+import org.geysermc.geyser.entity.type.living.animal.TemperatureVariantAnimal;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.entity.vehicle.BoostableVehicleComponent;
 import org.geysermc.geyser.entity.vehicle.ClientVehicle;
@@ -48,6 +48,7 @@ import org.geysermc.geyser.session.cache.tags.Tag;
 import org.geysermc.geyser.util.EntityUtils;
 import org.geysermc.geyser.util.InteractionResult;
 import org.geysermc.geyser.util.InteractiveTag;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.IntEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 
@@ -115,8 +116,7 @@ public class PigEntity extends TemperatureVariantAnimal implements Tickable, Cli
                 vehicleComponent.tickBoost();
             }
         } else { // getHand() for session player seems to always return air
-            ItemDefinition itemDefinition = session.getItemMappings().getStoredItems().carrotOnAStick().getBedrockDefinition();
-            if (player.getHand().getDefinition() == itemDefinition || player.getOffhand().getDefinition() == itemDefinition) {
+            if (player.isHolding(Items.CARROT_ON_A_STICK)) {
                 vehicleComponent.tickBoost();
             }
         }
@@ -128,8 +128,8 @@ public class PigEntity extends TemperatureVariantAnimal implements Tickable, Cli
     }
 
     @Override
-    public Vector2f getAdjustedInput(Vector2f input) {
-        return Vector2f.UNIT_Y;
+    public Vector3f getRiddenInput(Vector2f input) {
+        return Vector3f.UNIT_Z;
     }
 
     @Override
@@ -153,5 +153,10 @@ public class PigEntity extends TemperatureVariantAnimal implements Tickable, Cli
     @Override
     public JavaRegistryKey<BuiltInVariant> variantRegistry() {
         return JavaRegistries.PIG_VARIANT;
+    }
+
+    @Override
+    protected boolean canUseSlot(EquipmentSlot slot) {
+        return slot != EquipmentSlot.SADDLE ? super.canUseSlot(slot) : this.isAlive() && !this.isBaby();
     }
 }

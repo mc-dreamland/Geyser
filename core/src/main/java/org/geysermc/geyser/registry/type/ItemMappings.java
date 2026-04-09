@@ -38,6 +38,7 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.cloudburstmc.protocol.common.DefinitionRegistry;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.block.custom.CustomBlockData;
+import org.geysermc.geyser.inventory.GeyserItemStack;
 import org.geysermc.geyser.inventory.item.StoredItemMappings;
 import org.geysermc.geyser.item.Items;
 import org.geysermc.geyser.item.type.Item;
@@ -45,7 +46,6 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Builder
@@ -66,22 +66,31 @@ public class ItemMappings implements DefinitionRegistry<ItemDefinition> {
     List<CreativeItemData> creativeItems;
     Int2ObjectMap<ItemDefinition> itemDefinitions;
 
+    List<ItemDefinition> componentItemData;
+
     StoredItemMappings storedItems;
-    Set<Item> javaOnlyItems;
 
     List<ItemDefinition> buckets;
     List<ItemDefinition> boats;
-
-    List<ItemDefinition> componentItemData; // TODO get rid of?
     Int2ObjectMap<String> customIdMappings;
 
     Object2ObjectMap<CustomBlockData, ItemDefinition> customBlockItemDefinitions;
 
     /**
+     * Gets an {@link ItemMapping} from the given {@link GeyserItemStack}.
+     *
+     * @param itemStack the itemstack
+     * @return an item entry from the given item stack
+     */
+    public ItemMapping getMapping(@NonNull GeyserItemStack itemStack) {
+        return this.getMapping(itemStack.getJavaId());
+    }
+
+    /**
      * Gets an {@link ItemMapping} from the given {@link ItemStack}.
      *
      * @param itemStack the itemstack
-     * @return an item entry from the given java edition identifier
+     * @return an item entry from the given java edition item stack
      */
     @NonNull
     public ItemMapping getMapping(@NonNull ItemStack itemStack) {
@@ -160,7 +169,7 @@ public class ItemMappings implements DefinitionRegistry<ItemDefinition> {
                         continue;
                     }
                 }
-                if (!this.javaOnlyItems.contains(mapping.getJavaItem())) {
+                if (!mapping.hasTranslation()) {
                     // From a Bedrock item data, we aren't getting one of these items
                     return mapping;
                 }

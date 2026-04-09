@@ -25,11 +25,9 @@
 
 package org.geysermc.geyser.skin;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
@@ -41,6 +39,7 @@ import org.geysermc.geyser.api.skin.Skin;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.auth.BedrockClientData;
 import org.geysermc.geyser.util.Gzip;
+import org.geysermc.geyser.util.JsonUtils;
 import org.geysermc.geyser.util.PluginMessageUtils;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -62,7 +61,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 public final class FloodgateSkinUploader {
-    private final ObjectMapper JACKSON = new ObjectMapper();
     private final List<String> skinQueue = new ArrayList<>();
 
     private final GeyserLogger logger;
@@ -89,15 +87,14 @@ public final class FloodgateSkinUploader {
 
             @Override
             public void onMessage(String message) {
-                // The reason why I don't like Jackson
                 try {
-                    JsonNode node = JACKSON.readTree(message);
+                    JsonObject node = JsonUtils.parseJson(message);
                     if (node.has("error")) {
-                        logger.error("Got an error: " + node.get("error").asText());
+                        logger.error("Got an error: " + node.get("error").getAsString());
                         return;
                     }
 
-                    int typeId = node.get("event_id").asInt();
+                    int typeId = node.get("event_id").getAsInt();
                     WebsocketEventType type = WebsocketEventType.fromId(typeId);
                     if (type == null) {
                         logger.warning(String.format(
@@ -108,11 +105,11 @@ public final class FloodgateSkinUploader {
 
                     switch (type) {
                         case SUBSCRIBER_CREATED:
-                            id = node.get("id").asInt();
-                            verifyCode = node.get("verify_code").asText();
+                            id = node.get("id").getAsInt();
+                            verifyCode = node.get("verify_code").getAsString();
                             break;
                         case SUBSCRIBER_COUNT:
-                            subscribersCount = node.get("subscribers_count").asInt();
+                            subscribersCount = node.get("subscribers_count").getAsInt();
                             break;
                         case SKIN_UPLOADED:
                             // if Geyser is the only subscriber we have send it to the server manually
@@ -121,19 +118,19 @@ public final class FloodgateSkinUploader {
                                 break;
                             }
 
-                            String xuid = node.get("xuid").asText();
+                            String xuid = node.get("xuid").getAsString();
                             GeyserSession session = geyser.connectionByXuid(xuid);
 
                             if (session != null) {
-                                if (!node.get("success").asBoolean()) {
+                                if (!node.get("success").getAsBoolean()) {
                                     logger.info("Failed to upload skin for " + session.bedrockUsername());
                                     return;
                                 }
 
-                                JsonNode data = node.get("data");
+                                JsonObject data = node.getAsJsonObject("data");
 
-                                String value = data.get("value").asText();
-                                String signature = data.get("signature").asText();
+                                String value = data.get("value").getAsString();
+                                String signature = data.get("signature").getAsString();
 
                                 byte[] bytes = (value + '\0' + signature)
                                         .getBytes(StandardCharsets.UTF_8);
@@ -141,8 +138,8 @@ public final class FloodgateSkinUploader {
                             }
                             break;
                         case LOG_MESSAGE:
-                            String logMessage = node.get("message").asText();
-                            switch (node.get("priority").asInt()) {
+                            String logMessage = node.get("message").getAsString();
+                            switch (node.get("priority").getAsInt()) {
                                 case -1 -> logger.debug("Got a message from skin uploader: " + logMessage);
                                 case 0 -> logger.info("Got a message from skin uploader: " + logMessage);
                                 case 1 -> logger.error("Got a message from skin uploader: " + logMessage);
@@ -150,11 +147,11 @@ public final class FloodgateSkinUploader {
                             }
                             break;
                         case NEWS_ADDED:
-                            UUID uuid = UUID.fromString(node.get("uuid").asText());
-                            String textures = node.get("skin_data").asText();
+                            UUID uuid = UUID.fromString(node.get("uuid").getAsString());
+                            String textures = node.get("skin_data").getAsString();
                             byte[] skin_data = Gzip.unGZipBytes(Base64.getDecoder().decode(textures));
-                            String skinHash = node.get("skin_hash").asText();
-                            String skinUrl = String.format(GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/%s?%s?pe", uuid, skinHash);
+                            String skinHash = node.get("skin_hash").getAsString();
+                            String skinUrl = String.format(GeyserImpl.getInstance().config().netease().service().skinurl() + "/skin/%s?%s?pe", uuid, skinHash);
                             Skin skin = new Skin(skinUrl, skin_data, false);
                             SkinProvider.storeJavaSkin(skin);
                             SkinProvider.storeCustomSkin(uuid, uuid.toString(), skin_data);
@@ -170,20 +167,19 @@ public final class FloodgateSkinUploader {
             @Override
             public void onClose(int code, String reason, boolean remote) {
                 if (reason != null && !reason.isEmpty()) {
-                    // The reason why I don't like Jackson
                     try {
-                        JsonNode node = JACKSON.readTree(reason);
+                        JsonObject node = JsonUtils.parseJson(reason);
                         // info means that the uploader itself did nothing wrong
                         if (node.has("info")) {
-                            String info = node.get("info").asText();
+                            String info = node.get("info").getAsString();
                             logger.debug("Got disconnected from the skin uploader: " + info);
                         }
                         // error means that the uploader did something wrong
                         if (node.has("error")) {
-                            String error = node.get("error").asText();
+                            String error = node.get("error").getAsString();
                             logger.info("Got disconnected from the skin uploader: " + error);
                         }
-                    } catch (JsonProcessingException ignored) {
+                    } catch (JsonSyntaxException ignored) {
                         // ignore invalid json
                     } catch (Exception e) {
                         logger.error("Error while handling onClose", e);
@@ -218,33 +214,25 @@ public final class FloodgateSkinUploader {
         }
 //        logger.debug(session.getAuthData().name() + " syncSkin " + clientData.getOriginalString());
 
-        ObjectNode node = JACKSON.createObjectNode();
+        JsonObject node = new JsonObject();
 //        node.put("client_data", gZipBytes(JWSObject.parse(clientData.getOriginalString()).getPayload().toBytes()));
-        byte[] skinData = clientData.getSkinData().getBytes(StandardCharsets.UTF_8);
         Skin skin = SkinProvider.CUSTOM_SKINS.getIfPresent(session.javaUuid().toString());
         if (skin != null) {
             // skin data byte[]
-            node.put("skin_data", Base64.getEncoder().encodeToString(Gzip.gZipBytes(skin.skinData())));
+            node.addProperty("skin_data", Base64.getEncoder().encodeToString(Gzip.gZipBytes(skin.skinData())));
         } else {
-            // client data base64 String
-            node.put("skin_data", Base64.getEncoder().encodeToString(Gzip.gZipBytes(Base64.getDecoder().decode(skinData))));
+            node.addProperty("skin_data", Base64.getEncoder().encodeToString(Gzip.gZipBytes(clientData.getSkinData())));
         }
-        node.put("hash", hash(clientData.getSkinData()));
-        node.put("geometry_data", clientData.getGeometryData());
+        node.addProperty("hash", hash(clientData.getSkinData()));
+        node.addProperty("geometry_data", Base64.getEncoder().encodeToString(clientData.getGeometryData()));
 //        node.put("geometry_data",MathUtils.gZipBytes(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8)));
-        node.put("geometry_name", clientData.getGeometryName());
-        node.put("skin_id", clientData.getSkinId());
-        node.put("uuid", session.getAuthData().uuid().toString());
-        node.put("xuid", session.getAuthData().xuid());
-        node.put("uid", session.getAuthData().uid());
-        // The reason why I don't like Jackson
-        String jsonString;
-        try {
-            jsonString = JACKSON.writeValueAsString(node);
-        } catch (Exception e) {
-            logger.error("Failed to upload skin", e);
-            return;
-        }
+        node.addProperty("geometry_name", Base64.getEncoder().encodeToString(clientData.getGeometryName()));
+        node.addProperty("skin_id", clientData.getSkinId());
+        node.addProperty("uuid", session.getAuthData().uuid().toString());
+        node.addProperty("xuid", session.getAuthData().xuid());
+        node.addProperty("uid", session.getAuthData().uid());
+
+        String jsonString = node.toString();
 
         logger.debug(session.getAuthData().name() + "syncSkin Json: " + jsonString);
 
@@ -260,20 +248,40 @@ public final class FloodgateSkinUploader {
             return;
         }
 
-        ObjectNode node = JACKSON.createObjectNode();
-        ArrayNode chainDataNode = JACKSON.createArrayNode();
+        JsonObject node = new JsonObject();
+        JsonArray chainDataNode = new JsonArray();
         chainData.forEach(chainDataNode::add);
-        node.set("chain_data", chainDataNode);
-        node.put("client_data", clientData);
+        node.add("chain_data", chainDataNode);
+        node.addProperty("client_data", clientData);
 
-        // The reason why I don't like Jackson
-        String jsonString;
-        try {
-            jsonString = JACKSON.writeValueAsString(node);
-        } catch (Exception e) {
-            logger.error("Failed to upload skin", e);
+        String jsonString = node.toString();
+
+        if (client.isOpen()) {
+            client.send(jsonString);
             return;
         }
+        skinQueue.add(jsonString);
+    }
+
+    public void uploadSkin(GeyserSession session) {
+        List<String> chainData = session.getCertChainData();
+        String token = session.getToken();
+        String clientData = session.getClientData().getOriginalString();
+        if ((chainData == null && token == null) || clientData == null) {
+            return;
+        }
+
+        JsonObject node = new JsonObject();
+        if (chainData != null) {
+            JsonArray chainDataNode = new JsonArray();
+            chainData.forEach(chainDataNode::add);
+            node.add("chain_data", chainDataNode);
+        } else {
+            node.addProperty("token", token);
+        }
+        node.addProperty("client_data", clientData);
+
+        String jsonString = node.toString();
 
         if (client.isOpen()) {
             client.send(jsonString);
@@ -283,7 +291,7 @@ public final class FloodgateSkinUploader {
     }
 
     private void reconnectLater(GeyserImpl geyser) {
-        // we ca only reconnect when the thread pool is open
+        // we can only reconnect when the thread pool is open
         if (geyser.getScheduledThread().isShutdown() || closed) {
             logger.info("The skin uploader has been closed");
             return;
@@ -307,10 +315,10 @@ public final class FloodgateSkinUploader {
         }
     }
 
-    public static String hash(String input) {
+    public static String hash(byte[] input) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] messageDigest = md.digest(input.getBytes());
+            byte[] messageDigest = md.digest(input);
             BigInteger number = new BigInteger(1, messageDigest);
             String hashtext = number.toString(16);
             while (hashtext.length() < 32) {
@@ -327,10 +335,10 @@ public final class FloodgateSkinUploader {
         Map<String, Object> map = new LinkedHashMap<>(2);
         map.put("pe", true);
         map.put("alex", geyserSession.getClientData().getSkinId().contains("Slim") ? "true" : "false");
-        map.put("data", GeyserImpl.getInstance().getConfig().getService().getSkinurl() + "/skin/"
+        map.put("data", GeyserImpl.getInstance().config().netease().service().skinurl() + "/skin/"
             + geyserSession.getAuthData().uuid() + "?" +
             hash(geyserSession.getClientData().getSkinData()) + "?pe");
         // 114514 魔法值 无作用
-        return (Base64.getEncoder().encodeToString(GeyserImpl.JSON_MAPPER.writeValueAsBytes(map)) + '\0' + "114514").getBytes(StandardCharsets.UTF_8);
+        return (Base64.getEncoder().encodeToString(GeyserImpl.GSON.toJson(map).getBytes(StandardCharsets.UTF_8)) + '\0' + "114514").getBytes(StandardCharsets.UTF_8);
     }
 }

@@ -43,12 +43,16 @@ import org.geysermc.geyser.level.block.Blocks;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.registry.JavaRegistries;
 import org.geysermc.geyser.util.MinecraftKey;
+import org.geysermc.mcprotocollib.protocol.data.game.Holder;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeType;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.ModifierOperation;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.GlobalPos;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.HashedStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.AttackRange;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.BlockStateProperties;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.BlocksAttacks;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.Consumable;
@@ -65,18 +69,24 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.component.HolderSet;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.IntComponentType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.ItemAttributeModifiers;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.ItemEnchantments;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.KineticWeapon;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.LodestoneTracker;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.MobEffectDetails;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.MobEffectInstance;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.PiercingWeapon;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.PotionContents;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.SwingAnimation;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.ToolData;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.TooltipDisplay;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.TypedEntityData;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.Unit;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.UseCooldown;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.UseEffects;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.Weapon;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.WritableBookContent;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.WrittenBookContent;
 import org.geysermc.mcprotocollib.protocol.data.game.level.sound.BuiltinSound;
+import org.geysermc.mcprotocollib.protocol.data.game.level.sound.CustomSound;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -96,8 +106,14 @@ public class DataComponentHashers {
         registerInt(DataComponentTypes.MAX_DAMAGE);
         registerInt(DataComponentTypes.DAMAGE);
         registerUnit(DataComponentTypes.UNBREAKABLE);
+        registerMap(DataComponentTypes.USE_EFFECTS, builder -> builder
+            .optional("can_sprint", MinecraftHasher.BOOL, UseEffects::canSprint, false)
+            .optional("interact_vibrations", MinecraftHasher.BOOL, UseEffects::interactVibrations, true)
+            .optional("speed_multiplier", MinecraftHasher.FLOAT, UseEffects::speedMultiplier, 0.2F)); // TODO test 1.21.11
 
         register(DataComponentTypes.CUSTOM_NAME, ComponentHasher.COMPONENT);
+        register(DataComponentTypes.MINIMUM_ATTACK_CHARGE, MinecraftHasher.FLOAT);
+        register(DataComponentTypes.DAMAGE_TYPE, RegistryHasher.eitherHolderHasher(JavaRegistries.DAMAGE_TYPE));
         register(DataComponentTypes.ITEM_NAME, ComponentHasher.COMPONENT);
         register(DataComponentTypes.ITEM_MODEL, MinecraftHasher.KEY);
         register(DataComponentTypes.LORE, ComponentHasher.COMPONENT.list());
@@ -149,6 +165,21 @@ public class DataComponentHashers {
         registerMap(DataComponentTypes.WEAPON, builder -> builder
             .optional("item_damage_per_attack", MinecraftHasher.INT, Weapon::itemDamagePerAttack, 1)
             .optional("disable_blocking_for_seconds", MinecraftHasher.FLOAT, Weapon::disableBlockingForSeconds, 0.0F));
+        registerMap(DataComponentTypes.PIERCING_WEAPON, builder -> builder
+            .optional("deals_knockback", MinecraftHasher.BOOL, PiercingWeapon::dealsKnockback, true)
+            .optional("dismounts", MinecraftHasher.BOOL, PiercingWeapon::dealsKnockback, false)
+            .optionalNullable("sound", RegistryHasher.SOUND_EVENT, PiercingWeapon::sound)
+            .optionalNullable("hit_sound", RegistryHasher.SOUND_EVENT, PiercingWeapon::hitSound)); // TODO test 1.21.11
+        registerMap(DataComponentTypes.ATTACK_RANGE, builder -> builder
+            .optional("min_reach", MinecraftHasher.FLOAT, AttackRange::minRange, 0.0F)
+            .optional("max_reach", MinecraftHasher.FLOAT, AttackRange::maxRange, 3.0F)
+            .optional("min_creative_reach", MinecraftHasher.FLOAT, AttackRange::minCreativeRange, 0.0F)
+            .optional("max_creative_reach", MinecraftHasher.FLOAT, AttackRange::maxCreativeRange, 5.0F)
+            .optional("hitbox_margin", MinecraftHasher.FLOAT, AttackRange::hitboxMargin, 0.3F)
+            .optional("mob_factor", MinecraftHasher.FLOAT, AttackRange::mobFactor, 1.0F)); // TODO test 1.21.11
+        registerMap(DataComponentTypes.SWING_ANIMATION, builder -> builder
+            .optional("type", RegistryHasher.SWING_ANIMATION_TYPE, SwingAnimation::type, SwingAnimation.Type.WHACK)
+            .optional("duration", MinecraftHasher.INT, SwingAnimation::duration, 6)); // TODO test 1.21.11
         registerMap(DataComponentTypes.ENCHANTABLE, builder -> builder
             .accept("value", MinecraftHasher.INT, Function.identity()));
         registerMap(DataComponentTypes.EQUIPPABLE, builder -> builder
@@ -160,7 +191,9 @@ public class DataComponentHashers {
             .optional("dispensable", MinecraftHasher.BOOL, Equippable::dispensable, true)
             .optional("swappable", MinecraftHasher.BOOL, Equippable::swappable, true)
             .optional("damage_on_hurt", MinecraftHasher.BOOL, Equippable::damageOnHurt, true)
-            .optional("equip_on_interact", MinecraftHasher.BOOL, Equippable::equipOnInteract, false));
+            .optional("equip_on_interact", MinecraftHasher.BOOL, Equippable::equipOnInteract, false)
+            .optional("can_be_sheared", MinecraftHasher.BOOL, Equippable::canBeSheared, false)
+            .optional("shearing_sound", RegistryHasher.SOUND_EVENT, Equippable::shearingSound, BuiltinSound.ITEM_SHEARS_SNIP));
         registerMap(DataComponentTypes.REPAIRABLE, builder -> builder
             .accept("items", RegistryHasher.ITEM.holderSet(), Function.identity()));
 
@@ -177,6 +210,16 @@ public class DataComponentHashers {
             .optionalNullable("bypassed_by", MinecraftHasher.TAG, BlocksAttacks::bypassedBy)
             .optionalNullable("block_sound", RegistryHasher.SOUND_EVENT, BlocksAttacks::blockSound)
             .optionalNullable("disabled_sound", RegistryHasher.SOUND_EVENT, BlocksAttacks::disableSound)); // TODO needs tests
+        registerMap(DataComponentTypes.KINETIC_WEAPON, builder -> builder
+            .optional("contact_cooldown_ticks", MinecraftHasher.INT, KineticWeapon::contactCooldownTicks, 10)
+            .optional("delay_ticks", MinecraftHasher.INT, KineticWeapon::contactCooldownTicks, 0)
+            .optionalNullable("dismount_conditions", RegistryHasher.KINETIC_WEAPON_CONDITION, KineticWeapon::dismountConditions)
+            .optionalNullable("knockback_conditions", RegistryHasher.KINETIC_WEAPON_CONDITION, KineticWeapon::knockbackConditions)
+            .optionalNullable("damage_conditions", RegistryHasher.KINETIC_WEAPON_CONDITION, KineticWeapon::damageConditions)
+            .optional("forward_movement", MinecraftHasher.FLOAT, KineticWeapon::forwardMovement, 0.0F)
+            .optional("damage_multiplier", MinecraftHasher.FLOAT, KineticWeapon::damageMultiplier, 1.0F)
+            .optionalNullable("sound", RegistryHasher.SOUND_EVENT, KineticWeapon::sound)
+            .optionalNullable("hit_sound", RegistryHasher.SOUND_EVENT, KineticWeapon::hitSound)); // TODO test 1.21.11
         register(DataComponentTypes.STORED_ENCHANTMENTS, RegistryHasher.ITEM_ENCHANTMENTS);
 
         registerInt(DataComponentTypes.DYED_COLOR);
@@ -207,9 +250,13 @@ public class DataComponentHashers {
 
         register(DataComponentTypes.TRIM, RegistryHasher.ARMOR_TRIM);
         register(DataComponentTypes.DEBUG_STICK_STATE, MinecraftHasher.NBT_MAP);
-        register(DataComponentTypes.ENTITY_DATA, MinecraftHasher.NBT_MAP);
+        registerMap(DataComponentTypes.ENTITY_DATA, builder -> builder
+            .accept("id", RegistryHasher.ENTITY_TYPE_KEY, TypedEntityData::type)
+            .accept(TypedEntityData::tag, MapBuilder.inlineNbtMap()));
         register(DataComponentTypes.BUCKET_ENTITY_DATA, MinecraftHasher.NBT_MAP);
-        register(DataComponentTypes.BLOCK_ENTITY_DATA, MinecraftHasher.NBT_MAP);
+        registerMap(DataComponentTypes.BLOCK_ENTITY_DATA, builder -> builder
+            .accept("id", RegistryHasher.BLOCK_ENTITY_TYPE_KEY, TypedEntityData::type)
+            .accept(TypedEntityData::tag, MapBuilder.inlineNbtMap()));
 
         register(DataComponentTypes.INSTRUMENT, RegistryHasher.INSTRUMENT_COMPONENT);
         register(DataComponentTypes.PROVIDES_TRIM_MATERIAL, RegistryHasher.PROVIDES_TRIM_MATERIAL);
@@ -229,7 +276,7 @@ public class DataComponentHashers {
             .optional("flight_duration", MinecraftHasher.BYTE, fireworks -> (byte) fireworks.getFlightDuration(), (byte) 0)
             .optionalList("explosions", RegistryHasher.FIREWORK_EXPLOSION, Fireworks::getExplosions));
 
-        register(DataComponentTypes.PROFILE, MinecraftHasher.GAME_PROFILE);
+        register(DataComponentTypes.PROFILE, MinecraftHasher.RESOLVABLE_PROFILE);
         register(DataComponentTypes.NOTE_BLOCK_SOUND, MinecraftHasher.KEY);
         register(DataComponentTypes.BANNER_PATTERNS, RegistryHasher.BANNER_PATTERN_LAYER.list());
         register(DataComponentTypes.BASE_COLOR, MinecraftHasher.DYE_COLOR);
@@ -256,11 +303,11 @@ public class DataComponentHashers {
         register(DataComponentTypes.RABBIT_VARIANT, RegistryHasher.RABBIT_VARIANT);
         register(DataComponentTypes.PIG_VARIANT, RegistryHasher.PIG_VARIANT);
         register(DataComponentTypes.COW_VARIANT, RegistryHasher.COW_VARIANT);
-        register(DataComponentTypes.CHICKEN_VARIANT, MinecraftHasher.KEY
-            .sessionCast((session, holder) -> holder.getOrCompute(id -> JavaRegistries.CHICKEN_VARIANT.keyFromNetworkId(session, id)))); // Why, Mojang?
+        register(DataComponentTypes.CHICKEN_VARIANT, RegistryHasher.eitherHolderHasher(JavaRegistries.CHICKEN_VARIANT));
+        register(DataComponentTypes.ZOMBIE_NAUTILUS_VARIANT, RegistryHasher.eitherHolderHasher(JavaRegistries.ZOMBIE_NAUTILUS_VARIANT)); // TODO test 1.21.11
         register(DataComponentTypes.FROG_VARIANT, RegistryHasher.FROG_VARIANT);
         register(DataComponentTypes.HORSE_VARIANT, RegistryHasher.HORSE_VARIANT);
-        register(DataComponentTypes.PAINTING_VARIANT, RegistryHasher.PAINTING_VARIANT.holder());
+        register(DataComponentTypes.PAINTING_VARIANT, RegistryHasher.PAINTING_VARIANT.cast(Holder::id)); // This can and will throw when a direct holder was received, which is still possible due to a bug in 1.21.6.
         register(DataComponentTypes.LLAMA_VARIANT, RegistryHasher.LLAMA_VARIANT);
         register(DataComponentTypes.AXOLOTL_VARIANT, RegistryHasher.AXOLOTL_VARIANT);
         register(DataComponentTypes.CAT_VARIANT, RegistryHasher.CAT_VARIANT);
@@ -298,7 +345,7 @@ public class DataComponentHashers {
 
     public static <T> HashCode hash(GeyserSession session, DataComponentType<T> component, T value) {
         try {
-            return hasher(component).hash(value, new MinecraftHashEncoder(session));
+            return hasher(component).hash(value, new MinecraftHashEncoder(session.getRegistryCache()));
         } catch (Exception exception) {
             GeyserImpl.getInstance().getLogger().error("Failed to hash item data component " + component.getKey() + " with value " + value + "!");
             GeyserImpl.getInstance().getLogger().error("This is a Geyser bug, please report this!");
@@ -369,6 +416,56 @@ public class DataComponentHashers {
             0, 1
         )), 0); // TODO identifier lookup
 
+        testHash(session, DataComponentTypes.ATTRIBUTE_MODIFIERS, new ItemAttributeModifiers(
+            List.of(
+                ItemAttributeModifiers.Entry.builder()
+                    .attribute(AttributeType.Builtin.ATTACK_DAMAGE.getId())
+                    .modifier(ItemAttributeModifiers.AttributeModifier.builder()
+                        .id(MinecraftKey.key("test_modifier_1"))
+                        .amount(2.0)
+                        .operation(ModifierOperation.ADD)
+                        .build())
+                    .slot(ItemAttributeModifiers.EquipmentSlotGroup.ANY)
+                    .display(new ItemAttributeModifiers.Display(ItemAttributeModifiers.DisplayType.DEFAULT, null))
+                    .build(),
+                ItemAttributeModifiers.Entry.builder()
+                    .attribute(AttributeType.Builtin.JUMP_STRENGTH.getId())
+                    .modifier(ItemAttributeModifiers.AttributeModifier.builder()
+                        .id(MinecraftKey.key("test_modifier_2"))
+                        .amount(4.2)
+                        .operation(ModifierOperation.ADD_MULTIPLIED_TOTAL)
+                        .build())
+                    .slot(ItemAttributeModifiers.EquipmentSlotGroup.HEAD)
+                    .display(new ItemAttributeModifiers.Display(ItemAttributeModifiers.DisplayType.HIDDEN, null))
+                    .build(),
+                ItemAttributeModifiers.Entry.builder()
+                    .attribute(AttributeType.Builtin.WAYPOINT_RECEIVE_RANGE.getId())
+                    .modifier(ItemAttributeModifiers.AttributeModifier.builder()
+                        .id(MinecraftKey.key("geyser_mc:test_modifier_3"))
+                        .amount(5.4)
+                        .operation(ModifierOperation.ADD_MULTIPLIED_BASE)
+                        .build())
+                    .slot(ItemAttributeModifiers.EquipmentSlotGroup.FEET)
+                    .display(new ItemAttributeModifiers.Display(ItemAttributeModifiers.DisplayType.DEFAULT, null))
+                    .build()
+            )
+        ), 1889444548);
+
+        testHash(session, DataComponentTypes.ATTRIBUTE_MODIFIERS, new ItemAttributeModifiers(
+            List.of(
+                ItemAttributeModifiers.Entry.builder()
+                    .attribute(AttributeType.Builtin.WAYPOINT_TRANSMIT_RANGE.getId())
+                    .modifier(ItemAttributeModifiers.AttributeModifier.builder()
+                        .id(MinecraftKey.key("geyser_mc:test_modifier_4"))
+                        .amount(2.0)
+                        .operation(ModifierOperation.ADD)
+                        .build())
+                    .slot(ItemAttributeModifiers.EquipmentSlotGroup.ANY)
+                    .display(new ItemAttributeModifiers.Display(ItemAttributeModifiers.DisplayType.OVERRIDE, Component.text("give me a test")))
+                    .build()
+            )
+        ), 1375953017);
+
         testHash(session, DataComponentTypes.CUSTOM_MODEL_DATA,
             new CustomModelData(List.of(5.0F, 3.0F, -1.0F), List.of(false, true, false), List.of("1", "3", "2"), List.of(3424, -123, 345)), 1947635619);
 
@@ -414,16 +511,24 @@ public class DataComponentHashers {
         testHash(session, DataComponentTypes.ENCHANTABLE, 3, -1834983819);
 
         testHash(session, DataComponentTypes.EQUIPPABLE, new Equippable(EquipmentSlot.BODY, BuiltinSound.ITEM_ARMOR_EQUIP_GENERIC, null, null, null,
-            true, true, true, false), 1294431019);
+            true, true, true, false,
+            false, BuiltinSound.ITEM_SHEARS_SNIP), 1294431019);
         testHash(session, DataComponentTypes.EQUIPPABLE, new Equippable(EquipmentSlot.BODY, BuiltinSound.ITEM_ARMOR_EQUIP_CHAIN, MinecraftKey.key("testing"), null, null,
-            true, true, true, false), 1226203061);
+            true, true, true, false,
+            true, BuiltinSound.ITEM_BONE_MEAL_USE), -801616214);
         testHash(session, DataComponentTypes.EQUIPPABLE, new Equippable(EquipmentSlot.BODY, BuiltinSound.AMBIENT_CAVE, null, null, null,
-            false, true, false, false), 1416408052);
+            false, true, false, false,
+            false, new CustomSound("testing_equippable", false, 10.0F)), -1145684769);
         testHash(session, DataComponentTypes.EQUIPPABLE, new Equippable(EquipmentSlot.BODY, BuiltinSound.ENTITY_BREEZE_WIND_BURST, null, MinecraftKey.key("testing"),
-            new HolderSet(new int[]{EntityType.ACACIA_BOAT.ordinal()}), false, true, false, false), 1711275245);
-
+            new HolderSet(new int[]{EntityType.ACACIA_BOAT.ordinal()}), false, true, false, false,
+            true, BuiltinSound.BLOCK_NETHERITE_BLOCK_PLACE), -115079770);
         testHash(session, DataComponentTypes.EQUIPPABLE, new Equippable(EquipmentSlot.HELMET, BuiltinSound.ITEM_ARMOR_EQUIP_GENERIC, null, null, null,
-            true, true, true, false), 497790992); // TODO broken because equipment slot names don't match
+            true, true, true, false,
+            false, BuiltinSound.ITEM_SHEARS_SNIP), 497790992);
+        testHash(session, DataComponentTypes.EQUIPPABLE, new Equippable(EquipmentSlot.HELMET, BuiltinSound.ITEM_ARMOR_EQUIP_GENERIC, null, null,
+            new HolderSet(MinecraftKey.key("aquatic")),
+            true, true, true, false,
+            false, BuiltinSound.ITEM_SHEARS_SNIP), 264760955);
 
         testHash(session, DataComponentTypes.REPAIRABLE, new HolderSet(new int[]{Items.AMETHYST_BLOCK.javaId(), Items.PUMPKIN.javaId()}), -36715567);
 

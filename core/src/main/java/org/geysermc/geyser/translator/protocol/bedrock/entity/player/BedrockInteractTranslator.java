@@ -32,6 +32,7 @@ import org.cloudburstmc.protocol.bedrock.packet.SetEntityLinkPacket;
 import org.geysermc.geyser.entity.type.ChestBoatEntity;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.living.animal.horse.AbstractHorseEntity;
+import org.geysermc.geyser.entity.type.living.animal.nautilus.AbstractNautilusEntity;
 import org.geysermc.geyser.item.Items;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
@@ -62,7 +63,7 @@ public class BedrockInteractTranslator extends PacketTranslator<InteractPacket> 
 
         switch (packet.getAction()) {
             case INTERACT:
-                if (session.getPlayerInventory().getItemInHand().asItem() == Items.SHIELD) {
+                if (session.getPlayerInventory().getItemInHand().is(Items.SHIELD)) {
                     break;
                 }
                 ServerboundInteractPacket interactPacket = new ServerboundInteractPacket(entity.getEntityId(),
@@ -76,9 +77,6 @@ public class BedrockInteractTranslator extends PacketTranslator<InteractPacket> 
                 break;
             case LEAVE_VEHICLE:
                 session.setLeavingVehicle(true);
-//                ServerboundPlayerCommandPacket sneakPacket = new ServerboundPlayerCommandPacket(entity.getEntityId(), PlayerState.START_SNEAKING);
-//                session.sendDownstreamGamePacket(sneakPacket);
-
                 // Reset steering to avoid these accidentally triggering session#isHandsBusy
                 session.setSteeringLeft(false);
                 session.setSteeringRight(false);
@@ -126,7 +124,7 @@ public class BedrockInteractTranslator extends PacketTranslator<InteractPacket> 
             case OPEN_INVENTORY:
                 if (session.getInventoryHolder() == null) {
                     Entity ridingEntity = session.getPlayerEntity().getVehicle();
-                    if (ridingEntity instanceof AbstractHorseEntity || ridingEntity instanceof ChestBoatEntity) {
+                    if (ridingEntity instanceof AbstractHorseEntity || ridingEntity instanceof AbstractNautilusEntity || ridingEntity instanceof ChestBoatEntity) {
                         // This mob has an inventory of its own that we should open instead.
                         ServerboundPlayerCommandPacket openVehicleWindowPacket = new ServerboundPlayerCommandPacket(session.getPlayerEntity().getEntityId(), PlayerState.OPEN_VEHICLE_INVENTORY);
                         session.sendDownstreamGamePacket(openVehicleWindowPacket);

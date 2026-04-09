@@ -27,8 +27,17 @@ package org.geysermc.geyser.session.auth;
 
 import java.util.UUID;
 
-public record AuthData(String name, UUID uuid, String xuid, Long uid) {
+/**
+ * A class holding some basic information of the connected user.
+ *
+ * @param name The gamertag of the user
+ * @param uuid Also known as identity
+ * @param xuid The xuid of the user
+ * @param uid The Bedrock UID used by skin-related flows
+ * @param issuedAt The unix time (in seconds) that the JWT was issued
+ */
+public record AuthData(String name, UUID uuid, String xuid, long uid, long issuedAt) {
     public AuthData(String name, UUID uuid, String xuid) {
-        this(name, uuid, xuid, -1L);
+        this(name, uuid, xuid, -1L, -1L);
     }
 }

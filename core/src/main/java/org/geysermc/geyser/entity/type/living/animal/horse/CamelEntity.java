@@ -25,7 +25,6 @@
 
 package org.geysermc.geyser.entity.type.living.animal.horse;
 
-import org.cloudburstmc.math.vector.Vector2f;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.AttributeData;
@@ -68,8 +67,6 @@ public class CamelEntity extends AbstractHorseEntity implements ClientVehicle {
 
     public void setHorseFlags(ByteEntityMetadata entityMetadata) {
         byte xd = entityMetadata.getPrimitiveValue();
-        boolean saddled = (xd & 0x04) == 0x04;
-        setFlag(EntityFlag.SADDLED, saddled);
         setFlag(EntityFlag.EATING, (xd & 0x10) == 0x10);
         setFlag(EntityFlag.STANDING, (xd & 0x20) == 0x20);
 
@@ -98,7 +95,7 @@ public class CamelEntity extends AbstractHorseEntity implements ClientVehicle {
         }
 
         // Shows the dash meter
-        setFlag(EntityFlag.CAN_DASH, saddled);
+        // setFlag(EntityFlag.CAN_DASH, saddled);
     }
 
     @Override
@@ -152,11 +149,6 @@ public class CamelEntity extends AbstractHorseEntity implements ClientVehicle {
     @Override
     public VehicleComponent<?> getVehicleComponent() {
         return vehicleComponent;
-    }
-
-    @Override
-    public Vector2f getAdjustedInput(Vector2f input) {
-        return input.mul(0.5f, input.getY() < 0 ? 0.25f : 1.0f);
     }
 
     @Override

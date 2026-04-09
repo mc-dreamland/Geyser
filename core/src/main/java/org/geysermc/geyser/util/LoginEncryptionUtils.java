@@ -25,10 +25,10 @@
 
 package org.geysermc.geyser.util;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import net.raphimc.minecraftauth.step.msa.StepMsaDeviceCode;
+import net.raphimc.minecraftauth.msa.model.MsaDeviceCode;
+import org.cloudburstmc.protocol.bedrock.data.auth.AuthPayload;
+import org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload;
+import org.cloudburstmc.protocol.bedrock.data.auth.TokenPayload;
 import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ServerToClientHandshakePacket;
 import org.cloudburstmc.protocol.bedrock.util.ChainValidationResult;
@@ -58,14 +58,12 @@ import java.util.List;
 import java.util.function.BiConsumer;
 
 public class LoginEncryptionUtils {
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
     private static boolean HAS_SENT_ENCRYPTION_MESSAGE = false;
 
     public static final String ENV_STANDARD = "obt";
 
     public static void encryptPlayerConnection(GeyserSession session, LoginPacket loginPacket) {
-        encryptConnectionWithCert(session, loginPacket.getExtra(), loginPacket.getChain());
+        encryptConnectionWithCert(session, loginPacket.getAuthPayload(), loginPacket.getClientJwt());
     }
 
     private static boolean validateNeteaseChainData(List<String> chain) {
@@ -76,38 +74,51 @@ public class LoginEncryptionUtils {
         return profile.env.equals(ENV_STANDARD);
     }
 
-    private static void encryptConnectionWithCert(GeyserSession session, String clientData, List<String> certChainData) {
+    private static void encryptConnectionWithCert(GeyserSession session, AuthPayload authPayload, String jwt) {
         try {
             GeyserImpl geyser = session.getGeyser();
-            ChainValidationResult result = EncryptionUtils.validateChain(certChainData);
+
+            ChainValidationResult result = EncryptionUtils.validatePayload(authPayload);
 
             geyser.getLogger().debug(String.format("Is player data signed? %s", result.signed()));
 
-            boolean validNeteaseChainData = validateNeteaseChainData(certChainData);
-
-            //TODO 同时支持网易和mojang
-            if ((!validNeteaseChainData && session.getGeyser().getConfig().isOnlineMode())) {
-                session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
-                return;
+            // Netease
+            if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
+                List<String> certChainData = certificateChainPayload.getChain();
+                boolean validNeteaseChainData = validateNeteaseChainData(certChainData);
+                if (!validNeteaseChainData && session.getGeyser().config().netease().onlineMode()) {
+                    session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
+                    return;
+                }
             }
+
+            // Should always be present, but hey, why not make it safe :D
+            Long rawIssuedAt = (Long) result.rawIdentityClaims().get("iat");
+            long issuedAt = rawIssuedAt != null ? rawIssuedAt : -1;
+
             IdentityData extraData = result.identityClaims().extraData;
-            session.setAuthData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, extraData.uid));
-            session.setCertChainData(certChainData);
+            session.setAuthData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, extraData.uid, issuedAt));
+            if (authPayload instanceof TokenPayload tokenPayload) {
+                session.setToken(tokenPayload.getToken());
+            } else if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
+                session.setCertChainData(certificateChainPayload.getChain());
+            } else {
+                GeyserImpl.getInstance().getLogger().warning("Unknown auth payload! Skin uploading will not work");
+            }
 
             PublicKey identityPublicKey = result.identityClaims().parsedIdentityPublicKey();
 
-            byte[] clientDataPayload = EncryptionUtils.verifyClientData(clientData, identityPublicKey);
+            byte[] clientDataPayload = EncryptionUtils.verifyClientData(jwt, identityPublicKey);
             if (clientDataPayload == null) {
                 throw new IllegalStateException("Client data isn't signed by the given chain data");
             }
 
-            JsonNode clientDataJson = JSON_MAPPER.readTree(clientDataPayload);
-            BedrockClientData data = JSON_MAPPER.convertValue(clientDataJson, BedrockClientData.class);
-            data.setOriginalString(clientData);
+            BedrockClientData data = JsonUtils.fromJson(clientDataPayload, BedrockClientData.class);
+            data.setOriginalString(jwt);
             session.setClientData(data);
 
             if (data.getGeometryName() != null) {
-                String decodeGeometryName = new String(Base64.getDecoder().decode(data.getGeometryName()), StandardCharsets.UTF_8);
+                String decodeGeometryName = new String(data.getGeometryName(), StandardCharsets.UTF_8);
                 if (!decodeGeometryName.contains("geometry.humanoid.customSlim") && !decodeGeometryName.contains("geometry.humanoid.custom")) {
                     ProvidedSkins.ProvidedSkin alexOrSteve = ProvidedSkins.getAlexOrSteve(session.getAuthData().uuid());
                     data.setSkinData(Base64.getEncoder().encodeToString(alexOrSteve.getData().skinData()));
@@ -118,7 +129,7 @@ public class LoginEncryptionUtils {
                 startEncryptionHandshake(session, identityPublicKey);
             } catch (Throwable e) {
                 // An error can be thrown on older Java 8 versions about an invalid key
-                if (geyser.getConfig().isDebugMode()) {
+                if (geyser.config().debugMode()) {
                     e.printStackTrace();
                 }
 
@@ -227,7 +238,7 @@ public class LoginEncryptionUtils {
     /**
      * Shows the code that a user must input into their browser
      */
-    public static void buildAndShowMicrosoftCodeWindow(GeyserSession session, StepMsaDeviceCode.MsaDeviceCode msCode) {
+    public static void buildAndShowMicrosoftCodeWindow(GeyserSession session, MsaDeviceCode msCode) {
         String locale = session.locale();
 
         StringBuilder message = new StringBuilder("%xbox.signin.website\n")
@@ -237,7 +248,7 @@ public class LoginEncryptionUtils {
                 .append("\n%xbox.signin.enterCode\n")
                 .append(ChatColor.GREEN)
                 .append(msCode.getUserCode());
-        int timeout = session.getGeyser().getConfig().getPendingAuthenticationTimeout();
+        int timeout = session.getGeyser().config().pendingAuthenticationTimeout();
         if (timeout != 0) {
             message.append("\n\n")
                     .append(ChatColor.RESET)

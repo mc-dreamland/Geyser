@@ -30,10 +30,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
-import org.cloudburstmc.protocol.bedrock.packet.AddEntityPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateAttributesPacket;
 import org.geysermc.geyser.entity.EntityDefinition;
+import org.geysermc.geyser.entity.properties.type.StringEnumProperty;
 import org.geysermc.geyser.entity.type.living.animal.VariantIntHolder;
+import org.geysermc.geyser.impl.IdentifierImpl;
 import org.geysermc.geyser.inventory.GeyserItemStack;
 import org.geysermc.geyser.item.Items;
 import org.geysermc.geyser.item.enchantment.EnchantmentComponent;
@@ -47,30 +48,41 @@ import org.geysermc.geyser.session.cache.tags.Tag;
 import org.geysermc.geyser.util.InteractionResult;
 import org.geysermc.geyser.util.InteractiveTag;
 import org.geysermc.geyser.util.ItemUtils;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ByteEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.IntEntityMetadata;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.LongEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
-import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.HolderSet;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class WolfEntity extends TameableEntity implements VariantIntHolder {
+
+    public static final StringEnumProperty SOUND_VARIANT = new StringEnumProperty(
+        IdentifierImpl.of("sound_variant"),
+        List.of(
+            "default",
+            "big",
+            "cute",
+            "grumpy",
+            "mad",
+            "puglin",
+            "sad"
+        ),
+        null
+    );
+
     private byte collarColor = 14; // Red - default
     private HolderSet repairableItems = null;
     private boolean isCurseOfBinding = false;
 
     public WolfEntity(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, float pitch, float headYaw) {
         super(session, entityId, geyserId, uuid, definition, position, motion, yaw, pitch, headYaw);
-    }
-
-    @Override
-    public void addAdditionalSpawnData(AddEntityPacket addEntityPacket) {
-        propertyManager.add("minecraft:sound_variant", "default");
-        propertyManager.applyIntProperties(addEntityPacket.getProperties().getIntProperties());
     }
 
     @Override
@@ -107,10 +119,10 @@ public class WolfEntity extends TameableEntity implements VariantIntHolder {
     }
 
     // 1.16+
-    public void setWolfAngerTime(IntEntityMetadata entityMetadata) {
-        int time = entityMetadata.getPrimitiveValue();
-        setFlag(EntityFlag.ANGRY, time != 0);
-        dirtyMetadata.put(EntityDataTypes.COLOR, time != 0 ? (byte) 0 : collarColor);
+    public void setWolfAngerTime(LongEntityMetadata entityMetadata) {
+        long time = entityMetadata.getPrimitiveValue();
+        setFlag(EntityFlag.ANGRY, time != -1L);
+        dirtyMetadata.put(EntityDataTypes.COLOR, time != -1L ? (byte) 0 : collarColor);
     }
 
     @Override
@@ -130,16 +142,15 @@ public class WolfEntity extends TameableEntity implements VariantIntHolder {
     }
 
     @Override
-    public void setBody(ItemStack stack) {
+    public void setBody(GeyserItemStack stack) {
         super.setBody(stack);
         isCurseOfBinding = ItemUtils.hasEffect(session, stack, EnchantmentComponent.PREVENT_ARMOR_CHANGE);
-        // Not using ItemStack#getDataComponents as that wouldn't include default item components
-        repairableItems = GeyserItemStack.from(stack).getComponent(DataComponentTypes.REPAIRABLE);
+        repairableItems = stack.getComponent(DataComponentTypes.REPAIRABLE);
     }
 
     @Override
     public boolean canBeLeashed() {
-        return !getFlag(EntityFlag.ANGRY) && super.canBeLeashed();
+        return !getFlag(EntityFlag.ANGRY);
     }
 
     @NonNull
@@ -148,7 +159,7 @@ public class WolfEntity extends TameableEntity implements VariantIntHolder {
         if (getFlag(EntityFlag.ANGRY)) {
             return InteractiveTag.NONE;
         }
-        if (itemInHand.asItem() == Items.BONE && !getFlag(EntityFlag.TAMED)) {
+        if (itemInHand.is(Items.BONE) && !getFlag(EntityFlag.TAMED)) {
             // Bone and untamed - can tame
             return InteractiveTag.TAME;
         }
@@ -161,17 +172,15 @@ public class WolfEntity extends TameableEntity implements VariantIntHolder {
                     return super.testMobInteraction(hand, itemInHand);
                 }
             }
-            if (itemInHand.asItem() == Items.WOLF_ARMOR && !this.body.isValid() && !getFlag(EntityFlag.BABY)) {
+            if (itemInHand.is(Items.WOLF_ARMOR) && !getItemInSlot(EquipmentSlot.BODY).isEmpty() && !getFlag(EntityFlag.BABY)) {
                 return InteractiveTag.EQUIP_WOLF_ARMOR;
             }
-            if (itemInHand.asItem() == Items.SHEARS && this.body.isValid()
+            if (itemInHand.is(Items.SHEARS) && !getItemInSlot(EquipmentSlot.BODY).isEmpty()
                     && (!isCurseOfBinding || session.getGameMode().equals(GameMode.CREATIVE))) {
                 return InteractiveTag.REMOVE_WOLF_ARMOR;
             }
-            if (getFlag(EntityFlag.SITTING) &&
-                    session.getTagCache().isItem(repairableItems, itemInHand.asItem()) &&
-                    this.body.isValid() && this.body.getTag() != null &&
-                    this.body.getTag().getInt("Damage") > 0) {
+            if (getFlag(EntityFlag.SITTING) && itemInHand.is(session, repairableItems) &&
+                    !getItemInSlot(EquipmentSlot.BODY).isEmpty() && getItemInSlot(EquipmentSlot.BODY).isDamaged()) {
                 return InteractiveTag.REPAIR_WOLF_ARMOR;
             }
             // Tamed and owned by player - can sit/stand
@@ -184,7 +193,7 @@ public class WolfEntity extends TameableEntity implements VariantIntHolder {
     @Override
     protected InteractionResult mobInteract(@NonNull Hand hand, @NonNull GeyserItemStack itemInHand) {
         if (ownerBedrockId == session.getPlayerEntity().getGeyserId() || getFlag(EntityFlag.TAMED)
-                || itemInHand.asItem() == Items.BONE && !getFlag(EntityFlag.ANGRY)) {
+                || itemInHand.is(Items.BONE) && !getFlag(EntityFlag.ANGRY)) {
             // Sitting toggle or feeding; not angry
             return InteractionResult.CONSUME;
         } else {

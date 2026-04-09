@@ -26,7 +26,6 @@
 package org.geysermc.geyser.util;
 
 import lombok.Getter;
-import org.cloudburstmc.math.GenericMath;
 import org.cloudburstmc.protocol.bedrock.packet.SetTitlePacket;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.PreferencesCache;
@@ -39,23 +38,13 @@ import java.util.concurrent.TimeUnit;
  * Much of the work here is from the wonderful folks from <a href="https://github.com/ViaVersion/ViaRewind">ViaRewind</a>
  */
 public class CooldownUtils {
-    private static CooldownType DEFAULT_SHOW_COOLDOWN;
-
-    public static void setDefaultShowCooldown(String showCooldown) {
-        DEFAULT_SHOW_COOLDOWN = CooldownType.getByName(showCooldown);
-    }
-
-    public static CooldownType getDefaultShowCooldown() {
-        return DEFAULT_SHOW_COOLDOWN;
-    }
-
     /**
      * Starts sending the fake cooldown to the Bedrock client. If the cooldown is not disabled, the sent type is the cooldownPreference in {@link PreferencesCache}
      *
      * @param session GeyserSession
      */
     public static void sendCooldown(GeyserSession session) {
-        if (DEFAULT_SHOW_COOLDOWN == CooldownType.DISABLED) return;
+        if (session.getGeyser().config().gameplay().showCooldown() == CooldownType.DISABLED) return;
         CooldownType sessionPreference = session.getPreferencesCache().getCooldownPreference();
         if (sessionPreference == CooldownType.DISABLED) return;
 
@@ -73,13 +62,16 @@ public class CooldownUtils {
 
         session.getWorldCache().markTitleTimesAsIncorrect();
 
-        // Needs to be sent or no subtitle packet is recognized by the client
-        titlePacket = new SetTitlePacket();
-        titlePacket.setType(SetTitlePacket.Type.TITLE);
-        titlePacket.setText(" ");
-        titlePacket.setXuid("");
-        titlePacket.setPlatformOnlineId("");
-        session.sendUpstreamPacket(titlePacket);
+        // Actionbars don't need an empty title
+        if (sessionPreference == CooldownType.TITLE) {
+            // Needs to be sent or no subtitle packet is recognized by the client
+            titlePacket = new SetTitlePacket();
+            titlePacket.setType(SetTitlePacket.Type.TITLE);
+            titlePacket.setText(" ");
+            titlePacket.setXuid("");
+            titlePacket.setPlatformOnlineId("");
+            session.sendUpstreamPacket(titlePacket);
+        }
         session.setLastHitTime(System.currentTimeMillis());
         long lastHitTime = session.getLastHitTime(); // Used later to prevent multiple scheduled cooldown threads
         computeCooldown(session, sessionPreference, lastHitTime);
@@ -168,10 +160,6 @@ public class CooldownUtils {
          * @return The converted CooldownType
          */
         public static CooldownType getByName(String name) {
-            if (name.equalsIgnoreCase("true")) { // Backwards config compatibility
-                return CooldownType.TITLE;
-            }
-
             for (CooldownType type : VALUES) {
                 if (type.name().equalsIgnoreCase(name)) {
                     return type;

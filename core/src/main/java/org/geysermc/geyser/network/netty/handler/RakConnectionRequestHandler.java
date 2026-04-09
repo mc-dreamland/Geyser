@@ -64,8 +64,8 @@ public class RakConnectionRequestHandler extends ChannelInboundHandlerAdapter {
         }
 
         try {
-            String serverIp = GeyserImpl.getInstance().getConfig().getBedrock().address();
-            int serverPort = GeyserImpl.getInstance().getConfig().getBedrock().port();
+            String serverIp = GeyserImpl.getInstance().config().bedrock().address();
+            int serverPort = GeyserImpl.getInstance().config().bedrock().port();
             if ((!serverIp.equals("127.0.0.1") && !serverIp.equals("0.0.0.0"))) {
                 // 获取客户端的 IP 和端口
                 InetSocketAddress sender = packet.sender();

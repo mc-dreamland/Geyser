@@ -31,6 +31,7 @@ import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.SoundEvent;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.geysermc.geyser.entity.EntityDefinition;
+import org.geysermc.geyser.entity.type.living.animal.TemperatureVariantAnimal;
 import org.geysermc.geyser.inventory.GeyserItemStack;
 import org.geysermc.geyser.item.Items;
 import org.geysermc.geyser.item.type.Item;
@@ -54,7 +55,7 @@ public class CowEntity extends TemperatureVariantAnimal {
     @NonNull
     @Override
     protected InteractiveTag testMobInteraction(@NonNull Hand hand, @NonNull GeyserItemStack itemInHand) {
-        if (getFlag(EntityFlag.BABY) || itemInHand.asItem() != Items.BUCKET) {
+        if (getFlag(EntityFlag.BABY) || !itemInHand.is(Items.BUCKET)) {
             return super.testMobInteraction(hand, itemInHand);
         }
 
@@ -64,7 +65,7 @@ public class CowEntity extends TemperatureVariantAnimal {
     @NonNull
     @Override
     protected InteractionResult mobInteract(@NonNull Hand hand, @NonNull GeyserItemStack itemInHand) {
-        if (getFlag(EntityFlag.BABY) || itemInHand.asItem() != Items.BUCKET) {
+        if (getFlag(EntityFlag.BABY) || !itemInHand.is(Items.BUCKET)) {
             return super.mobInteract(hand, itemInHand);
         }
 

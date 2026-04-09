@@ -26,6 +26,7 @@
 package org.geysermc.geyser.inventory.holder;
 
 import org.cloudburstmc.math.vector.Vector3f;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerType;
@@ -60,13 +61,19 @@ public class BlockInventoryHolder extends InventoryHolder {
     private final BlockState defaultJavaBlockState;
     private final ContainerType containerType;
     private final Set<Block> validBlocks;
+    private final @Nullable Class<? extends Block> validBlockClass;
 
     public BlockInventoryHolder(Block defaultJavaBlock, ContainerType containerType, Block... validBlocks) {
-        this(defaultJavaBlock.defaultBlockState(), containerType, validBlocks);
+        this(defaultJavaBlock.defaultBlockState(), null, containerType, validBlocks);
     }
 
     public BlockInventoryHolder(BlockState defaultJavaBlockState, ContainerType containerType, Block... validBlocks) {
+        this(defaultJavaBlockState, null, containerType, validBlocks);
+    }
+
+    public BlockInventoryHolder(BlockState defaultJavaBlockState, @Nullable Class<? extends Block> validBlockClass, ContainerType containerType, Block... validBlocks) {
         this.defaultJavaBlockState = defaultJavaBlockState;
+        this.validBlockClass = validBlockClass;
         this.containerType = containerType;
         if (validBlocks != null) {
             Set<Block> validBlocksTemp = new HashSet<>(validBlocks.length + 1);
@@ -146,7 +153,7 @@ public class BlockInventoryHolder extends InventoryHolder {
             // and the bedrock block is vanilla
             BlockState state = session.getGeyser().getWorldManager().blockAt(session, session.getLastInteractionBlockPosition());
             if (!BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get().containsKey(state.javaId())) {
-                if (isValidBlock(state)) {
+                if (isValidBlock(session, session.getLastInteractionBlockPosition(), state)) {
                     // We can safely use this block
                     container.setHolderPosition(session.getLastInteractionBlockPosition());
                     container.setUsingRealBlock(true, state.block());
@@ -167,30 +174,24 @@ public class BlockInventoryHolder extends InventoryHolder {
      * a block to hold the inventory that's wildly out of range.
      */
     protected boolean checkInteractionPosition(GeyserSession session) {
-        Vector3i lastInteractionBlockPosition = session.getLastInteractionBlockPosition();
         Vector3f position = session.getPlayerEntity().getPosition();
-
-        float distance = position.distance(lastInteractionBlockPosition.getX(), lastInteractionBlockPosition.getY(), lastInteractionBlockPosition.getZ());
-
-        if (distance >= 5.01) {
+        // Netease: allow slight player movement after the interaction so real containers are not rejected too easily.
+        if (session.getLastInteractionPlayerPosition().distance(position) >= 2) {
             return false;
         }
 
-        BlockState state = session.getGeyser().getWorldManager().blockAt(session, lastInteractionBlockPosition);
-        if (!BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get().containsKey(state.javaId())) {
-            if (isValidBlock(state)) {
-                return true;
-            }
-        }
-
-
-        return session.getLastInteractionPlayerPosition().equals(position);
+        Vector3i lastInteractionBlockPosition = session.getLastInteractionBlockPosition();
+        // Netease: still require the interacted block to remain within normal reach so we don't reuse a far-away block.
+        return position.distance(lastInteractionBlockPosition.getX(), lastInteractionBlockPosition.getY(), lastInteractionBlockPosition.getZ()) < 5.01f;
     }
 
     /**
      * @return true if this Java block ID can be used for player inventory.
      */
-    protected boolean isValidBlock(BlockState blockState) {
+    protected boolean isValidBlock(GeyserSession session, Vector3i position, BlockState blockState) {
+        if (this.validBlockClass != null && this.validBlockClass.isInstance(blockState.block())) {
+            return true;
+        }
         return this.validBlocks.contains(blockState.block());
     }
 

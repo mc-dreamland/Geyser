@@ -43,7 +43,6 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.event.java.ServerDefineCommandsEvent;
 import org.geysermc.geyser.api.util.PlatformType;
 import org.geysermc.geyser.command.CommandRegistry;
-import org.geysermc.geyser.item.enchantment.Enchantment;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.session.GeyserSession;
@@ -124,7 +123,7 @@ public class JavaCommandsTranslator extends PacketTranslator<ClientboundCommands
     @Override
     public void translate(GeyserSession session, ClientboundCommandsPacket packet) {
         // Don't send command suggestions if they are disabled
-        if (!session.getGeyser().getConfig().isCommandSuggestions()) {
+        if (!session.getGeyser().config().gameplay().commandSuggestions()) {
             session.getGeyser().getLogger().debug("Not sending translated command suggestions as they are disabled.");
 
             // Send a mostly empty packet so Bedrock doesn't override /help with its own, built-in help command.
@@ -146,6 +145,8 @@ public class JavaCommandsTranslator extends PacketTranslator<ClientboundCommands
         // Get the first node, it should be a root node
         CommandNode rootNode = nodes[packet.getFirstNodeIndex()];
 
+        List<String> knownCommands = new ArrayList<>();
+        List<String> restrictedCommands = new ArrayList<>();
         // Loop through the root nodes to get all commands
         for (int nodeIndex : rootNode.getChildIndices()) {
             CommandNode node = nodes[nodeIndex];
@@ -168,7 +169,16 @@ public class JavaCommandsTranslator extends PacketTranslator<ClientboundCommands
             String description = registry.description(name, session.locale());
             BedrockCommandInfo info = new BedrockCommandInfo(name, description, params);
             commands.computeIfAbsent(info, $ -> new HashSet<>()).add(name);
+
+            // Add the command to the command lists
+            knownCommands.add(name);
+            if (node.isAllowsRestricted()) { // Name is a bit confusing - this is what we want
+                restrictedCommands.add(name);
+            }
         }
+
+        session.setKnownCommands(knownCommands);
+        session.setRestrictedCommands(restrictedCommands);
 
         var eventBus = session.getGeyser().eventBus();
 
@@ -359,8 +369,7 @@ public class JavaCommandsTranslator extends PacketTranslator<ClientboundCommands
             if (enchantments != null) {
                 return enchantments;
             }
-            return (enchantments = session.getRegistryCache().registry(JavaRegistries.ENCHANTMENT).values().stream()
-                    .map(Enchantment::identifier).toArray(String[]::new));
+            return (enchantments = session.getRegistryCache().registry(JavaRegistries.ENCHANTMENT).keys().stream().map(Key::asString).toArray(String[]::new));
         }
 
         private String[] getEntityTypes() {

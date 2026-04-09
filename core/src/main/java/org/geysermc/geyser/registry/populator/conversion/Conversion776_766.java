@@ -27,6 +27,8 @@ package org.geysermc.geyser.registry.populator.conversion;
 
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
+import org.geysermc.geyser.item.type.Item;
+import org.geysermc.geyser.registry.type.GeyserMappingItem;
 
 public class Conversion776_766 {
 
@@ -60,6 +62,10 @@ public class Conversion776_766 {
         }
 
         return tag;
+    }
+
+    public static GeyserMappingItem remapItem(Item item, GeyserMappingItem mapping) {
+        return Conversion786_776.remapItem(item, mapping);
     }
 
 }

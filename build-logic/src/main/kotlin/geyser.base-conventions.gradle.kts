@@ -22,7 +22,7 @@ indra {
 }
 
 dependencies {
-    compileOnly("org.checkerframework", "checker-qual", libs.checker.qual.get().version)
+    compileOnly("org.checkerframework:checker-qual:" + libs.checker.qual.get().version)
 }
 
 repositories {
@@ -37,11 +37,6 @@ repositories {
 
     // Spigot
     maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots") {
-        mavenContent { snapshotsOnly() }
-    }
-
-    // BungeeCord
-    maven("https://oss.sonatype.org/content/repositories/snapshots") {
         mavenContent { snapshotsOnly() }
     }
 
@@ -60,9 +55,6 @@ repositories {
     maven("https://repo.viaversion.com") {
         name = "viaversion"
     }
-
-    // For Adventure snapshots
-    maven("https://s01.oss.sonatype.org/content/repositories/snapshots/")
 
     // Jitpack for e.g. MCPL
     maven("https://jitpack.io") {

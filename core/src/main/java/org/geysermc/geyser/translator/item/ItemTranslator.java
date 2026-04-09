@@ -29,6 +29,7 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.nbt.NbtList;
@@ -55,17 +56,17 @@ import org.geysermc.geyser.registry.type.CustomSkull;
 import org.geysermc.geyser.registry.type.ItemMapping;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.SkullCache;
+import org.geysermc.geyser.skin.SkinManager;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.text.MinecraftLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.util.InventoryUtils;
 import org.geysermc.geyser.util.MinecraftKey;
 import org.geysermc.mcprotocollib.auth.GameProfile;
-import org.geysermc.mcprotocollib.auth.GameProfile.Texture;
-import org.geysermc.mcprotocollib.auth.GameProfile.TextureType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.ModifierOperation;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.ResolvableProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.AdventureModePredicate;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
@@ -84,6 +85,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public final class ItemTranslator {
 
@@ -166,6 +168,22 @@ public final class ItemTranslator {
         }
         // Java item needs to be loaded separately. The mapping for tipped arrow would
         return translateToBedrock(session, Registries.JAVA_ITEMS.get().get(stack.getId()), bedrockItem, stack.getAmount(), stack.getDataComponentsPatch())
+                .build();
+    }
+
+    @NonNull
+    public static ItemData translateToBedrock(GeyserSession session, @NonNull GeyserItemStack stack) {
+        if (stack.isEmpty()) {
+            return ItemData.AIR;
+        }
+
+        ItemMapping bedrockItem = session.getItemMappings().getMapping(stack.getJavaId());
+        if (bedrockItem == ItemMapping.AIR) {
+            session.getGeyser().getLogger().debug("ItemMapping returned air: " + stack);
+            return ItemData.AIR;
+        }
+
+        return translateToBedrock(session, stack.asItem(), bedrockItem, stack.getAmount(), stack.getComponents())
                 .build();
     }
 
@@ -253,9 +271,9 @@ public final class ItemTranslator {
         Map<ItemAttributeModifiers.EquipmentSlotGroup, List<String>> slotsToModifiers = new HashMap<>();
         for (ItemAttributeModifiers.Entry entry : modifiers.getModifiers()) {
             // convert the modifier tag to a lore entry
-            String loreEntry = attributeToLore(session, entry.getAttribute(), entry.getModifier(), language);
+            String loreEntry = attributeToLore(session, entry.getAttribute(), entry.getModifier(), entry.getDisplay(), language);
             if (loreEntry == null) {
-                continue; // invalid or failed
+                continue; // invalid, failed, or hidden
             }
 
             slotsToModifiers.computeIfAbsent(entry.getSlot(), s -> new ArrayList<>()).add(loreEntry);
@@ -284,7 +302,16 @@ public final class ItemTranslator {
     }
 
     @Nullable
-    private static String attributeToLore(GeyserSession session, int attribute, ItemAttributeModifiers.AttributeModifier modifier, String language) {
+    private static String attributeToLore(GeyserSession session, int attribute, ItemAttributeModifiers.AttributeModifier modifier,
+                                          ItemAttributeModifiers.Display display, String language) {
+        if (display.getType() == ItemAttributeModifiers.DisplayType.HIDDEN) {
+            return null;
+        } else if (display.getType() == ItemAttributeModifiers.DisplayType.OVERRIDE) {
+            return MessageTranslator.convertMessage(Objects.requireNonNull(display.getComponent())
+                .colorIfAbsent(NamedTextColor.WHITE)
+                .decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE), language);
+        }
+
         double amount = modifier.getAmount();
         if (amount == 0) {
             return null;
@@ -305,7 +332,7 @@ public final class ItemTranslator {
                     amount += session.getPlayerEntity().attributeOrDefault(GeyserAttributeType.ATTACK_DAMAGE);
                     baseModifier = true;
                 } else if (modifier.getId().equals(BASE_ATTACK_SPEED_ID)) {
-                    amount += session.getPlayerEntity().attributeOrDefault(GeyserAttributeType.ATTACK_SPEED);
+                    amount += session.getAttackSpeed();
                     baseModifier = true;
                 }
 
@@ -322,7 +349,7 @@ public final class ItemTranslator {
         Component attributeComponent = Component.text()
                 .resetStyle()
                 .color(baseModifier ? NamedTextColor.DARK_GREEN : amount > 0 ? NamedTextColor.BLUE : NamedTextColor.RED)
-                .append(Component.text(" " + operationTotal + " "), Component.translatable("attribute.name." + name))
+                .append(Component.text(operationTotal + " "), Component.translatable("attribute.name." + name))
                 .build();
 
         return MessageTranslator.convertMessage(attributeComponent, language);
@@ -609,53 +636,45 @@ public final class ItemTranslator {
         builder.blockDefinition(blockDefinition);
     }
 
-    private static @Nullable CustomSkull getCustomSkull(@Nullable GameProfile profile) {
+    private static @Nullable CustomSkull getCustomSkull(@Nullable ResolvableProfile profile) {
         if (profile == null) {
             return null;
         }
-        String name = profile.getName();
+        String name = profile.getProfile().getName();
         if (Constants.isHeyPixelCustom(name)) {
             return null;
         }
 
-        Map<TextureType, Texture> textures;
-        try {
-            textures = profile.getTextures(false);
-        } catch (IllegalStateException e) {
-            GeyserImpl.getInstance().getLogger().debug("Could not decode player head from profile %s, got: %s".formatted(profile, e.getMessage()));
+        // Ideally we'd update the item once the profile has been resolved, but this isn't really possible,
+        // also see comments in PlayerHeadItem for full explanation
+        GameProfile resolved = SkinManager.resolveProfile(profile).getNow(null);
+        if (resolved == null) {
             return null;
         }
 
-        if (textures == null || textures.isEmpty()) {
-            // TODO the java client looks up the texture properties here and updates the item
-            return null;
-        }
-
-        Texture skinTexture = textures.get(TextureType.SKIN);
-
+        GameProfile.Texture skinTexture = SkinManager.getTextureDataFromProfile(resolved, GameProfile.TextureType.SKIN);
         if (skinTexture == null) {
             return null;
         }
-
-        String skinHash = skinTexture.getURL().substring(skinTexture.getURL().lastIndexOf('/') + 1);
-        return BlockRegistries.CUSTOM_SKULLS.get(skinHash);
+        return BlockRegistries.CUSTOM_SKULLS.get(skinTexture.getHash());
     }
 
-    private static void translatePlayerHead(GeyserSession session, GameProfile profile, ItemData.Builder builder) {
+    // Netease: keep custom skull head overrides when the profile name carries a custom block identifier.
+    private static void translatePlayerHead(GeyserSession session, ResolvableProfile profile, ItemData.Builder builder) {
         if (profile != null) {
-            String customSkullBlockName = profile.getName();
+            String customSkullBlockName = profile.getProfile().getName();
             if (customSkullBlockName != null && Constants.isHeyPixelCustom(customSkullBlockName)) {
                 CustomBlockData customBlockData = BlockRegistries.CUSTOM_BLOCK_HEAD_OVERRIDES.getOrDefault(customSkullBlockName, null);
                 if (customBlockData != null) {
                     ItemDefinition itemDefinition = session.getItemMappings().getCustomBlockItemDefinitions().get(customBlockData);
                     BlockDefinition blockDefinition = session.getBlockMappings().getCustomBlockStateDefinitions().get(customBlockData.defaultBlockState());
-
                     builder.definition(itemDefinition);
                     builder.blockDefinition(blockDefinition);
                     return;
                 }
             }
         }
+
         CustomSkull customSkull = getCustomSkull(profile);
         if (customSkull != null) {
             CustomBlockData customBlockData = customSkull.getCustomBlockData();
