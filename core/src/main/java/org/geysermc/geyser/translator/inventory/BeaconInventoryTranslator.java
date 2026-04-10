@@ -85,9 +85,9 @@ public class BeaconInventoryTranslator extends AbstractBlockInventoryTranslator<
         // Send a block entity data packet update to the fake beacon inventory
         Vector3i position = container.getHolderPosition();
         NbtMapBuilder builder = BlockEntityTranslator.getConstantBedrockTag("Beacon", position)
-                .putString("CustomName", container.getTitle())
-                .putInt("primary", container.getPrimaryId())
-                .putInt("secondary", container.getSecondaryId());
+            .putString("CustomName", container.getTitle())
+            .putInt("primary", container.getPrimaryId())
+            .putInt("secondary", container.getSecondaryId());
 
         BlockEntityDataPacket packet = new BlockEntityDataPacket();
         packet.setBlockPosition(position);
@@ -115,7 +115,7 @@ public class BeaconInventoryTranslator extends AbstractBlockInventoryTranslator<
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        if (slotInfoData.getContainer() == ContainerSlotType.BEACON_PAYMENT) {
+        if (slotInfoData.getContainerName().getContainer() == ContainerSlotType.BEACON_PAYMENT) {
             return 0;
         }
         return super.bedrockSlotToJava(slotInfoData);

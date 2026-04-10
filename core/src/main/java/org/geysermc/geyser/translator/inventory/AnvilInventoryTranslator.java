@@ -45,7 +45,7 @@ import java.util.Objects;
 public class AnvilInventoryTranslator extends AbstractBlockInventoryTranslator<AnvilContainer> {
     public AnvilInventoryTranslator() {
         super(3, Blocks.ANVIL, org.cloudburstmc.protocol.bedrock.data.inventory.ContainerType.ANVIL, AnvilInventoryUpdater.INSTANCE,
-                Blocks.CHIPPED_ANVIL, Blocks.DAMAGED_ANVIL);
+            Blocks.CHIPPED_ANVIL, Blocks.DAMAGED_ANVIL);
     }
 
     @Override
@@ -71,7 +71,7 @@ public class AnvilInventoryTranslator extends AbstractBlockInventoryTranslator<A
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        return switch (slotInfoData.getContainer()) {
+        return switch (slotInfoData.getContainerName().getContainer()) {
             case ANVIL_INPUT -> 0;
             case ANVIL_MATERIAL -> 1;
             case ANVIL_RESULT, CREATED_OUTPUT -> 2;

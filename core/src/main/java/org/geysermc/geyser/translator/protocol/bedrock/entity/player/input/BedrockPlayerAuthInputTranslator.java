@@ -331,16 +331,7 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
             Vector3f vehiclePosition = packet.getPosition();
             Vector2f vehicleRotation = packet.getVehicleRotation();
             if (vehicleRotation == null) {
-//                System.out.println(packet);
-//                return; // If the client just got in or out of a vehicle for example.
-                if (session.isShouldSendSneak()) {
-                    return;
-                }
-                if (session.isMounting()) {
-                    session.setMounting(false);
-                    return;
-                }
-                vehicleRotation = packet.getPlayerRotationToCamera(); // 网易的实体移动，不会发送vehicleRotation，设置0值，不然坐骑移动会有异常。
+                return; // If the client just got in or out of a vehicle for example.
             }
 
             if (session.getWorldBorder().isPassingIntoBorderBoundaries(vehiclePosition, false)) {

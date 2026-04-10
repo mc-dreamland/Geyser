@@ -42,7 +42,7 @@ public class CartographyInventoryTranslator extends AbstractBlockInventoryTransl
 
     @Override
     protected boolean shouldRejectItemPlace(GeyserSession session, CartographyContainer container, ContainerSlotType bedrockSourceContainer,
-                                         int javaSourceSlot, ContainerSlotType bedrockDestinationContainer, int javaDestinationSlot) {
+                                            int javaSourceSlot, ContainerSlotType bedrockDestinationContainer, int javaDestinationSlot) {
         if (javaDestinationSlot == 0) {
             // Bedrock Edition can use paper or an empty map in slot 0
             GeyserItemStack itemStack = javaSourceSlot == -1 ? session.getPlayerInventory().getCursor() : container.getItem(javaSourceSlot);
@@ -57,7 +57,7 @@ public class CartographyInventoryTranslator extends AbstractBlockInventoryTransl
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        return switch (slotInfoData.getContainer()) {
+        return switch (slotInfoData.getContainerName().getContainer()) {
             case CARTOGRAPHY_INPUT -> 0;
             case CARTOGRAPHY_ADDITIONAL -> 1;
             case CARTOGRAPHY_RESULT, CREATED_OUTPUT -> 2;

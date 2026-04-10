@@ -64,7 +64,7 @@ public class OldSmithingTableTranslator extends AbstractBlockInventoryTranslator
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        return switch (slotInfoData.getContainer()) {
+        return switch (slotInfoData.getContainerName().getContainer()) {
             case SMITHING_TABLE_INPUT -> 0;
             case SMITHING_TABLE_MATERIAL -> 1;
             case SMITHING_TABLE_RESULT, CREATED_OUTPUT -> 2;
@@ -102,25 +102,25 @@ public class OldSmithingTableTranslator extends AbstractBlockInventoryTranslator
         for (var action: request.getActions()) {
             switch (action.getType()) {
                 case DROP -> {
-                   if (isInvalidAction(((DropAction) action).getSource())) {
-                       return rejectRequest(request, false);
-                   }
+                    if (isInvalidAction(((DropAction) action).getSource())) {
+                        return rejectRequest(request, false);
+                    }
                 }
                 case TAKE -> {
                     if (isInvalidAction(((TakeAction) action).getSource()) ||
-                            isInvalidAction(((TakeAction) action).getDestination())) {
+                        isInvalidAction(((TakeAction) action).getDestination())) {
                         return rejectRequest(request, false);
                     }
                 }
                 case SWAP -> {
                     if (isInvalidAction(((SwapAction) action).getSource()) ||
-                            isInvalidAction(((SwapAction) action).getDestination())) {
+                        isInvalidAction(((SwapAction) action).getDestination())) {
                         return rejectRequest(request, false);
                     }
                 }
                 case PLACE -> {
                     if (isInvalidAction(((PlaceAction) action).getSource()) ||
-                            isInvalidAction(((PlaceAction) action).getDestination())) {
+                        isInvalidAction(((PlaceAction) action).getDestination())) {
                         return rejectRequest(request, false);
                     }
                 }
@@ -131,7 +131,7 @@ public class OldSmithingTableTranslator extends AbstractBlockInventoryTranslator
     }
 
     private boolean isInvalidAction(ItemStackRequestSlotData slotData) {
-        return slotData.getContainer().equals(ContainerSlotType.SMITHING_TABLE_TEMPLATE);
+        return slotData.getContainerName().getContainer().equals(ContainerSlotType.SMITHING_TABLE_TEMPLATE);
     }
 
     @Override

@@ -68,7 +68,7 @@ public class LoomInventoryTranslator extends AbstractBlockInventoryTranslator<Co
 
     @Override
     protected boolean shouldRejectItemPlace(GeyserSession session, Container container, ContainerSlotType bedrockSourceContainer,
-                                         int javaSourceSlot, ContainerSlotType bedrockDestinationContainer, int javaDestinationSlot) {
+                                            int javaSourceSlot, ContainerSlotType bedrockDestinationContainer, int javaDestinationSlot) {
         if (javaDestinationSlot != 1) {
             return false;
         }
@@ -139,7 +139,7 @@ public class LoomInventoryTranslator extends AbstractBlockInventoryTranslator<Co
 
     @Override
     public int bedrockSlotToJava(ItemStackRequestSlotData slotInfoData) {
-        return switch (slotInfoData.getContainer()) {
+        return switch (slotInfoData.getContainerName().getContainer()) {
             case LOOM_INPUT -> 0;
             case LOOM_DYE -> 1;
             case LOOM_MATERIAL -> 2;
