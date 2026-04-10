@@ -261,7 +261,11 @@ class CodecProcessor {
             //v388
             float x = buffer.readFloatLE();
             float y = buffer.readFloatLE();
-            packet.setPosition(helper.readVector3f(buffer));
+            float px = buffer.readFloatLE();
+            float py = buffer.readFloatLE();
+            float pz = buffer.readFloatLE();
+
+            packet.setPosition(Vector3f.from(px, py, pz));
             packet.setMotion(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
             float z = buffer.readFloatLE();
             packet.setRotation(Vector3f.from(x, y, z));
@@ -282,6 +286,128 @@ class CodecProcessor {
                 }
                 if ((flagValue & (1L << i)) != 0) {
                     PlayerAuthInputData value = PlayerAuthInputData.values()[i + offset];
+                    flags.add(value);
+                }
+            }
+            packet.setInputMode(INPUT_MODES[VarInts.readUnsignedInt(buffer)]);
+            packet.setPlayMode(CLIENT_PLAY_MODES[VarInts.readUnsignedInt(buffer)]);
+            readInteractionModel(buffer, helper, packet);
+
+            packet.setInteractRotation(helper.readVector2f(buffer));
+
+            //v419
+            packet.setTick(VarInts.readUnsignedLong(buffer));
+            packet.setDelta(helper.readVector3f(buffer));
+
+            //v428
+            //Netease Only Start
+            packet.setCameraDeparted(buffer.readBoolean());
+            //Netease Only End
+
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_INTERACTION)) {
+                packet.setItemUseTransaction(this.readItemUseTransaction(buffer, helper));
+            }
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_STACK_REQUEST)) {
+                packet.setItemStackRequest(helper.readItemStackRequest(buffer));
+            }
+
+            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_BLOCK_ACTIONS)) {
+                helper.readArray(buffer, packet.getPlayerActions(), VarInts::readInt, this::readPlayerBlockActionData, 32); // 32 is more than enough
+            }
+
+            //v662
+            if (packet.getInputData().contains(PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE)) {
+                packet.setVehicleRotation(helper.readVector2f(buffer));
+                packet.setPredictedVehicle(VarInts.readLong(buffer));
+            }
+            packet.setAnalogMoveVector(helper.readVector2f(buffer));
+            packet.setCameraOrientation(helper.readVector3f(buffer));
+            packet.setRawMoveVector(helper.readVector2f(buffer));
+
+            //Netease Only Start
+            packet.setThirdPersonPerspective(buffer.readBoolean());
+            packet.setPlayerRotationToCamera(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
+            packet.setReadyPosDetalDirty(buffer.readBoolean());
+            packet.setOnGround(buffer.readBoolean());
+            packet.setResetPosition(buffer.readByte());
+
+            if (buffer.readableBytes() > 0) {
+                System.out.println("异常输入包!");
+                System.out.println(buffer.readableBytes());
+            }
+            //Netease Only End
+        }
+
+
+        @Override
+        protected ItemUseTransaction readItemUseTransaction(ByteBuf buffer, BedrockCodecHelper helper) {
+            ItemUseTransaction itemTransaction = new ItemUseTransaction();
+
+            int legacyRequestId = VarInts.readInt(buffer);
+            itemTransaction.setLegacyRequestId(legacyRequestId);
+
+            if (legacyRequestId < -1 && (legacyRequestId & 1) == 0) {
+                helper.readArray(buffer, itemTransaction.getLegacySlots(), (buf, packetHelper) -> {
+                    byte containerId = buf.readByte();
+                    byte[] slots = packetHelper.readByteArray(buf, 89);
+                    return new LegacySetItemSlotData(containerId, slots);
+                });
+            }
+
+            boolean hasNetIds = helper.readInventoryActions(buffer, itemTransaction.getActions());
+            itemTransaction.setActionType(VarInts.readUnsignedInt(buffer));
+            itemTransaction.setTriggerType(ItemUseTransaction.TriggerType.values()[VarInts.readUnsignedInt(buffer)]);
+            itemTransaction.setBlockPosition(helper.readBlockPosition(buffer));
+            itemTransaction.setBlockFace(VarInts.readInt(buffer));
+            itemTransaction.setHotbarSlot(VarInts.readInt(buffer));
+            itemTransaction.setItemInHand(helper.readItem(buffer));
+            itemTransaction.setPlayerPosition(helper.readVector3f(buffer));
+            itemTransaction.setClickPosition(helper.readVector3f(buffer));
+            itemTransaction.setBlockDefinition(helper.getBlockDefinitions().getDefinition(VarInts.readUnsignedInt(buffer)));
+            itemTransaction.setClientInteractPrediction(ItemUseTransaction.PredictedResult.values()[VarInts.readUnsignedInt(buffer)]);
+            return itemTransaction;
+        }
+    };
+
+
+    private static final BedrockPacketSerializer<PlayerAuthInputPacket> PLAYER_AUTH_INPUT_NETEASE_819 = new PlayerAuthInputSerializer_v662() {
+        @Override
+        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
+            super.serialize(buffer, helper, packet);
+        }
+
+        @Override
+        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
+            //v388
+            float x = buffer.readFloatLE();
+            float y = buffer.readFloatLE();
+            Vector3f position = helper.readVector3f(buffer);
+            packet.setPosition(position);
+            packet.setMotion(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
+            float z = buffer.readFloatLE();
+            packet.setRotation(Vector3f.from(x, y, z));
+            long flagValue = VarInts.readUnsignedLong(buffer);
+
+            Set<PlayerAuthInputData> flags = packet.getInputData();
+//            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
+//                if ((flagValue & (1L << flag.ordinal())) != 0) {
+//                    flags.add(flag);
+//                }
+//            }
+            // copy from nukkit-mot :>
+            int inClientPredictedInVehicleOrdinal = PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE.ordinal();
+            for (int i = 0; i < PlayerAuthInputData.values().length; i++) {
+                int offset = 0;
+                if (i >= inClientPredictedInVehicleOrdinal) {
+                    offset = -2;
+                }
+                if ((flagValue & (1L << i)) != 0) {
+                    PlayerAuthInputData value = PlayerAuthInputData.values()[i + offset];
+//                    if (value != PlayerAuthInputData.VERTICAL_COLLISION) {
+//                        System.out.println("v819 offset-2 -> " + value + " | base -> " + PlayerAuthInputData.values()[i] + " | offset-1 -> " +  PlayerAuthInputData.values()[i - 1]);
+//                    }
                     flags.add(value);
                 }
             }
@@ -545,9 +671,13 @@ class CodecProcessor {
                 .updateSerializer(PlayerInputPacket.class, ILLEGAL_SERIALIZER);
         }
 
-        if (protocolVersion == 766) {
+        if (protocolVersion == 766 || protocolVersion == 819) {
             codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE_766);
             codecBuilder.updateSerializer(TextPacket.class, TEXT_SERIALIZER_NETEASE);
+        }
+
+        if (protocolVersion == 819) {
+            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE_819);
         }
 
         if (!Boolean.getBoolean("Geyser.ReceiptPackets")) {

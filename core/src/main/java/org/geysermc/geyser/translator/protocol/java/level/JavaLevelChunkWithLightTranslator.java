@@ -530,13 +530,26 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         levelChunkPacket.setDimension(dimension);
         session.sendUpstreamPacket(levelChunkPacket);
 
+        int updatedItemFrames = 0;
         for (Map.Entry<Vector3i, ItemFrameEntity> entry : session.getItemFrameCache().entrySet()) {
             Vector3i position = entry.getKey();
             if ((position.getX() >> 4) == packet.getX() && (position.getZ() >> 4) == packet.getZ()) {
                 // Update this item frame so it doesn't get lost in the abyss
                 //TODO optimize
                 entry.getValue().updateBlock(true);
+                updatedItemFrames++;
             }
+        }
+        if (updatedItemFrames > 0 || !session.getItemFrameCache().isEmpty()) {
+            session.getGeyser().getLogger().info(
+                "[item-frame-chunk-scan] session=%s chunk=(%d,%d) cacheSize=%d updated=%d".formatted(
+                    session.bedrockUsername(),
+                    packet.getX(),
+                    packet.getZ(),
+                    session.getItemFrameCache().size(),
+                    updatedItemFrames
+                )
+            );
         }
     }
 

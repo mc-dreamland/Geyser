@@ -54,7 +54,6 @@ import org.geysermc.geyser.util.BlockUtils;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.Arrays;
 import java.util.Locale;
 
 public class CollisionManager {
@@ -167,14 +166,12 @@ public class CollisionManager {
         }
         // We need to parse the float as a string since casting a float to a double causes us to
         // lose precision and thus, causes players to get stuck when walking near walls
-        double javaY = Double.parseDouble(Float.toString(bedrockPosition.getY())) - EntityDefinitions.PLAYER.offset();
+        // FIXME 实验性测试，需观察
+        double javaY = (Double.parseDouble(Float.toString(bedrockPosition.getY())) * 100000 - EntityDefinitions.PLAYER.offset() * 100000) / 100000;
+        double javaYB =  Math.floor(javaY * 10000d) / 10000d;
 
-//        Vector3d position = Vector3d.from(Double.parseDouble(Float.toString(bedrockPosition.getX())), javaY,
-//                Double.parseDouble(Float.toString(bedrockPosition.getZ())));
-
-
-        Vector3d position = Vector3d.from(bedrockPosition.getX(), javaY,
-            bedrockPosition.getZ());
+        Vector3d position = Vector3d.from(Double.parseDouble(Float.toString(bedrockPosition.getX())), javaYB,
+            Double.parseDouble(Float.toString(bedrockPosition.getZ())));
 
         // Don't correct position if controlling a vehicle
         if (session.getPlayerEntity().getVehicle() instanceof ClientVehicle clientVehicle && clientVehicle.isClientControlled()) {
