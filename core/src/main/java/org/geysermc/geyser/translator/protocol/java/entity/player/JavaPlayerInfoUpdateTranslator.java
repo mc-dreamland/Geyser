@@ -107,8 +107,8 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (self) {
-                    playerEntity.setSkin(profile, true,
-                        () -> GeyserImpl.getInstance().getLogger().debug("Loaded Local Bedrock Java Skin Data for " + session.getClientData().getUsername()));
+                    SkinManager.requestAndHandleSkinAndCape(playerEntity, session, skinAndCape ->
+                        GeyserImpl.getInstance().getLogger().debug("Loaded Local Bedrock Java Skin Data for " + session.getClientData().getUsername()));
                 }
             }
         }
@@ -125,9 +125,11 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 }
 
                 if (entry.isListed()) {
-                    PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
-                    toAdd.add(playerListEntry);
-                    session.getWaypointCache().listPlayer(entity);
+//                    PlayerListPacket.Entry playerListEntry = SkinManager.buildCachedEntry(session, entity);
+//                    toAdd.add(playerListEntry);
+//                    session.getWaypointCache().listPlayer(entity);
+                    //TODO 后续需尝试支持一次性发送多个玩家皮肤信息。
+                    sendAddPlayerList(session, entity);
                 } else {
                     toRemove.add(new PlayerListPacket.Entry(entity.getTabListUuid()));
                     session.getWaypointCache().unlistPlayer(entity);
@@ -136,7 +138,7 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
             }
 
             if (!toAdd.isEmpty()) {
-                PlayerListUtils.batchSendPlayerList(session, toAdd, PlayerListPacket.Action.ADD);
+//                PlayerListUtils.batchSendPlayerList(session, toAdd, PlayerListPacket.Action.ADD);
             }
             if (!toRemove.isEmpty()) {
                 PlayerListUtils.batchSendPlayerList(session, toRemove, PlayerListPacket.Action.REMOVE);
@@ -159,10 +161,14 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 session.getWaypointCache().getWaypointColor(entity.getUuid()).orElse(Color.WHITE)
             );
 
+            System.out.println(skinData.skin());
+            System.out.println(skinData.skin().skinData().length);
+
             PlayerListPacket playerAddPacket = new PlayerListPacket();
             playerAddPacket.setAction(PlayerListPacket.Action.ADD);
             playerAddPacket.getEntries().add(updatedEntry);
             session.sendUpstreamPacket(playerAddPacket);
+            session.getWaypointCache().listPlayer(entity);
 
             ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
             confirmSkinPacket.setEntries(List.of(updatedEntry));

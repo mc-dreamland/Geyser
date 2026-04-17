@@ -82,6 +82,14 @@ public class LoginEncryptionUtils {
 
             geyser.getLogger().debug(String.format("Is player data signed? %s", result.signed()));
 
+
+            // Should always be present, but hey, why not make it safe :D
+            Long rawIssuedAt = (Long) result.rawIdentityClaims().get("iat");
+            long issuedAt = rawIssuedAt != null ? rawIssuedAt : -1;
+
+            IdentityData extraData = result.identityClaims().extraData;
+            session.setAuthData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, extraData.uid, issuedAt));
+
             // Netease
             if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
                 List<String> certChainData = certificateChainPayload.getChain();
@@ -92,12 +100,6 @@ public class LoginEncryptionUtils {
                 }
             }
 
-            // Should always be present, but hey, why not make it safe :D
-            Long rawIssuedAt = (Long) result.rawIdentityClaims().get("iat");
-            long issuedAt = rawIssuedAt != null ? rawIssuedAt : -1;
-
-            IdentityData extraData = result.identityClaims().extraData;
-            session.setAuthData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, extraData.uid, issuedAt));
             if (authPayload instanceof TokenPayload tokenPayload) {
                 session.setToken(tokenPayload.getToken());
             } else if (authPayload instanceof CertificateChainPayload certificateChainPayload) {

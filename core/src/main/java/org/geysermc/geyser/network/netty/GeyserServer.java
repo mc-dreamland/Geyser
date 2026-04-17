@@ -123,6 +123,9 @@ public final class GeyserServer {
     public GeyserServer(GeyserImpl geyser, int threadCount) {
         this.geyser = geyser;
         this.listenCount = Bootstraps.isReusePortAvailable() ?  Integer.getInteger("Geyser.ListenCount", 1) : 1;
+        if (listenCount == -1) {
+            listenCount = Math.max(1, Math.min(20, threadCount / 2));
+        }
         GeyserImpl.getInstance().getLogger().debug("Listen thread count: " + listenCount);
         this.group = TRANSPORT.eventLoopGroupFactory().apply(listenCount, new DefaultThreadFactory("GeyserServer", true));
         this.childGroup = TRANSPORT.eventLoopGroupFactory().apply(threadCount, new DefaultThreadFactory("GeyserServerChild", true));
@@ -148,6 +151,7 @@ public final class GeyserServer {
     public CompletableFuture<Void> bind(InetSocketAddress address) {
         bootstrapFutures = new ChannelFuture[listenCount];
         for (int i = 0; i < listenCount; i++) {
+            System.out.println("#bind -> " + i);
             ChannelFuture future = bootstrap.bind(address);
             modifyHandlers(future);
             bootstrapFutures[i] = future;

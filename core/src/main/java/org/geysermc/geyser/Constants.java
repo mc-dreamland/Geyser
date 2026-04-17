@@ -55,7 +55,7 @@ public final class Constants {
             String os = System.getProperty("os.name").toLowerCase();
             String skinurl = GeyserImpl.getInstance().config().netease().service().skinurl();
             if (os.contains("win")) {
-                skinurl = skinurl.replace("skinsync.bjd-mc.com", "42.186.61.161").replace("10.191.171.36", "42.186.61.161");
+                skinurl = skinurl.replace("skinsync.bjd-mc.com", "106.2.37.104").replace("10.191.171.36", "106.2.37.104");
             }
             wsUri = new URI("ws://"+ skinurl
                 .replace("http://","")

@@ -254,11 +254,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         ResourcePacksInfoPacket resourcePacksInfo = new ResourcePacksInfoPacket();
         resourcePacksInfo.getResourcePackInfos().addAll(this.resourcePackLoadEvent.infoPacketEntries());
-        if (session.protocolVersion() >= 766) {
-            resourcePacksInfo.getResourcePackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
-        } else {
-            resourcePacksInfo.getBehaviorPackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
-        }
+        resourcePacksInfo.getResourcePackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
 
 
         if (geyser.config().netease().optionalPacks().enableOptionalPacks()) {
@@ -440,8 +436,14 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             return;
         }
 
-        ResourcePackHolder holder = this.resourcePackLoadEvent.getPacks().get(packet.getPackId());
-        if (holder == null) {
+        ResourcePackHolder holder = null;
+        if (this.resourcePackLoadEvent.getPacks().containsKey(packet.getPackId())) {
+            holder = this.resourcePackLoadEvent.getPacks().get(packet.getPackId());
+        }
+        if (this.optionalResourcePacksEvent != null && this.optionalResourcePacksEvent.getPacks().containsKey(packet.getPackId())) {
+            holder = this.optionalResourcePacksEvent.getPacks().get(packet.getPackId());
+        }
+        if (this.behaviorPackLoadEvent.getPacks().containsKey(packet.getPackId())) {
             holder = this.behaviorPackLoadEvent.getPacks().get(packet.getPackId());
         }
         if (holder == null) {
