@@ -215,10 +215,13 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
 
                         float distanceRight = session.getLastInteractionPlayerPosition().distance(session.getPlayerEntity().getPosition());
                         boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < (distanceRight > 0.001 ? 20 : 75) &&
-                                packetBlockPosition.distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001;
+                                packetBlockPosition.distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001 &&
+                                packet.getBlockFace() == session.getLastInteractionFace()
+                            ;
 
                         session.setLastInteractionBlockPosition(packetBlockPosition);
                         session.setLastInteractionPlayerPosition(session.getPlayerEntity().getPosition());
+                        session.setLastInteractionFace(packet.getBlockFace());
 
                         if (hasAlreadyClicked) {
                             break;
@@ -308,7 +311,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         int sequence = session.getWorldCache().nextPredictionSequence();
                         session.getWorldCache().markPositionInSequence(blockPos);
                         ServerboundUseItemOnPacket blockPacket = new ServerboundUseItemOnPacket(
-                                packet.getBlockPosition(),
+                                packetBlockPosition,
                                 Direction.getUntrusted(packet, InventoryTransactionPacket::getBlockFace).mcpl(),
                                 Hand.MAIN_HAND,
                                 cursorX, cursorY, cursorZ,

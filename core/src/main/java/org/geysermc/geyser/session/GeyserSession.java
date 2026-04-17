@@ -503,6 +503,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      */
     @Setter
     private Vector3i lastInteractionBlockPosition = Vector3i.ZERO;
+    @Setter
+    private int lastInteractionFace = -1;
 
     /**
      * Stores the position of the player the last time they interacted.
