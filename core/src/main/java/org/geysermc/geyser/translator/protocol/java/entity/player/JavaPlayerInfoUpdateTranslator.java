@@ -161,9 +161,6 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 session.getWaypointCache().getWaypointColor(entity.getUuid()).orElse(Color.WHITE)
             );
 
-            System.out.println(skinData.skin());
-            System.out.println(skinData.skin().skinData().length);
-
             PlayerListPacket playerAddPacket = new PlayerListPacket();
             playerAddPacket.setAction(PlayerListPacket.Action.ADD);
             playerAddPacket.getEntries().add(updatedEntry);
