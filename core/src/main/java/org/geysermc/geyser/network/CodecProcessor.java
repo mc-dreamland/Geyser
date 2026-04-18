@@ -278,7 +278,7 @@ class CodecProcessor {
 //                }
 //            }
             // copy from nukkit-mot :>
-            int inClientPredictedInVehicleOrdinal = PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE.ordinal();
+            int inClientPredictedInVehicleOrdinal = PlayerAuthInputData.RECEIVED_SERVER_DATA.ordinal();
             for (int i = 0; i < PlayerAuthInputData.values().length; i++) {
                 int offset = 0;
                 if (i >= inClientPredictedInVehicleOrdinal) {

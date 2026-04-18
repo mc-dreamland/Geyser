@@ -30,6 +30,7 @@ import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.geysermc.geyser.entity.EntityDefinition;
 import org.geysermc.geyser.entity.type.living.GolemEntity;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ByteEntityMetadata;
@@ -53,11 +54,13 @@ public class ShulkerEntity extends GolemEntity {
         // We still need the special case for 16 color in setShulkerColor though as it will send it for an entity metadata update
         dirtyMetadata.put(EntityDataTypes.VARIANT, 16);
 
-        setFlag(EntityFlag.COLLIDABLE, true);
 
-        // This is vanilla behaviour yes (BDS does this), without this as of 1.21.93 entity became fully invisible.
-        // Doing this allow the invisible parity support inside GeyserOptionalPack to works again.
-        setFlag(EntityFlag.RENDER_WHEN_INVISIBLE, true);
+        if (GameProtocol.is1_21_93orHigher(session)) {
+            setFlag(EntityFlag.COLLIDABLE, true);
+            // This is vanilla behaviour yes (BDS does this), without this as of 1.21.93 entity became fully invisible.
+            // Doing this allow the invisible parity support inside GeyserOptionalPack to works again.
+            setFlag(EntityFlag.RENDER_WHEN_INVISIBLE, true);
+        }
     }
 
     public void setAttachedFace(EntityMetadata<Direction, ?> entityMetadata) {

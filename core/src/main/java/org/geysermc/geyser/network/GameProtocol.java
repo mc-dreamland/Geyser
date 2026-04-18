@@ -176,6 +176,9 @@ public final class GameProtocol {
     public static boolean is1_21_80orHigher(GeyserSession session) {
         return session.protocolVersion() >= Bedrock_v800.CODEC.getProtocolVersion();
     }
+    public static boolean is1_21_93orHigher(GeyserSession session) {
+        return session.protocolVersion() >= Bedrock_v819.CODEC.getProtocolVersion();
+    }
 
     public static boolean is1_20_0orLower(GeyserSession session) {
         return session.protocolVersion() < Bedrock_v766.CODEC.getProtocolVersion();
