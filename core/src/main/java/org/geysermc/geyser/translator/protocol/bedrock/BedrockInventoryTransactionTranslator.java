@@ -581,28 +581,20 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                     InteractAction.INTERACT_AT, clickPosition.getX(), clickPosition.getY(), clickPosition.getZ(),
                     hand, session.isSneaking()));
 
-            InteractionResult result;
-            if (isSpectator) {
-                result = InteractionResult.PASS;
-            } else {
-                result = entity.interactAt(hand);
-            }
-
-            if (!result.consumesAction()) {
-                session.sendDownstreamGamePacket(new ServerboundInteractPacket(entity.getEntityId(),
-                        InteractAction.INTERACT, hand, session.isSneaking()));
-                if (!isSpectator) {
+            if (!isSpectator) {
+                InteractionResult result = entity.interactAt(hand);
+                if (!result.consumesAction()) {
                     result = entity.interact(hand);
                 }
-            }
 
-            if (result.consumesAction()) {
-                if (result.shouldSwing() && hand == Hand.OFF_HAND) {
-                    // Currently, Bedrock will send us the arm swing packet in most cases. But it won't for offhand.
-                    session.sendDownstreamGamePacket(new ServerboundSwingPacket(hand));
-                    // Note here to look into sending the animation packet back to Bedrock
+                if (result.consumesAction()) {
+                    if (result.shouldSwing() && hand == Hand.OFF_HAND) {
+                        // Currently, Bedrock will send us the arm swing packet in most cases. But it won't for offhand.
+                        session.sendDownstreamGamePacket(new ServerboundSwingPacket(hand));
+                        // Note here to look into sending the animation packet back to Bedrock
+                    }
+                    return;
                 }
-                return;
             }
         }
     }
