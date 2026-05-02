@@ -39,7 +39,8 @@ public class JavaSetBorderLerpSizeTranslator extends PacketTranslator<Clientboun
         WorldBorder worldBorder = session.getWorldBorder();
         worldBorder.setOldDiameter(packet.getOldSize());
         worldBorder.setNewDiameter(packet.getNewSize());
-        worldBorder.setSpeed(packet.getLerpTime());
+        // FixMe viaversion似乎在转换1.21.11协议的时候 将时间转成了tick，所以在此处我们需要*50 临时恢复为毫秒。在后续viaversion修复后再回滚。
+        worldBorder.setSpeed(packet.getLerpTime() * 50);
         worldBorder.setResizing(true);
 
         worldBorder.update();
