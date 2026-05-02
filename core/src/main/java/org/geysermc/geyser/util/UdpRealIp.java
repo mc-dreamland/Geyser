@@ -36,6 +36,7 @@ import java.net.DatagramSocketImpl;
 import java.net.InetAddress;
 import java.nio.channels.DatagramChannel;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class UdpRealIp {
     /*
@@ -130,7 +131,7 @@ public class UdpRealIp {
      * NIO 场景下获取真实客户端IP
      */
 
-    public static HashMap<String, String> IP_PORT_WITH_RealIP = new HashMap<>();
+    public static ConcurrentHashMap<String, String> IP_PORT_WITH_RealIP = new ConcurrentHashMap<>();
     //    private static Uoa uoa = new Uoa();
     public static void getRealIp(Channel nettyChannel, String clientAddress, int clientPort, String serverIp, int serverPort) {
         String key = clientAddress + ":" + clientPort;
