@@ -59,6 +59,7 @@ import org.geysermc.geyser.command.defaults.ReloadSkinCommand;
 import org.geysermc.geyser.command.defaults.SettingsCommand;
 import org.geysermc.geyser.command.defaults.StatisticsCommand;
 import org.geysermc.geyser.command.defaults.StopCommand;
+import org.geysermc.geyser.command.defaults.TestPacketCommand;
 import org.geysermc.geyser.command.defaults.VersionCommand;
 import org.geysermc.geyser.event.type.GeyserDefineCommandsEventImpl;
 import org.geysermc.geyser.extension.command.GeyserExtensionCommand;
@@ -174,6 +175,7 @@ public class CommandRegistry implements EventRegistrar {
         registerBuiltInCommand(new LoadPacksCommand(geyser, "loadpacks", "重载材质包", "geyser.command.loadPacks"));
         registerBuiltInCommand(new CustomOptionsCommand("options", "geyser.commands.options.desc", "geyser.command.options"));
         registerBuiltInCommand(new QuickActionsCommand("quickactions", "geyser.commands.quickactions.desc", "geyser.command.quickactions"));
+        registerBuiltInCommand(new TestPacketCommand(geyser, "testpacket", "自定义包", "geyser.command.quickactions"));
 
         if (this.geyser.platformType() == PlatformType.STANDALONE) {
             registerBuiltInCommand(new StopCommand(geyser, "stop", "geyser.commands.stop.desc", "geyser.command.stop"));
