@@ -25,15 +25,23 @@
 
 package org.geysermc.geyser.inventory.recipe;
 
+import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.RecipeData;
 import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.SmithingRecipeDisplay;
 import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.slot.SlotDisplay;
+
+import java.util.List;
 
 public record GeyserSmithingRecipe(SlotDisplay template,
                                    SlotDisplay base,
                                    SlotDisplay addition,
-                                   SlotDisplay result) implements GeyserRecipe {
-    public GeyserSmithingRecipe(SmithingRecipeDisplay display) {
-        this(display.template(), display.base(), display.addition(), display.result());
+                                   SlotDisplay result,
+                                   List<RecipeData> recipeData) implements GeyserRecipe {
+    public GeyserSmithingRecipe(SlotDisplay template, SlotDisplay base, SlotDisplay addition, SlotDisplay result) {
+        this(template, base, addition, result, List.of());
+    }
+
+    public GeyserSmithingRecipe(SmithingRecipeDisplay display, List<RecipeData> recipeData) {
+        this(display.template(), display.base(), display.addition(), display.result(), recipeData);
     }
 
     @Override

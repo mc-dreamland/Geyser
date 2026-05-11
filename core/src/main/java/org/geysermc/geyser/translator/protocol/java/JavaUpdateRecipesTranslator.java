@@ -40,9 +40,12 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.descriptor.ItemDescripto
 import org.cloudburstmc.protocol.bedrock.packet.CraftingDataPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TrimDataPacket;
 import org.geysermc.geyser.GeyserImpl;
+import org.geysermc.geyser.inventory.recipe.GeyserRecipe;
+import org.geysermc.geyser.inventory.recipe.GeyserSmithingRecipe;
 import org.geysermc.geyser.inventory.recipe.GeyserStonecutterData;
 import org.geysermc.geyser.inventory.recipe.TrimRecipe;
 import org.geysermc.geyser.item.Items;
+import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.registry.type.ItemMapping;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.registry.JavaRegistries;
@@ -62,6 +65,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+
+import static org.geysermc.geyser.translator.protocol.java.JavaFinishConfigurationTranslator.CARTOGRAPHY_RECIPES;
 
 /**
  * Used to send all valid recipes from Java to Bedrock.
@@ -91,6 +96,20 @@ public class JavaUpdateRecipesTranslator extends PacketTranslator<ClientboundUpd
     public void translate(GeyserSession session, ClientboundUpdateRecipesPacket packet) {
         int netId = session.getLastRecipeNetId().get();
         CraftingDataPacket craftingDataPacket = new CraftingDataPacket();
+        // See JavaFinishConfigurationTranslator - avoid re-sending base recipe data in quick succession
+        if (session.isCleanRecipesRequired()) {
+            craftingDataPacket.setCleanRecipes(true);
+            craftingDataPacket.getCraftingData().addAll(CARTOGRAPHY_RECIPES);
+            craftingDataPacket.getPotionMixData().addAll(Registries.POTION_MIXES.forVersion(session.getUpstream().getProtocolVersion()));
+
+            for (GeyserRecipe recipe : session.getCraftingRecipes().values()) {
+                craftingDataPacket.getCraftingData().addAll(recipe.recipeData());
+            }
+            for (GeyserSmithingRecipe recipe : session.getSmithingRecipes()) {
+                craftingDataPacket.getCraftingData().addAll(recipe.recipeData());
+            }
+        }
+        session.setCleanRecipesRequired(true);
 
         boolean oldSmithingTable;
         int[] smithingBase = packet.getItemSets().get(SMITHING_BASE);
