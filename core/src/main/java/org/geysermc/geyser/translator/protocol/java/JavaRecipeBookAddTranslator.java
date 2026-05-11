@@ -34,6 +34,7 @@ import net.kyori.adventure.key.Key;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.RecipeUnlockingRequirement;
+import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.RecipeData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.ShapedRecipeData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.ShapelessRecipeData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.SmithingTransformRecipeData;
@@ -112,17 +113,18 @@ public class JavaRecipeBookAddTranslator extends PacketTranslator<ClientboundRec
                     List<String> bedrockRecipeIds = new ArrayList<>();
                     ItemData output = bedrockRecipes.right();
                     List<List<ItemDescriptorWithCount>> left = bedrockRecipes.left();
-                    GeyserRecipe geyserRecipe = new GeyserShapedRecipe(shapedRecipe);
                     for (int i = 0; i < left.size(); i++) {
                         List<ItemDescriptorWithCount> inputs = left.get(i);
                         String recipeId = contents.id() + "_" + i;
                         int recipeNetworkId = netId++;
-                        craftingDataPacket.getCraftingData().add(ShapedRecipeData.shaped(recipeId,
-                            shapedRecipe.width(), shapedRecipe.height(), inputs,
-                            Collections.singletonList(output), UUID.randomUUID(), "crafting_table", 0, recipeNetworkId, true, RecipeUnlockingRequirement.INVALID));
+                        RecipeData bedrockRecipe = ShapedRecipeData.shaped(recipeId,
+                                shapedRecipe.width(), shapedRecipe.height(), inputs,
+                                Collections.singletonList(output), UUID.randomUUID(), "crafting_table", 0,
+                                recipeNetworkId, true, RecipeUnlockingRequirement.INVALID);
+                        craftingDataPacket.getCraftingData().add(bedrockRecipe);
                         recipesPacket.getUnlockedRecipes().add(recipeId);
                         bedrockRecipeIds.add(recipeId);
-                        geyserRecipes.put(recipeNetworkId, geyserRecipe);
+                        geyserRecipes.put(recipeNetworkId, new GeyserShapedRecipe(shapedRecipe, List.of(bedrockRecipe)));
                     }
                     javaToBedrockRecipeIds.put(contents.id(), List.copyOf(bedrockRecipeIds));
                 }
@@ -135,16 +137,17 @@ public class JavaRecipeBookAddTranslator extends PacketTranslator<ClientboundRec
                     List<String> bedrockRecipeIds = new ArrayList<>();
                     ItemData output = bedrockRecipes.right();
                     List<List<ItemDescriptorWithCount>> left = bedrockRecipes.left();
-                    GeyserRecipe geyserRecipe = new GeyserShapelessRecipe(shapelessRecipe);
                     for (int i = 0; i < left.size(); i++) {
                         List<ItemDescriptorWithCount> inputs = left.get(i);
                         String recipeId = contents.id() + "_" + i;
                         int recipeNetworkId = netId++;
-                        craftingDataPacket.getCraftingData().add(ShapelessRecipeData.shapeless(recipeId,
-                            inputs, Collections.singletonList(output), UUID.randomUUID(), "crafting_table", 0, recipeNetworkId, RecipeUnlockingRequirement.INVALID));
+                        RecipeData bedrockRecipe = ShapelessRecipeData.shapeless(recipeId,
+                                inputs, Collections.singletonList(output), UUID.randomUUID(), "crafting_table", 0,
+                                recipeNetworkId, RecipeUnlockingRequirement.INVALID);
+                        craftingDataPacket.getCraftingData().add(bedrockRecipe);
                         recipesPacket.getUnlockedRecipes().add(recipeId);
                         bedrockRecipeIds.add(recipeId);
-                        geyserRecipes.put(recipeNetworkId, geyserRecipe);
+                        geyserRecipes.put(recipeNetworkId, new GeyserShapelessRecipe(shapelessRecipe, List.of(bedrockRecipe)));
                     }
                     javaToBedrockRecipeIds.put(contents.id(), List.copyOf(bedrockRecipeIds));
                 }
@@ -167,18 +170,21 @@ public class JavaRecipeBookAddTranslator extends PacketTranslator<ClientboundRec
                         continue;
                     }
 
+                    List<RecipeData> bedrockRecipeData = new ArrayList<>();
                     int i = 0;
                     for (ItemDescriptorWithCount template : templates) {
                         for (ItemDescriptorWithCount base : bases) {
                             for (ItemDescriptorWithCount addition : additions) {
                                 String id = contents.id() + "_" + i++;
                                 // Note: vanilla inputs use aux value of Short.MAX_VALUE
-                                craftingDataPacket.getCraftingData().add(SmithingTransformRecipeData.of(id,
-                                        template, base, addition, output.right(), "smithing_table", netId++));
+                                RecipeData bedrockRecipe = SmithingTransformRecipeData.of(id,
+                                        template, base, addition, output.right(), "smithing_table", netId++);
+                                craftingDataPacket.getCraftingData().add(bedrockRecipe);
+                                bedrockRecipeData.add(bedrockRecipe);
                             }
                         }
                     }
-                    session.getSmithingRecipes().add(new GeyserSmithingRecipe(smithingRecipe));
+                    session.getSmithingRecipes().add(new GeyserSmithingRecipe(smithingRecipe, List.copyOf(bedrockRecipeData)));
                 }
             }
         }

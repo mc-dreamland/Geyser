@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.translator.protocol.java;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.MultiRecipeData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.RecipeData;
 import org.cloudburstmc.protocol.bedrock.packet.CraftingDataPacket;
@@ -47,7 +48,7 @@ public class JavaFinishConfigurationTranslator extends PacketTranslator<Clientbo
     /**
      * Required to use the specified cartography table recipes
      */
-    private static final List<RecipeData> CARTOGRAPHY_RECIPES = List.of(
+    static final List<RecipeData> CARTOGRAPHY_RECIPES = List.of(
         MultiRecipeData.of(UUID.fromString("8b36268c-1829-483c-a0f1-993b7156a8f2"), ++LAST_RECIPE_NET_ID), // Map extending
         MultiRecipeData.of(UUID.fromString("442d85ed-8272-4543-a6f1-418f90ded05d"), ++LAST_RECIPE_NET_ID), // Map cloning
         MultiRecipeData.of(UUID.fromString("98c84b38-1085-46bd-b1ce-dd38c159e6cc"), ++LAST_RECIPE_NET_ID), // Map upgrading
@@ -72,17 +73,17 @@ public class JavaFinishConfigurationTranslator extends PacketTranslator<Clientbo
         craftingDataPacket.getPotionMixData().addAll(Registries.POTION_MIXES.forVersion(session.getUpstream().getProtocolVersion()));
         if (session.isSentSpawnPacket()) {
             session.getUpstream().sendPacket(craftingDataPacket);
-            // TODO proper fix to check if we've been online - in online mode (with auth screen),
-            //  recipes are not yet known
-            if (session.getStonecutterRecipes() != null) {
-                session.getCraftingRecipes().clear();
-                session.getJavaToBedrockRecipeIds().clear();
-                session.getSmithingRecipes().clear();
-                session.getStonecutterRecipes().clear();
-            }
+            session.getLastRecipeNetId().set(LAST_RECIPE_NET_ID + 1);
+            session.getCraftingRecipes().clear();
+            session.getJavaToBedrockRecipeIds().clear();
+            session.getSmithingRecipes().clear();
+            session.setStonecutterRecipes(Int2ObjectMaps.emptyMap());
         } else {
             session.getUpstream().queuePostStartGamePacket(craftingDataPacket);
         }
+
+        // We can avoid re-sending potion mixes / crafting recipes again in the JavaUpdateRecipesTranslator
+        session.setCleanRecipesRequired(false);
 
         // while ClientboundLoginPacket holds the level, it doesn't hold the scoreboard.
         // The ClientboundStartConfigurationPacket indirectly removes the old scoreboard,

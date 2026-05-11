@@ -26,6 +26,9 @@
 package org.geysermc.geyser.inventory.recipe;
 
 import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.slot.SlotDisplay;
+import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.RecipeData;
+
+import java.util.List;
 
 /**
  * A more compact version of {@link org.geysermc.mcprotocollib.protocol.data.game.recipe.display.RecipeDisplay}.
@@ -37,4 +40,10 @@ public interface GeyserRecipe {
     boolean isShaped();
 
     SlotDisplay result();
+
+    /**
+     * The exact Bedrock recipe data previously sent for this Java recipe.
+     * Reusing it preserves recipe IDs and network IDs after a clean recipe reset.
+     */
+    List<RecipeData> recipeData();
 }
