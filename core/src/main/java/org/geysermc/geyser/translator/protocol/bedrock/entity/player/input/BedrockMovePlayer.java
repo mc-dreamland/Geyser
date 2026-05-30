@@ -164,12 +164,13 @@ final class BedrockMovePlayer {
         // (Press into a wall in a corner - you're trying to move but nothing actually happens)
         // This isn't sent when a player is riding a vehicle (as of 1.21.62)
         boolean horizontalCollision = packet.getInputData().contains(PlayerAuthInputData.HORIZONTAL_COLLISION);
+        boolean javaOnGround = isOnGround || session.getBlockBreakHandler().shouldSpoofOnGroundForFlyingBreak();
 
         // If only the pitch and yaw changed
         // This isn't needed, but it makes the packets closer to vanilla
         // It also means you can't "lag back" while only looking, in theory
         if (!positionChangedAndShouldUpdate && rotationChanged) {
-            ServerboundMovePlayerRotPacket playerRotationPacket = new ServerboundMovePlayerRotPacket(isOnGround, horizontalCollision, javaYaw, pitch);
+            ServerboundMovePlayerRotPacket playerRotationPacket = new ServerboundMovePlayerRotPacket(javaOnGround, horizontalCollision, javaYaw, pitch);
 
             entity.setYaw(yaw);
             entity.setJavaYaw(javaYaw);
@@ -194,7 +195,7 @@ final class BedrockMovePlayer {
                         if (rotationChanged) {
                             // Send rotation updates as well
                             movePacket = new ServerboundMovePlayerPosRotPacket(
-                                isOnGround,
+                                javaOnGround,
                                 horizontalCollision,
                                 position.getX(), position.getY(), position.getZ(),
                                 javaYaw, pitch
@@ -205,7 +206,7 @@ final class BedrockMovePlayer {
                             entity.setHeadYaw(headYaw);
                         } else {
                             // Rotation did not change; don't send an update with rotation
-                            movePacket = new ServerboundMovePlayerPosPacket(isOnGround, horizontalCollision, position.getX(), position.getY(), position.getZ());
+                            movePacket = new ServerboundMovePlayerPosPacket(javaOnGround, horizontalCollision, position.getX(), position.getY(), position.getZ());
                         }
 
                         entity.setPositionManual(packet.getPosition());
@@ -224,11 +225,13 @@ final class BedrockMovePlayer {
                 session.getGeyser().getLogger().debug("Recalculating position...");
                 session.getCollisionManager().recalculatePosition();
             }
-        } else if (horizontalCollision != session.getInputCache().lastHorizontalCollision() || isOnGround != entity.isOnGround()) {
-            session.sendDownstreamGamePacket(new ServerboundMovePlayerStatusOnlyPacket(isOnGround, horizontalCollision));
+        } else if (horizontalCollision != session.getInputCache().lastHorizontalCollision()
+            || javaOnGround != session.getInputCache().lastJavaOnGround()) {
+            session.sendDownstreamGamePacket(new ServerboundMovePlayerStatusOnlyPacket(javaOnGround, horizontalCollision));
         }
 
         session.getInputCache().setLastHorizontalCollision(horizontalCollision);
+        session.getInputCache().setLastJavaOnGround(javaOnGround);
         entity.setOnGround(isOnGround);
 
         // Move parrots to match if applicable

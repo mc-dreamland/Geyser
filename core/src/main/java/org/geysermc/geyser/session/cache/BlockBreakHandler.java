@@ -60,12 +60,14 @@ import org.geysermc.geyser.translator.protocol.bedrock.BedrockInventoryTransacti
 import org.geysermc.geyser.translator.protocol.java.level.JavaBlockDestructionTranslator;
 import org.geysermc.geyser.util.BlockUtils;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.BlockBreakStage;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.InteractAction;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.AdventureModePredicate;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.ToolData;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundInteractPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerStatusOnlyPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundPlayerActionPacket;
 
 import java.util.HashSet;
@@ -296,6 +298,7 @@ public class BlockBreakHandler {
 
     protected void handleStartBreak(@NonNull Vector3i position, @NonNull BlockState state, Direction blockFace, long tick) {
         GeyserItemStack item = session.getPlayerInventory().getItemInHand();
+        sendFlyingBreakGroundState();
 
         // Account for fire - the client likes to hit the block behind.
         Vector3i fireBlockPos = BlockUtils.getBlockPosition(position, blockFace);
@@ -519,6 +522,8 @@ public class BlockBreakHandler {
     }
 
     protected void destroyBlock(BlockState state, Vector3i vector, Direction direction, boolean instamine) {
+        sendFlyingBreakGroundState();
+
         // Send java packet
         session.sendDownstreamGamePacket(new ServerboundPlayerActionPacket(instamine ? PlayerAction.START_DIGGING : PlayerAction.FINISH_DIGGING,
             vector, direction.mcpl(), session.getWorldCache().nextPredictionSequence()));
@@ -580,6 +585,21 @@ public class BlockBreakHandler {
 
         this.updatedServerBlockStateId = null;
         return session.getGeyser().getWorldManager().blockAt(session, position);
+    }
+
+    public boolean shouldSpoofOnGroundForFlyingBreak() {
+        return currentBlockPos != null && shouldIgnoreAirborneMiningPenalty();
+    }
+
+    public boolean shouldIgnoreAirborneMiningPenalty() {
+        return session.isFlying() && !session.isInstabuild() && session.getGameMode() != GameMode.SPECTATOR;
+    }
+
+    private void sendFlyingBreakGroundState() {
+        if (shouldIgnoreAirborneMiningPenalty() && !session.getPlayerEntity().isOnGround()) {
+            session.sendDownstreamGamePacket(new ServerboundMovePlayerStatusOnlyPacket(
+                true, session.getInputCache().lastHorizontalCollision()));
+        }
     }
 
     /**
