@@ -50,6 +50,7 @@ public class Conversion827_819 {
         }
 
         return switch (item.javaIdentifier()) {
+            case "minecraft:skeleton_skull" -> mapping.withBedrockIdentifier("minecraft:skull");
             case "minecraft:acacia_shelf", "minecraft:bamboo_shelf", "minecraft:birch_shelf", "minecraft:cherry_shelf",
                     "minecraft:crimson_shelf", "minecraft:dark_oak_shelf", "minecraft:jungle_shelf", "minecraft:mangrove_shelf",
                     "minecraft:oak_shelf", "minecraft:pale_oak_shelf", "minecraft:spruce_shelf", "minecraft:warped_shelf" -> mapping.withFallbackIdentifier("minecraft:chiseled_bookshelf");
