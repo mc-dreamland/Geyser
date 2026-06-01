@@ -170,7 +170,7 @@ public final class GeyserServer {
         Channel channel = future.channel();
         // Add our ping handler
         channel.pipeline()
-                .addFirst(RakConnectionRequestHandler.NAME, new RakConnectionRequestHandler(this))
+                .addBefore(RakServerOfflineHandler.NAME, RakConnectionRequestHandler.NAME, new RakConnectionRequestHandler(this))
                 .addAfter(RakServerOfflineHandler.NAME, RakPingHandler.NAME, new RakPingHandler(this));
 
         // Add proxy handler
@@ -280,7 +280,7 @@ public final class GeyserServer {
         }
 
         ConnectionRequestEvent requestEvent = new ConnectionRequestEvent(
-            inetSocketAddress, 
+            inetSocketAddress,
             this.proxiedAddresses != null ? this.proxiedAddresses.get(inetSocketAddress) : null
         );
         geyser.eventBus().fire(requestEvent);
