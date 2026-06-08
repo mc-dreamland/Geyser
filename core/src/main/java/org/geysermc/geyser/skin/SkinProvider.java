@@ -163,6 +163,19 @@ public class SkinProvider {
         }
     }
 
+    public static void clearCachesForKey(UUID uuid) {
+        CACHED_GEOMETRY.invalidate(uuid);
+        GeyserSession geyserSession = GeyserImpl.getInstance().getSessionManager().getSessions().get(uuid);
+        String skinId = geyserSession.getClientData().getSkinId();
+        CACHED_BEDROCK_SKINS.invalidate(skinId);
+        String textureUrl = CACHED_JAVA_SKINS_UUID.getIfPresent(uuid);
+        if (textureUrl != null) {
+            CACHED_JAVA_SKINS.invalidate(textureUrl);
+            requestedSkins.remove(textureUrl);
+        }
+        CACHED_JAVA_SKINS_UUID.invalidate(uuid);
+    }
+
     public static void registerCacheImageTask(GeyserImpl geyser) {
         // Schedule Daily Image Expiry if we are caching them
         if (geyser.config().advanced().cacheImages() > 0) {
@@ -173,7 +186,7 @@ public class SkinProvider {
                 }
 
                 int count = 0;
-                final long expireTime = ((long) GeyserImpl.getInstance().config().advanced().cacheImages()) * ((long)1000 * 60 * 60 * 24);
+                final long expireTime = ((long) GeyserImpl.getInstance().config().advanced().cacheImages()) * ((long) 1000 * 60 * 60 * 24);
                 for (File imageFile : Objects.requireNonNull(cacheFolder.listFiles())) {
                     if (imageFile.lastModified() < System.currentTimeMillis() - expireTime) {
                         //noinspection ResultOfMethodCallIgnored
