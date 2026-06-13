@@ -227,6 +227,13 @@ public final class ItemTranslator {
             nbtMapBuilder.putIfAbsent("ench", NbtList.EMPTY);
         }
 
+        // Pass a Java item's custom_data "minecraft:item_lock" (byte) through to the Bedrock item,
+        // so Bedrock clients show the lock indicator and prevent moving it. 1 = lock_in_slot, 2 = lock_in_inventory.
+        NbtMap itemLockData = components.get(DataComponentTypes.CUSTOM_DATA);
+        if (itemLockData != null && itemLockData.containsKey("minecraft:item_lock")) {
+            nbtBuilder.putByte("minecraft:item_lock", itemLockData.getByte("minecraft:item_lock", (byte) 0));
+        }
+
         ItemData.Builder builder = javaItem.translateToBedrock(session, count, components, bedrockItem, session.getItemMappings());
         // Finalize the Bedrock NBT
         builder.tag(nbtBuilder.build());
