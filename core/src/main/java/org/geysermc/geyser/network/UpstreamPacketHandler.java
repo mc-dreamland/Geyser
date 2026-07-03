@@ -564,7 +564,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         session.sendUpstreamPacket(data);
 
         totalSentPackBytes += codec.size();
-        GeyserImpl.getInstance().getLogger().info(String.format(
+        GeyserImpl.getInstance().getLogger().debug(String.format(
             "[Geyser] 开始下发资源包：%s（类型：%s），大小：%,d 字节，共 %d 个分片。累计发送大小: %,d 字节。",
             header.name(),
             data.getType(),
