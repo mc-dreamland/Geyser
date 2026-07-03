@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.network.netty;
 
+import com.google.common.collect.Lists;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -101,9 +102,9 @@ public final class GeyserServer {
     private final GeyserImpl geyser;
     private EventLoopGroup group;
     // Split childGroup may improve IO
-    private EventLoopGroup childGroup;
-    private final ServerBootstrap bootstrap;
-    private EventLoopGroup playerGroup;
+//    private EventLoopGroup childGroup;
+//    private final ServerBootstrap bootstrap;
+//    private EventLoopGroup playerGroup;
 
     @Getter
     private final ExpiringMap<InetSocketAddress, InetSocketAddress> proxiedAddresses;
@@ -128,14 +129,14 @@ public final class GeyserServer {
         }
         GeyserImpl.getInstance().getLogger().debug("Listen thread count: " + listenCount);
         this.group = TRANSPORT.eventLoopGroupFactory().apply(listenCount, new DefaultThreadFactory("GeyserServer", true));
-        this.childGroup = TRANSPORT.eventLoopGroupFactory().apply(threadCount, new DefaultThreadFactory("GeyserServerChild", true));
+//        this.childGroup = TRANSPORT.eventLoopGroupFactory().apply(threadCount, new DefaultThreadFactory("GeyserServerChild", true));
 
-        this.bootstrap = this.createBootstrap();
+//        ServerBootstrap bootstrap = this.createBootstrap();
         // setup SO_REUSEPORT if exists - or, if the option does not actually exist, reset listen count
         // otherwise, we try to bind multiple times which wont work if so_reuseport is not valid
-        if (!Bootstraps.setupBootstrap(this.bootstrap)) {
-            this.listenCount = 1;
-        }
+//        if (!Bootstraps.setupBootstrap(bootstrap)) {
+//            this.listenCount = 1;
+//        }
 
         if (this.geyser.config().advanced().bedrock().useHaproxyProtocol()) {
             this.proxiedAddresses = ExpiringMap.builder()
@@ -149,14 +150,19 @@ public final class GeyserServer {
     }
 
     public CompletableFuture<Void> bind(InetSocketAddress address) {
-        bootstrapFutures = new ChannelFuture[listenCount];
+//        bootstrapFutures = new ChannelFuture[listenCount];
+        List<ChannelFuture> all = Lists.newLinkedList();
         for (int i = 0; i < listenCount; i++) {
             System.out.println("#bind -> " + i);
+            ServerBootstrap bootstrap = createBootstrap();
+            if (!Bootstraps.setupBootstrap(bootstrap)) {
+                this.listenCount = 1;
+            }
             ChannelFuture future = bootstrap.bind(address);
             modifyHandlers(future);
-            bootstrapFutures[i] = future;
+            all.add(future);
         }
-
+        bootstrapFutures = all.toArray(new ChannelFuture[0]);
         return Bootstraps.allOf(bootstrapFutures);
     }
 
@@ -185,16 +191,16 @@ public final class GeyserServer {
 
     public void shutdown() {
         try {
-            Future<?> futureChildGroup = this.childGroup.shutdownGracefully(SHUTDOWN_QUIET_PERIOD_MS, SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-            this.childGroup = null;
+//            Future<?> futureChildGroup = this.childGroup.shutdownGracefully(SHUTDOWN_QUIET_PERIOD_MS, SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+//            this.childGroup = null;
             Future<?> futureGroup = this.group.shutdownGracefully(SHUTDOWN_QUIET_PERIOD_MS, SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             this.group = null;
-            Future<?> futurePlayerGroup = this.playerGroup.shutdownGracefully(SHUTDOWN_QUIET_PERIOD_MS, SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-            this.playerGroup = null;
+//            Future<?> futurePlayerGroup = this.playerGroup.shutdownGracefully(SHUTDOWN_QUIET_PERIOD_MS, SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+//            this.playerGroup = null;
 
-            futureChildGroup.sync();
+//            futureChildGroup.sync();
             futureGroup.sync();
-            futurePlayerGroup.sync();
+//            futurePlayerGroup.sync();
 
             SkinProvider.shutdown();
         } catch (InterruptedException e) {
@@ -222,7 +228,7 @@ public final class GeyserServer {
         }
 
         GeyserServerInitializer serverInitializer = new GeyserServerInitializer(this.geyser);
-        playerGroup = serverInitializer.getEventLoopGroup();
+//        playerGroup = serverInitializer.getEventLoopGroup();
         this.geyser.getLogger().debug("Setting MTU to " + this.geyser.config().advanced().bedrock().mtu());
 
         int rakPacketLimit = positivePropOrDefault("Geyser.RakPacketLimit", DEFAULT_PACKET_LIMIT);
@@ -236,7 +242,7 @@ public final class GeyserServer {
 
         return new ServerBootstrap()
                 .channelFactory(RakChannelFactory.server(TRANSPORT.datagramChannelClass()))
-                .group(group, childGroup)
+                .group(group.next())
                 .option(RakChannelOption.RAK_HANDLE_PING, true)
                 .option(RakChannelOption.RAK_MAX_MTU, this.geyser.config().advanced().bedrock().mtu())
                 .option(RakChannelOption.RAK_PACKET_LIMIT, rakPacketLimit)
