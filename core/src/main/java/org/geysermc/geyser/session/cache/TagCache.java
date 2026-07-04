@@ -34,7 +34,9 @@ import org.geysermc.geyser.GeyserLogger;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.registry.JavaRegistries;
 import org.geysermc.geyser.session.cache.registry.JavaRegistryKey;
+import org.geysermc.geyser.session.cache.tags.BlockTag;
 import org.geysermc.geyser.session.cache.tags.GeyserHolderSet;
+import org.geysermc.geyser.session.cache.tags.ItemTag;
 import org.geysermc.geyser.session.cache.tags.Tag;
 import org.geysermc.geyser.util.MinecraftKey;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.HolderSet;
@@ -64,6 +66,8 @@ import java.util.Map;
 public final class TagCache {
     private final GeyserSession session;
     private final Map<Tag<?>, int[]> tags = new Object2ObjectOpenHashMap<>();
+    private int[] climbableBlockIds = IntArrays.EMPTY_ARRAY;
+    private int[] bundleItemIds = IntArrays.EMPTY_ARRAY;
 
     public TagCache(GeyserSession session) {
         this.session = session;
@@ -74,6 +78,8 @@ public final class TagCache {
         GeyserLogger logger = session.getGeyser().getLogger();
 
         this.tags.clear();
+        this.climbableBlockIds = IntArrays.EMPTY_ARRAY;
+        this.bundleItemIds = IntArrays.EMPTY_ARRAY;
 
         for (Key registryKey : allTags.keySet()) {
             JavaRegistryKey<?> registry = JavaRegistries.fromKey(registryKey);
@@ -112,6 +118,12 @@ public final class TagCache {
             if (sort) {
                 // Used in RecipeBookAddTranslator
                 Arrays.sort(value);
+            }
+            if (registry == JavaRegistries.BLOCK && tag.getKey().equals(BlockTag.CLIMBABLE.tag())) {
+                this.climbableBlockIds = value;
+            }
+            if (registry == JavaRegistries.ITEM && tag.getKey().equals(ItemTag.BUNDLES.tag())) {
+                this.bundleItemIds = value;
             }
             this.tags.put(new Tag<>(registry, tag.getKey()), value);
         }
@@ -168,6 +180,12 @@ public final class TagCache {
      * @return the network IDs in the given tag. This can be an empty array.
      */
     public int[] getRaw(@NonNull Tag<?> tag) {
+        if (tag == BlockTag.CLIMBABLE) {
+            return this.climbableBlockIds;
+        }
+        if (tag == ItemTag.BUNDLES) {
+            return this.bundleItemIds;
+        }
         return this.tags.getOrDefault(tag, IntArrays.EMPTY_ARRAY);
     }
 

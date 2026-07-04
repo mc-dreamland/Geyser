@@ -28,6 +28,7 @@ package org.geysermc.geyser.session.cache;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import lombok.Setter;
+import org.geysermc.erosion.util.BlockPositionIterator;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.level.block.type.Block;
 import org.geysermc.geyser.level.chunk.GeyserChunk;
@@ -126,6 +127,57 @@ public class ChunkCache {
         }
 
         return Block.JAVA_AIR_ID;
+    }
+
+    public void getBlocksAt(BlockPositionIterator iter, int[] blocks) {
+        if (!cache) {
+            for (; iter.hasNext(); iter.next()) {
+                blocks[iter.getIteration()] = Block.JAVA_AIR_ID;
+            }
+            return;
+        }
+
+        int currentChunkX = Integer.MIN_VALUE;
+        int currentChunkZ = Integer.MIN_VALUE;
+        int currentSectionY = Integer.MIN_VALUE;
+        DataPalette[] sections = null;
+        DataPalette section = null;
+
+        for (; iter.hasNext(); iter.next()) {
+            final int iteration = iter.getIteration();
+            final int x = iter.getX();
+            final int y = iter.getY();
+            final int z = iter.getZ();
+            final int sectionY = (y - minY) >> 4;
+
+            if (sectionY < 0) {
+                blocks[iteration] = Block.JAVA_AIR_ID;
+                continue;
+            }
+
+            final int chunkX = x >> 4;
+            final int chunkZ = z >> 4;
+            if (chunkX != currentChunkX || chunkZ != currentChunkZ) {
+                currentChunkX = chunkX;
+                currentChunkZ = chunkZ;
+                GeyserChunk column = this.getChunk(chunkX, chunkZ);
+                sections = column == null ? null : column.sections();
+                currentSectionY = Integer.MIN_VALUE;
+                section = null;
+            }
+
+            if (sections == null || sectionY >= sections.length) {
+                blocks[iteration] = Block.JAVA_AIR_ID;
+                continue;
+            }
+
+            if (sectionY != currentSectionY) {
+                currentSectionY = sectionY;
+                section = sections[sectionY];
+            }
+
+            blocks[iteration] = section == null ? Block.JAVA_AIR_ID : section.get(x & 0xF, y & 0xF, z & 0xF);
+        }
     }
 
     public void removeChunk(int chunkX, int chunkZ) {

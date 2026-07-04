@@ -32,9 +32,11 @@ import org.geysermc.erosion.packet.backendbound.BackendboundBatchBlockRequestPac
 import org.geysermc.erosion.packet.backendbound.BackendboundBlockRequestPacket;
 import org.geysermc.erosion.util.BlockPositionIterator;
 import org.geysermc.geyser.erosion.ErosionCancellationException;
+import org.geysermc.geyser.level.block.type.Block;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 public class GeyserWorldManager extends WorldManager {
@@ -71,16 +73,32 @@ public class GeyserWorldManager extends WorldManager {
 
     @Override
     public int[] getBlocksAt(GeyserSession session, BlockPositionIterator iter) {
+        int[] blocks = new int[iter.getMaxIterations()];
+        this.getBlocksAt(session, iter, blocks);
+        return blocks;
+    }
+
+    @Override
+    public void getBlocksAt(GeyserSession session, BlockPositionIterator iter, int[] blocks) {
         var erosionHandler = session.getErosionHandler().getAsActive();
         if (erosionHandler == null) {
-            return super.getBlocksAt(session, iter);
+            session.getChunkCache().getBlocksAt(iter, blocks);
+            return;
         } else if (session.isClosed()) {
             throw new ErosionCancellationException();
         }
+
         CompletableFuture<int[]> future = new CompletableFuture<>();
         erosionHandler.setPendingBatchLookup(future);
         erosionHandler.sendPacket(new BackendboundBatchBlockRequestPacket(iter));
-        return future.join();
+
+        int expectedLength = iter.getMaxIterations();
+        int[] result = future.join();
+        int copyLength = Math.min(result.length, expectedLength);
+        System.arraycopy(result, 0, blocks, 0, copyLength);
+        if (copyLength < expectedLength) {
+            Arrays.fill(blocks, copyLength, expectedLength, Block.JAVA_AIR_ID);
+        }
     }
 
     @Override

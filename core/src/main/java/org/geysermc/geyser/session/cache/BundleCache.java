@@ -63,6 +63,10 @@ public final class BundleCache {
      * If so, we initialize our bundle cache.
      */
     public void initialize(GeyserItemStack itemStack) {
+        if (itemStack.isEmpty()) {
+            return;
+        }
+
         // Message before 1.21.4 - "Can't check for BUNDLE_CONTENTS, which may be missing if the bundle is empty."
         // Now irrelevant, but keeping as-is for the time being.
         if (itemStack.is(session, ItemTag.BUNDLES)) {
