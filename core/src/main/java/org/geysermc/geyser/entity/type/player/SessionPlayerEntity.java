@@ -523,7 +523,7 @@ public class SessionPlayerEntity extends PlayerEntity {
             return false;
         }
 
-        if (this.isOnClimbableBlock() || session.getPlayerEntity().isOnGround()) {
+        if (session.getPlayerEntity().isOnGround() || this.isOnClimbableBlock()) {
             return false;
         }
 

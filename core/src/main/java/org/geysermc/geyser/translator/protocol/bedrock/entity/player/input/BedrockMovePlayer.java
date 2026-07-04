@@ -105,8 +105,7 @@ final class BedrockMovePlayer {
         }
 
         // Due to how ladder works on Bedrock, we won't get climbing velocity from tick end unless if you're colliding horizontally. So we account for it ourselves.
-        boolean onClimbableBlock = entity.isOnClimbableBlock();
-        if (onClimbableBlock && packet.getInputData().contains(PlayerAuthInputData.JUMPING)) {
+        if (packet.getInputData().contains(PlayerAuthInputData.JUMPING) && entity.isOnClimbableBlock()) {
             entity.setLastTickEndVelocity(Vector3f.from(entity.getLastTickEndVelocity().getX(), 0.2F, entity.getLastTickEndVelocity().getZ()));
         }
 
