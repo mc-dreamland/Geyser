@@ -45,18 +45,6 @@ public class BedrockNeteasePythonRpcTranslator extends PacketTranslator<NeteaseP
             return;
         }
 
-        //由于1.20.50版本，authinput无法正确获取是否在地上。现通过SDK设置onGround属性
-        if (packet.getEventName() != null) {
-            switch (packet.getEventName()) {
-                case "OnGround":
-                    session.setSdkOnGround(true);
-                    return;
-                case "NotOnGround":
-                    session.setSdkOnGround(false);
-                    return;
-            }
-        }
-
         try {
             MessagePack msgPack = new MessagePack();
             byte[] write = msgPack.write(packet.getJson());

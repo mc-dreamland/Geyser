@@ -101,11 +101,15 @@ public abstract class WorldManager {
 
     public int[] getBlocksAt(GeyserSession session, BlockPositionIterator iter) {
         int[] blocks = new int[iter.getMaxIterations()];
+        this.getBlocksAt(session, iter, blocks);
+        return blocks;
+    }
+
+    public void getBlocksAt(GeyserSession session, BlockPositionIterator iter, int[] blocks) {
         for (; iter.hasNext(); iter.next()) {
             int networkId = this.getBlockAt(session, iter.getX(), iter.getY(), iter.getZ());
             blocks[iter.getIteration()] = networkId;
         }
-        return blocks;
     }
 
     /**

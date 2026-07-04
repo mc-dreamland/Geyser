@@ -62,7 +62,6 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.Serv
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundPlayerCommandPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSwingPacket;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -72,9 +71,10 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
     @Override
     public void translate(GeyserSession session, PlayerAuthInputPacket packet) {
         SessionPlayerEntity entity = session.getPlayerEntity();
+        Set<PlayerAuthInputData> inputData = packet.getInputData();
 
         session.setClientTicks(packet.getTick());
-        session.setInClientPredictedVehicle(packet.getInputData().contains(PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE) && entity.getVehicle() != null);
+        session.setInClientPredictedVehicle(inputData.contains(PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE) && entity.getVehicle() != null);
 
         boolean wasJumping = session.getInputCache().wasJumping();
         session.getInputCache().processInputs(entity, packet);
@@ -82,12 +82,23 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
 
         ServerboundPlayerCommandPacket sprintPacket = null;
 
-        Set<PlayerAuthInputData> inputData = packet.getInputData();
         // These inputs are sent in order, so if e.g. START_GLIDING and STOP_GLIDING are both present,
         // it's important to make sure we send the last known status instead of both to the Java server.
-        Set<PlayerAuthInputData> leftOverInputData = new HashSet<>(packet.getInputData());
+        int startSprintingIndex = -1;
+        int stopSprintingIndex = -1;
+        int stopGlidingIndex = -1;
+        int inputIndex = 0;
         for (PlayerAuthInputData input : inputData) {
-            leftOverInputData.remove(input);
+            switch (input) {
+                case START_SPRINTING -> startSprintingIndex = inputIndex;
+                case STOP_SPRINTING -> stopSprintingIndex = inputIndex;
+                case STOP_GLIDING -> stopGlidingIndex = inputIndex;
+            }
+            inputIndex++;
+        }
+
+        inputIndex = 0;
+        for (PlayerAuthInputData input : inputData) {
             switch (input) {
                 case PERFORM_ITEM_INTERACTION -> processItemUseTransaction(session, packet.getItemUseTransaction());
                 case PERFORM_ITEM_STACK_REQUEST -> session.getPlayerInventoryHolder().translateRequests(List.of(packet.getItemStackRequest()));
@@ -96,7 +107,7 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
                 case START_CRAWLING -> entity.setFlag(EntityFlag.CRAWLING, true);
                 case STOP_CRAWLING -> entity.setFlag(EntityFlag.CRAWLING, false);
                 case START_SPRINTING -> {
-                    if (!leftOverInputData.contains(PlayerAuthInputData.STOP_SPRINTING)) {
+                    if (stopSprintingIndex <= inputIndex) {
                         if (!GameProtocol.is1_21_80orHigher(session) && session.getCollisionManager().isPlayerTouchingWater() && !session.getCollisionManager().isPlayerInWater()) {
                             UpdateAttributesPacket attributesPacket = new UpdateAttributesPacket();
                             attributesPacket.setRuntimeEntityId(entity.getGeyserId());
@@ -110,7 +121,7 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
                 }
                 case STOP_SPRINTING -> {
                     // Don't send sprinting update when we weren't sprinting
-                    if (!leftOverInputData.contains(PlayerAuthInputData.START_SPRINTING) && session.isSprinting()) {
+                    if (startSprintingIndex <= inputIndex && session.isSprinting()) {
                         sprintPacket = new ServerboundPlayerCommandPacket(entity.javaId(), PlayerState.STOP_SPRINTING);
                         session.setSprinting(false);
                     }
@@ -146,7 +157,7 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
                     // Bedrock can send both start_glide and stop_glide in the same packet.
                     // We only want to start gliding if the client has not stopped gliding in the same tick.
                     // last replicated on 1.21.70 by "walking" and jumping while in water
-                    if (!leftOverInputData.contains(PlayerAuthInputData.STOP_GLIDING)) {
+                    if (stopGlidingIndex <= inputIndex) {
                         if (entity.canStartGliding()) {
                             // On Java you can't start gliding while flying
                             if (session.isFlying()) {
@@ -194,6 +205,7 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
                     CooldownUtils.sendCooldown(session);
                 }
             }
+            inputIndex++;
         }
 
         // The player will calculate the "desired" pose at the end of every tick, if this pose still invalid then

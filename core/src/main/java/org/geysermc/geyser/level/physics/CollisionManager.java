@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.level.physics;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.util.TriState;
@@ -65,6 +66,8 @@ public class CollisionManager {
     @Getter
     private final BoundingBox playerBoundingBox;
 
+    private int[] collidableBlockBuffer = new int[0];
+
     /**
      * Whether the player is inside scaffolding
      */
@@ -87,8 +90,11 @@ public class CollisionManager {
      * The locale used is necessary so other regions don't use <code>,</code> as their decimal separator.
      */
     private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.#####", new DecimalFormatSymbols(Locale.ENGLISH));
+    private static final boolean USE_FAST_MOVEMENT_Y_TRIM = Boolean.parseBoolean(System.getProperty("Geyser.FastMovementYTrim", "true"));
+    private static final double MOVEMENT_Y_TRIM_SCALE = 100000D;
 
     private static final double PLAYER_STEP_UP = 0.6;
+    private static final int MAX_REUSED_COLLISION_BLOCKS = 512;
 
     /**
      * The maximum squared distance between a Bedrock players' movement and our predicted movement before
@@ -212,10 +218,26 @@ public class CollisionManager {
 
         if (!newOnGround) {
             // Trim the position to prevent rounding errors that make Java think we are clipping into a block
-            position = Vector3d.from(position.getX(), Double.parseDouble(DECIMAL_FORMAT.format(position.getY())), position.getZ());
+            position = Vector3d.from(position.getX(), trimMovementY(position.getY()), position.getZ());
         }
 
         return new CollisionResult(position, TriState.byBoolean(onGround));
+    }
+
+    private static double trimMovementY(double y) {
+        if (!USE_FAST_MOVEMENT_Y_TRIM) {
+            return trimMovementYOld(y);
+        }
+
+        double scaled = y * MOVEMENT_Y_TRIM_SCALE;
+        if (!Double.isFinite(scaled)) {
+            return trimMovementYOld(y);
+        }
+        return Math.rint(scaled) / MOVEMENT_Y_TRIM_SCALE;
+    }
+
+    private static double trimMovementYOld(double y) {
+        return Double.parseDouble(DECIMAL_FORMAT.format(y));
     }
 
     public void recalculatePosition() {
@@ -267,35 +289,59 @@ public class CollisionManager {
 
         // Used when correction code needs to be run before the main correction
         BlockPositionIterator iter = session.getCollisionManager().playerCollidableBlocksIterator();
-        int[] blocks = session.getGeyser().getWorldManager().getBlocksAt(session, iter);
+        int[] blocks = collidableBlockBuffer(iter.getMaxIterations());
+        session.getGeyser().getWorldManager().getBlocksAt(session, iter, blocks);
         for (iter.reset(); iter.hasNext(); iter.next()) {
-            BlockCollision blockCollision = BlockUtils.getCollision(blocks[iter.getIteration()]);
+            final int iteration = iter.getIteration();
+
+            BlockCollision blockCollision = BlockUtils.getCollision(blocks[iteration]);
             if (blockCollision != null) {
-                blockCollision.beforeCorrectPosition(iter.getX(), iter.getY(), iter.getZ(), playerBoundingBox);
+                final int x = iter.getX();
+                final int y = iter.getY();
+                final int z = iter.getZ();
+                blockCollision.beforeCorrectPosition(x, y, z, playerBoundingBox);
             }
         }
 
         // Main correction code
+        IntArrayList collisionIgnoredBlocks = session.getBlockMappings().getCollisionIgnoredBlocks();
         for (iter.reset(); iter.hasNext(); iter.next()) {
-            final int blockId = blocks[iter.getIteration()];
+            final int iteration = iter.getIteration();
+            final int blockId = blocks[iteration];
 
-            // These block have different offset between BE and JE so we ignore them because if we "correct" the position
-            // it will lead to complication and more inaccurate movement.
-            if (session.getBlockMappings().getCollisionIgnoredBlocks().contains(blockId)) {
+            BlockCollision blockCollision = BlockUtils.getCollision(blockId);
+            if (blockCollision == null) {
                 continue;
             }
 
-            BlockCollision blockCollision = BlockUtils.getCollision(blockId);
-            if (blockCollision != null) {
-                if (!blockCollision.correctPosition(session, iter.getX(), iter.getY(), iter.getZ(), playerBoundingBox)) {
-                    return false;
-                }
+            // These block have different offset between BE and JE so we ignore them because if we "correct" the position
+            // it will lead to complication and more inaccurate movement.
+            if (collisionIgnoredBlocks.contains(blockId)) {
+                continue;
+            }
+
+            final int x = iter.getX();
+            final int y = iter.getY();
+            final int z = iter.getZ();
+            if (!blockCollision.correctPosition(session, x, y, z, playerBoundingBox)) {
+                return false;
             }
         }
 
         updateScaffoldingFlags(true);
 
         return true;
+    }
+
+    private int[] collidableBlockBuffer(int requiredSize) {
+        if (requiredSize > MAX_REUSED_COLLISION_BLOCKS) {
+            return new int[requiredSize];
+        }
+
+        if (collidableBlockBuffer.length < requiredSize) {
+            collidableBlockBuffer = new int[requiredSize];
+        }
+        return collidableBlockBuffer;
     }
 
     public Vector3d correctPlayerMovement(Vector3d movement, boolean checkWorld, boolean teleported) {
