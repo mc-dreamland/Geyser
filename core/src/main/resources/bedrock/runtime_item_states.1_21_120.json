@@ -13,13 +13,13 @@
     },
     {
         "name": "minecraft:acacia_chest_boat",
-        "id": 677,
+        "id": 679,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:acacia_door",
-        "id": 588,
+        "id": 589,
         "version": 2,
         "componentBased": false
     },
@@ -85,7 +85,7 @@
     },
     {
         "name": "minecraft:acacia_sign",
-        "id": 611,
+        "id": 612,
         "version": 2,
         "componentBased": false
     },
@@ -133,7 +133,7 @@
     },
     {
         "name": "minecraft:agent_spawn_egg",
-        "id": 514,
+        "id": 515,
         "version": 2,
         "componentBased": false
     },
@@ -145,7 +145,7 @@
     },
     {
         "name": "minecraft:allay_spawn_egg",
-        "id": 666,
+        "id": 668,
         "version": 2,
         "componentBased": false
     },
@@ -175,7 +175,7 @@
     },
     {
         "name": "minecraft:amethyst_shard",
-        "id": 659,
+        "id": 661,
         "version": 2,
         "componentBased": false
     },
@@ -217,7 +217,7 @@
     },
     {
         "name": "minecraft:angler_pottery_sherd",
-        "id": 691,
+        "id": 693,
         "version": 2,
         "componentBased": false
     },
@@ -235,7 +235,7 @@
     },
     {
         "name": "minecraft:archer_pottery_sherd",
-        "id": 692,
+        "id": 694,
         "version": 2,
         "componentBased": false
     },
@@ -253,13 +253,13 @@
     },
     {
         "name": "minecraft:armor_stand",
-        "id": 584,
+        "id": 585,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:arms_up_pottery_sherd",
-        "id": 693,
+        "id": 695,
         "version": 2,
         "componentBased": false
     },
@@ -277,7 +277,7 @@
     },
     {
         "name": "minecraft:axolotl_spawn_egg",
-        "id": 529,
+        "id": 530,
         "version": 2,
         "componentBased": false
     },
@@ -313,7 +313,7 @@
     },
     {
         "name": "minecraft:balloon",
-        "id": 634,
+        "id": 636,
         "version": 2,
         "componentBased": false
     },
@@ -337,7 +337,7 @@
     },
     {
         "name": "minecraft:bamboo_chest_raft",
-        "id": 689,
+        "id": 691,
         "version": 2,
         "componentBased": false
     },
@@ -409,7 +409,7 @@
     },
     {
         "name": "minecraft:bamboo_raft",
-        "id": 688,
+        "id": 690,
         "version": 2,
         "componentBased": false
     },
@@ -427,7 +427,7 @@
     },
     {
         "name": "minecraft:bamboo_sign",
-        "id": 687,
+        "id": 689,
         "version": 2,
         "componentBased": false
     },
@@ -463,13 +463,13 @@
     },
     {
         "name": "minecraft:banner",
-        "id": 599,
+        "id": 600,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:banner_pattern",
-        "id": 822,
+        "id": 785,
         "version": 2,
         "componentBased": false
     },
@@ -523,7 +523,7 @@
     },
     {
         "name": "minecraft:bee_spawn_egg",
-        "id": 521,
+        "id": 522,
         "version": 2,
         "componentBased": false
     },
@@ -583,13 +583,13 @@
     },
     {
         "name": "minecraft:birch_chest_boat",
-        "id": 674,
+        "id": 676,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:birch_door",
-        "id": 586,
+        "id": 587,
         "version": 2,
         "componentBased": false
     },
@@ -655,7 +655,7 @@
     },
     {
         "name": "minecraft:birch_sign",
-        "id": 609,
+        "id": 610,
         "version": 2,
         "componentBased": false
     },
@@ -811,7 +811,7 @@
     },
     {
         "name": "minecraft:blade_pottery_sherd",
-        "id": 694,
+        "id": 696,
         "version": 2,
         "componentBased": false
     },
@@ -841,7 +841,7 @@
     },
     {
         "name": "minecraft:bleach",
-        "id": 632,
+        "id": 634,
         "version": 2,
         "componentBased": false
     },
@@ -955,7 +955,7 @@
     },
     {
         "name": "minecraft:boat",
-        "id": 820,
+        "id": 781,
         "version": 2,
         "componentBased": false
     },
@@ -967,7 +967,7 @@
     },
     {
         "name": "minecraft:bolt_armor_trim_smithing_template",
-        "id": 733,
+        "id": 735,
         "version": 2,
         "componentBased": false
     },
@@ -1009,7 +1009,7 @@
     },
     {
         "name": "minecraft:bordure_indented_banner_pattern",
-        "id": 618,
+        "id": 619,
         "version": 2,
         "componentBased": false
     },
@@ -1063,13 +1063,13 @@
     },
     {
         "name": "minecraft:breeze_spawn_egg",
-        "id": 528,
+        "id": 529,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:brewer_pottery_sherd",
-        "id": 695,
+        "id": 697,
         "version": 2,
         "componentBased": false
     },
@@ -1219,7 +1219,7 @@
     },
     {
         "name": "minecraft:brush",
-        "id": 714,
+        "id": 716,
         "version": 2,
         "componentBased": false
     },
@@ -1273,7 +1273,7 @@
     },
     {
         "name": "minecraft:burn_pottery_sherd",
-        "id": 696,
+        "id": 698,
         "version": 2,
         "componentBased": false
     },
@@ -1315,19 +1315,19 @@
     },
     {
         "name": "minecraft:camel_spawn_egg",
-        "id": 690,
+        "id": 692,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:camera",
-        "id": 629,
+        "id": 631,
         "version": 0,
         "componentBased": false
     },
     {
         "name": "minecraft:campfire",
-        "id": 623,
+        "id": 624,
         "version": 2,
         "componentBased": true
     },
@@ -1357,7 +1357,7 @@
     },
     {
         "name": "minecraft:carrot_on_a_stick",
-        "id": 549,
+        "id": 550,
         "version": 2,
         "componentBased": false
     },
@@ -1381,7 +1381,7 @@
     },
     {
         "name": "minecraft:cat_spawn_egg",
-        "id": 515,
+        "id": 516,
         "version": 2,
         "componentBased": false
     },
@@ -1471,7 +1471,7 @@
     },
     {
         "name": "minecraft:cherry_boat",
-        "id": 684,
+        "id": 686,
         "version": 2,
         "componentBased": false
     },
@@ -1483,7 +1483,7 @@
     },
     {
         "name": "minecraft:cherry_chest_boat",
-        "id": 685,
+        "id": 687,
         "version": 2,
         "componentBased": false
     },
@@ -1555,7 +1555,7 @@
     },
     {
         "name": "minecraft:cherry_sign",
-        "id": 686,
+        "id": 688,
         "version": 2,
         "componentBased": false
     },
@@ -1603,7 +1603,7 @@
     },
     {
         "name": "minecraft:chest_boat",
-        "id": 680,
+        "id": 682,
         "version": 2,
         "componentBased": false
     },
@@ -1711,7 +1711,7 @@
     },
     {
         "name": "minecraft:chorus_fruit",
-        "id": 590,
+        "id": 591,
         "version": 0,
         "componentBased": false
     },
@@ -1777,7 +1777,7 @@
     },
     {
         "name": "minecraft:coast_armor_trim_smithing_template",
-        "id": 718,
+        "id": 720,
         "version": 2,
         "componentBased": false
     },
@@ -1861,7 +1861,7 @@
     },
     {
         "name": "minecraft:cod_spawn_egg",
-        "id": 507,
+        "id": 508,
         "version": 2,
         "componentBased": false
     },
@@ -1909,13 +1909,13 @@
     },
     {
         "name": "minecraft:command_block_minecart",
-        "id": 595,
+        "id": 596,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:comparator",
-        "id": 554,
+        "id": 555,
         "version": 2,
         "componentBased": true
     },
@@ -1933,7 +1933,7 @@
     },
     {
         "name": "minecraft:compound",
-        "id": 630,
+        "id": 632,
         "version": 2,
         "componentBased": false
     },
@@ -1981,7 +1981,7 @@
     },
     {
         "name": "minecraft:cooked_mutton",
-        "id": 583,
+        "id": 584,
         "version": 0,
         "componentBased": false
     },
@@ -2101,7 +2101,7 @@
     },
     {
         "name": "minecraft:copper_ingot",
-        "id": 537,
+        "id": 538,
         "version": 2,
         "componentBased": false
     },
@@ -2251,7 +2251,7 @@
     },
     {
         "name": "minecraft:creeper_banner_pattern",
-        "id": 614,
+        "id": 615,
         "version": 2,
         "componentBased": false
     },
@@ -2275,7 +2275,7 @@
     },
     {
         "name": "minecraft:crimson_door",
-        "id": 652,
+        "id": 654,
         "version": 2,
         "componentBased": false
     },
@@ -2347,7 +2347,7 @@
     },
     {
         "name": "minecraft:crimson_sign",
-        "id": 650,
+        "id": 652,
         "version": 2,
         "componentBased": false
     },
@@ -2389,7 +2389,7 @@
     },
     {
         "name": "minecraft:crossbow",
-        "id": 607,
+        "id": 608,
         "version": 2,
         "componentBased": false
     },
@@ -2551,7 +2551,7 @@
     },
     {
         "name": "minecraft:danger_pottery_sherd",
-        "id": 697,
+        "id": 699,
         "version": 2,
         "componentBased": false
     },
@@ -2569,13 +2569,13 @@
     },
     {
         "name": "minecraft:dark_oak_chest_boat",
-        "id": 678,
+        "id": 680,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:dark_oak_door",
-        "id": 589,
+        "id": 590,
         "version": 2,
         "componentBased": false
     },
@@ -2641,7 +2641,7 @@
     },
     {
         "name": "minecraft:dark_oak_sign",
-        "id": 612,
+        "id": 613,
         "version": 2,
         "componentBased": false
     },
@@ -3037,7 +3037,7 @@
     },
     {
         "name": "minecraft:diamond_horse_armor",
-        "id": 565,
+        "id": 566,
         "version": 2,
         "componentBased": false
     },
@@ -3115,7 +3115,7 @@
     },
     {
         "name": "minecraft:disc_fragment_5",
-        "id": 672,
+        "id": 674,
         "version": 2,
         "componentBased": false
     },
@@ -3127,7 +3127,7 @@
     },
     {
         "name": "minecraft:dolphin_spawn_egg",
-        "id": 511,
+        "id": 512,
         "version": 2,
         "componentBased": false
     },
@@ -3175,7 +3175,7 @@
     },
     {
         "name": "minecraft:dragon_breath",
-        "id": 592,
+        "id": 593,
         "version": 2,
         "componentBased": false
     },
@@ -3223,25 +3223,25 @@
     },
     {
         "name": "minecraft:drowned_spawn_egg",
-        "id": 510,
+        "id": 511,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:dune_armor_trim_smithing_template",
-        "id": 717,
+        "id": 719,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:dye",
-        "id": 821,
+        "id": 784,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:echo_shard",
-        "id": 682,
+        "id": 684,
         "version": 2,
         "componentBased": false
     },
@@ -3253,7 +3253,7 @@
     },
     {
         "name": "minecraft:elder_guardian_spawn_egg",
-        "id": 498,
+        "id": 499,
         "version": 2,
         "componentBased": false
     },
@@ -3979,13 +3979,13 @@
     },
     {
         "name": "minecraft:elytra",
-        "id": 596,
+        "id": 597,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:emerald",
-        "id": 545,
+        "id": 546,
         "version": 2,
         "componentBased": false
     },
@@ -4003,13 +4003,13 @@
     },
     {
         "name": "minecraft:empty_map",
-        "id": 548,
+        "id": 549,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:enchanted_book",
-        "id": 553,
+        "id": 554,
         "version": 2,
         "componentBased": false
     },
@@ -4099,7 +4099,7 @@
     },
     {
         "name": "minecraft:ender_dragon_spawn_egg",
-        "id": 534,
+        "id": 535,
         "version": 2,
         "componentBased": false
     },
@@ -4129,19 +4129,19 @@
     },
     {
         "name": "minecraft:evoker_spawn_egg",
-        "id": 502,
+        "id": 503,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:experience_bottle",
-        "id": 541,
+        "id": 542,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:explorer_pottery_sherd",
-        "id": 698,
+        "id": 700,
         "version": 2,
         "componentBased": false
     },
@@ -4243,7 +4243,7 @@
     },
     {
         "name": "minecraft:eye_armor_trim_smithing_template",
-        "id": 721,
+        "id": 723,
         "version": 2,
         "componentBased": false
     },
@@ -4285,7 +4285,7 @@
     },
     {
         "name": "minecraft:field_masoned_banner_pattern",
-        "id": 617,
+        "id": 618,
         "version": 2,
         "componentBased": false
     },
@@ -4303,7 +4303,7 @@
     },
     {
         "name": "minecraft:fire_charge",
-        "id": 542,
+        "id": 543,
         "version": 2,
         "componentBased": false
     },
@@ -4339,13 +4339,13 @@
     },
     {
         "name": "minecraft:firework_rocket",
-        "id": 551,
+        "id": 552,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:firework_star",
-        "id": 552,
+        "id": 553,
         "version": 2,
         "componentBased": false
     },
@@ -4375,31 +4375,31 @@
     },
     {
         "name": "minecraft:flow_armor_trim_smithing_template",
-        "id": 732,
+        "id": 734,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:flow_banner_pattern",
-        "id": 621,
+        "id": 622,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:flow_pottery_sherd",
-        "id": 699,
+        "id": 701,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:flower_banner_pattern",
-        "id": 613,
+        "id": 614,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:flower_pot",
-        "id": 547,
+        "id": 548,
         "version": 2,
         "componentBased": true
     },
@@ -4423,19 +4423,19 @@
     },
     {
         "name": "minecraft:fox_spawn_egg",
-        "id": 517,
+        "id": 518,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:frame",
-        "id": 546,
+        "id": 547,
         "version": 2,
         "componentBased": true
     },
     {
         "name": "minecraft:friend_pottery_sherd",
-        "id": 700,
+        "id": 702,
         "version": 2,
         "componentBased": false
     },
@@ -4447,7 +4447,7 @@
     },
     {
         "name": "minecraft:frog_spawn_egg",
-        "id": 663,
+        "id": 665,
         "version": 2,
         "componentBased": false
     },
@@ -4507,7 +4507,7 @@
     },
     {
         "name": "minecraft:globe_banner_pattern",
-        "id": 620,
+        "id": 621,
         "version": 2,
         "componentBased": false
     },
@@ -4519,13 +4519,13 @@
     },
     {
         "name": "minecraft:glow_frame",
-        "id": 658,
+        "id": 660,
         "version": 2,
         "componentBased": true
     },
     {
         "name": "minecraft:glow_ink_sac",
-        "id": 536,
+        "id": 537,
         "version": 2,
         "componentBased": false
     },
@@ -4537,13 +4537,13 @@
     },
     {
         "name": "minecraft:glow_squid_spawn_egg",
-        "id": 531,
+        "id": 532,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:glow_stick",
-        "id": 637,
+        "id": 639,
         "version": 2,
         "componentBased": false
     },
@@ -4567,13 +4567,13 @@
     },
     {
         "name": "minecraft:goat_horn",
-        "id": 662,
+        "id": 664,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:goat_spawn_egg",
-        "id": 530,
+        "id": 531,
         "version": 2,
         "componentBased": false
     },
@@ -4645,7 +4645,7 @@
     },
     {
         "name": "minecraft:golden_horse_armor",
-        "id": 564,
+        "id": 565,
         "version": 2,
         "componentBased": false
     },
@@ -4915,13 +4915,13 @@
     },
     {
         "name": "minecraft:guster_banner_pattern",
-        "id": 622,
+        "id": 623,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:guster_pottery_sherd",
-        "id": 701,
+        "id": 703,
         "version": 2,
         "componentBased": false
     },
@@ -5167,19 +5167,19 @@
     },
     {
         "name": "minecraft:heart_of_the_sea",
-        "id": 603,
+        "id": 604,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:heart_pottery_sherd",
-        "id": 702,
+        "id": 704,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:heartbreak_pottery_sherd",
-        "id": 703,
+        "id": 705,
         "version": 2,
         "componentBased": false
     },
@@ -5197,7 +5197,7 @@
     },
     {
         "name": "minecraft:hoglin_spawn_egg",
-        "id": 523,
+        "id": 524,
         "version": 2,
         "componentBased": false
     },
@@ -5209,13 +5209,13 @@
     },
     {
         "name": "minecraft:honey_bottle",
-        "id": 626,
+        "id": 627,
         "version": 0,
         "componentBased": false
     },
     {
         "name": "minecraft:honeycomb",
-        "id": 625,
+        "id": 626,
         "version": 0,
         "componentBased": false
     },
@@ -5227,13 +5227,13 @@
     },
     {
         "name": "minecraft:hopper",
-        "id": 559,
+        "id": 560,
         "version": 2,
         "componentBased": true
     },
     {
         "name": "minecraft:hopper_minecart",
-        "id": 558,
+        "id": 559,
         "version": 2,
         "componentBased": false
     },
@@ -5269,13 +5269,13 @@
     },
     {
         "name": "minecraft:host_armor_trim_smithing_template",
-        "id": 731,
+        "id": 733,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:howl_pottery_sherd",
-        "id": 704,
+        "id": 706,
         "version": 2,
         "componentBased": false
     },
@@ -5293,7 +5293,7 @@
     },
     {
         "name": "minecraft:ice_bomb",
-        "id": 631,
+        "id": 633,
         "version": 2,
         "componentBased": false
     },
@@ -5407,7 +5407,7 @@
     },
     {
         "name": "minecraft:iron_golem_spawn_egg",
-        "id": 532,
+        "id": 533,
         "version": 2,
         "componentBased": false
     },
@@ -5425,7 +5425,7 @@
     },
     {
         "name": "minecraft:iron_horse_armor",
-        "id": 563,
+        "id": 564,
         "version": 2,
         "componentBased": false
     },
@@ -5443,7 +5443,7 @@
     },
     {
         "name": "minecraft:iron_nugget",
-        "id": 601,
+        "id": 602,
         "version": 2,
         "componentBased": false
     },
@@ -5665,13 +5665,13 @@
     },
     {
         "name": "minecraft:jungle_chest_boat",
-        "id": 675,
+        "id": 677,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:jungle_door",
-        "id": 587,
+        "id": 588,
         "version": 2,
         "componentBased": false
     },
@@ -5737,7 +5737,7 @@
     },
     {
         "name": "minecraft:jungle_sign",
-        "id": 610,
+        "id": 611,
         "version": 2,
         "componentBased": false
     },
@@ -5845,7 +5845,7 @@
     },
     {
         "name": "minecraft:lead",
-        "id": 579,
+        "id": 580,
         "version": 2,
         "componentBased": false
     },
@@ -5881,7 +5881,7 @@
     },
     {
         "name": "minecraft:leather_horse_armor",
-        "id": 562,
+        "id": 563,
         "version": 2,
         "componentBased": false
     },
@@ -6289,7 +6289,7 @@
     },
     {
         "name": "minecraft:lingering_potion",
-        "id": 594,
+        "id": 595,
         "version": 2,
         "componentBased": false
     },
@@ -6337,7 +6337,7 @@
     },
     {
         "name": "minecraft:llama_spawn_egg",
-        "id": 500,
+        "id": 501,
         "version": 2,
         "componentBased": false
     },
@@ -6349,7 +6349,7 @@
     },
     {
         "name": "minecraft:lodestone_compass",
-        "id": 638,
+        "id": 640,
         "version": 2,
         "componentBased": false
     },
@@ -6481,7 +6481,7 @@
     },
     {
         "name": "minecraft:mangrove_boat",
-        "id": 670,
+        "id": 672,
         "version": 2,
         "componentBased": false
     },
@@ -6493,13 +6493,13 @@
     },
     {
         "name": "minecraft:mangrove_chest_boat",
-        "id": 679,
+        "id": 681,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:mangrove_door",
-        "id": 668,
+        "id": 670,
         "version": 2,
         "componentBased": false
     },
@@ -6571,7 +6571,7 @@
     },
     {
         "name": "minecraft:mangrove_sign",
-        "id": 669,
+        "id": 671,
         "version": 2,
         "componentBased": false
     },
@@ -6619,7 +6619,7 @@
     },
     {
         "name": "minecraft:medicine",
-        "id": 635,
+        "id": 637,
         "version": 2,
         "componentBased": false
     },
@@ -6667,7 +6667,7 @@
     },
     {
         "name": "minecraft:miner_pottery_sherd",
-        "id": 705,
+        "id": 707,
         "version": 2,
         "componentBased": false
     },
@@ -6679,7 +6679,7 @@
     },
     {
         "name": "minecraft:mojang_banner_pattern",
-        "id": 616,
+        "id": 617,
         "version": 2,
         "componentBased": false
     },
@@ -6769,7 +6769,7 @@
     },
     {
         "name": "minecraft:mourner_pottery_sherd",
-        "id": 706,
+        "id": 708,
         "version": 2,
         "componentBased": false
     },
@@ -6841,133 +6841,133 @@
     },
     {
         "name": "minecraft:music_disc_11",
-        "id": 576,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_13",
-        "id": 566,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_5",
-        "id": 671,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_blocks",
-        "id": 568,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_cat",
-        "id": 567,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_chirp",
-        "id": 569,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_creator",
-        "id": 809,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_creator_music_box",
-        "id": 810,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_far",
-        "id": 570,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_lava_chicken",
-        "id": 813,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_mall",
-        "id": 571,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_mellohi",
-        "id": 572,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_otherside",
-        "id": 661,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_pigstep",
-        "id": 655,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_precipice",
-        "id": 811,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_relic",
-        "id": 734,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_stal",
-        "id": 573,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_strad",
-        "id": 574,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_tears",
-        "id": 812,
-        "version": 2,
-        "componentBased": true
-    },
-    {
-        "name": "minecraft:music_disc_wait",
         "id": 577,
         "version": 2,
         "componentBased": true
     },
     {
-        "name": "minecraft:music_disc_ward",
+        "name": "minecraft:music_disc_13",
+        "id": 567,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_5",
+        "id": 673,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_blocks",
+        "id": 569,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_cat",
+        "id": 568,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_chirp",
+        "id": 570,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_creator",
+        "id": 776,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_creator_music_box",
+        "id": 777,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_far",
+        "id": 571,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_lava_chicken",
+        "id": 780,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_mall",
+        "id": 572,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_mellohi",
+        "id": 573,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_otherside",
+        "id": 663,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_pigstep",
+        "id": 657,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_precipice",
+        "id": 778,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_relic",
+        "id": 736,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_stal",
+        "id": 574,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_strad",
         "id": 575,
         "version": 2,
         "componentBased": true
     },
     {
+        "name": "minecraft:music_disc_tears",
+        "id": 779,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_wait",
+        "id": 578,
+        "version": 2,
+        "componentBased": true
+    },
+    {
+        "name": "minecraft:music_disc_ward",
+        "id": 576,
+        "version": 2,
+        "componentBased": true
+    },
+    {
         "name": "minecraft:mutton",
-        "id": 582,
+        "id": 583,
         "version": 0,
         "componentBased": false
     },
@@ -6979,13 +6979,13 @@
     },
     {
         "name": "minecraft:name_tag",
-        "id": 580,
+        "id": 581,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:nautilus_shell",
-        "id": 602,
+        "id": 603,
         "version": 2,
         "componentBased": false
     },
@@ -7033,13 +7033,13 @@
     },
     {
         "name": "minecraft:nether_sprouts",
-        "id": 656,
+        "id": 658,
         "version": 2,
         "componentBased": true
     },
     {
         "name": "minecraft:nether_star",
-        "id": 550,
+        "id": 551,
         "version": 2,
         "componentBased": false
     },
@@ -7057,13 +7057,13 @@
     },
     {
         "name": "minecraft:netherbrick",
-        "id": 555,
+        "id": 556,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:netherite_axe",
-        "id": 642,
+        "id": 644,
         "version": 2,
         "componentBased": false
     },
@@ -7075,67 +7075,67 @@
     },
     {
         "name": "minecraft:netherite_boots",
-        "id": 648,
+        "id": 650,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:netherite_chestplate",
-        "id": 646,
+        "id": 648,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:netherite_helmet",
-        "id": 645,
-        "version": 2,
-        "componentBased": false
-    },
-    {
-        "name": "minecraft:netherite_hoe",
-        "id": 643,
-        "version": 2,
-        "componentBased": false
-    },
-    {
-        "name": "minecraft:netherite_ingot",
-        "id": 644,
-        "version": 2,
-        "componentBased": false
-    },
-    {
-        "name": "minecraft:netherite_leggings",
         "id": 647,
         "version": 2,
         "componentBased": false
     },
     {
-        "name": "minecraft:netherite_pickaxe",
-        "id": 641,
+        "name": "minecraft:netherite_hoe",
+        "id": 645,
         "version": 2,
         "componentBased": false
     },
     {
-        "name": "minecraft:netherite_scrap",
+        "name": "minecraft:netherite_ingot",
+        "id": 646,
+        "version": 2,
+        "componentBased": false
+    },
+    {
+        "name": "minecraft:netherite_leggings",
         "id": 649,
         "version": 2,
         "componentBased": false
     },
     {
+        "name": "minecraft:netherite_pickaxe",
+        "id": 643,
+        "version": 2,
+        "componentBased": false
+    },
+    {
+        "name": "minecraft:netherite_scrap",
+        "id": 651,
+        "version": 2,
+        "componentBased": false
+    },
+    {
         "name": "minecraft:netherite_shovel",
-        "id": 640,
+        "id": 642,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:netherite_sword",
-        "id": 639,
+        "id": 641,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:netherite_upgrade_smithing_template",
-        "id": 715,
+        "id": 717,
         "version": 2,
         "componentBased": false
     },
@@ -7189,7 +7189,7 @@
     },
     {
         "name": "minecraft:oak_chest_boat",
-        "id": 673,
+        "id": 675,
         "version": 2,
         "componentBased": false
     },
@@ -7291,7 +7291,7 @@
     },
     {
         "name": "minecraft:ominous_bottle",
-        "id": 627,
+        "id": 628,
         "version": 2,
         "componentBased": false
     },
@@ -7663,7 +7663,7 @@
     },
     {
         "name": "minecraft:panda_spawn_egg",
-        "id": 516,
+        "id": 517,
         "version": 2,
         "componentBased": false
     },
@@ -7675,7 +7675,7 @@
     },
     {
         "name": "minecraft:parrot_spawn_egg",
-        "id": 505,
+        "id": 506,
         "version": 2,
         "componentBased": false
     },
@@ -7705,13 +7705,13 @@
     },
     {
         "name": "minecraft:phantom_membrane",
-        "id": 606,
+        "id": 607,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:phantom_spawn_egg",
-        "id": 513,
+        "id": 514,
         "version": 2,
         "componentBased": false
     },
@@ -7723,13 +7723,13 @@
     },
     {
         "name": "minecraft:piglin_banner_pattern",
-        "id": 619,
+        "id": 620,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:piglin_brute_spawn_egg",
-        "id": 526,
+        "id": 527,
         "version": 2,
         "componentBased": false
     },
@@ -7741,13 +7741,13 @@
     },
     {
         "name": "minecraft:piglin_spawn_egg",
-        "id": 524,
+        "id": 525,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:pillager_spawn_egg",
-        "id": 518,
+        "id": 519,
         "version": 2,
         "componentBased": false
     },
@@ -7891,7 +7891,7 @@
     },
     {
         "name": "minecraft:plenty_pottery_sherd",
-        "id": 707,
+        "id": 709,
         "version": 2,
         "componentBased": false
     },
@@ -7915,7 +7915,7 @@
     },
     {
         "name": "minecraft:polar_bear_spawn_egg",
-        "id": 499,
+        "id": 500,
         "version": 2,
         "componentBased": false
     },
@@ -8131,7 +8131,7 @@
     },
     {
         "name": "minecraft:popped_chorus_fruit",
-        "id": 591,
+        "id": 592,
         "version": 2,
         "componentBased": false
     },
@@ -8227,7 +8227,7 @@
     },
     {
         "name": "minecraft:prismarine_crystals",
-        "id": 581,
+        "id": 582,
         "version": 2,
         "componentBased": false
     },
@@ -8239,7 +8239,7 @@
     },
     {
         "name": "minecraft:prismarine_shard",
-        "id": 597,
+        "id": 598,
         "version": 2,
         "componentBased": false
     },
@@ -8263,7 +8263,7 @@
     },
     {
         "name": "minecraft:prize_pottery_sherd",
-        "id": 708,
+        "id": 710,
         "version": 2,
         "componentBased": false
     },
@@ -8281,7 +8281,7 @@
     },
     {
         "name": "minecraft:pufferfish_spawn_egg",
-        "id": 508,
+        "id": 509,
         "version": 2,
         "componentBased": false
     },
@@ -8425,7 +8425,7 @@
     },
     {
         "name": "minecraft:quartz",
-        "id": 556,
+        "id": 557,
         "version": 2,
         "componentBased": false
     },
@@ -8479,13 +8479,13 @@
     },
     {
         "name": "minecraft:rabbit_foot",
-        "id": 560,
+        "id": 561,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:rabbit_hide",
-        "id": 561,
+        "id": 562,
         "version": 2,
         "componentBased": false
     },
@@ -8509,25 +8509,25 @@
     },
     {
         "name": "minecraft:raiser_armor_trim_smithing_template",
-        "id": 729,
+        "id": 731,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:rapid_fertilizer",
-        "id": 633,
+        "id": 635,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:ravager_spawn_egg",
-        "id": 520,
+        "id": 521,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:raw_copper",
-        "id": 540,
+        "id": 541,
         "version": 2,
         "componentBased": false
     },
@@ -8539,7 +8539,7 @@
     },
     {
         "name": "minecraft:raw_gold",
-        "id": 539,
+        "id": 540,
         "version": 2,
         "componentBased": false
     },
@@ -8551,7 +8551,7 @@
     },
     {
         "name": "minecraft:raw_iron",
-        "id": 538,
+        "id": 539,
         "version": 2,
         "componentBased": false
     },
@@ -8563,7 +8563,7 @@
     },
     {
         "name": "minecraft:recovery_compass",
-        "id": 681,
+        "id": 683,
         "version": 2,
         "componentBased": false
     },
@@ -8857,7 +8857,7 @@
     },
     {
         "name": "minecraft:rib_armor_trim_smithing_template",
-        "id": 725,
+        "id": 727,
         "version": 2,
         "componentBased": false
     },
@@ -8893,7 +8893,7 @@
     },
     {
         "name": "minecraft:salmon_spawn_egg",
-        "id": 509,
+        "id": 510,
         "version": 2,
         "componentBased": false
     },
@@ -8947,7 +8947,7 @@
     },
     {
         "name": "minecraft:scrape_pottery_sherd",
-        "id": 709,
+        "id": 711,
         "version": 2,
         "componentBased": false
     },
@@ -9001,19 +9001,19 @@
     },
     {
         "name": "minecraft:sentry_armor_trim_smithing_template",
-        "id": 716,
+        "id": 718,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:shaper_armor_trim_smithing_template",
-        "id": 730,
+        "id": 732,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:sheaf_pottery_sherd",
-        "id": 710,
+        "id": 712,
         "version": 2,
         "componentBased": false
     },
@@ -9031,7 +9031,7 @@
     },
     {
         "name": "minecraft:shelter_pottery_sherd",
-        "id": 711,
+        "id": 713,
         "version": 2,
         "componentBased": false
     },
@@ -9067,7 +9067,7 @@
     },
     {
         "name": "minecraft:shulker_shell",
-        "id": 598,
+        "id": 599,
         "version": 2,
         "componentBased": false
     },
@@ -9079,7 +9079,7 @@
     },
     {
         "name": "minecraft:silence_armor_trim_smithing_template",
-        "id": 727,
+        "id": 729,
         "version": 2,
         "componentBased": false
     },
@@ -9121,13 +9121,13 @@
     },
     {
         "name": "minecraft:skull_banner_pattern",
-        "id": 615,
+        "id": 616,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:skull_pottery_sherd",
-        "id": 712,
+        "id": 714,
         "version": 2,
         "componentBased": false
     },
@@ -9277,19 +9277,19 @@
     },
     {
         "name": "minecraft:sniffer_spawn_egg",
-        "id": 527,
+        "id": 528,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:snort_pottery_sherd",
-        "id": 713,
+        "id": 715,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:snout_armor_trim_smithing_template",
-        "id": 724,
+        "id": 726,
         "version": 2,
         "componentBased": false
     },
@@ -9301,7 +9301,7 @@
     },
     {
         "name": "minecraft:snow_golem_spawn_egg",
-        "id": 533,
+        "id": 534,
         "version": 2,
         "componentBased": false
     },
@@ -9319,7 +9319,7 @@
     },
     {
         "name": "minecraft:soul_campfire",
-        "id": 657,
+        "id": 659,
         "version": 2,
         "componentBased": true
     },
@@ -9355,13 +9355,13 @@
     },
     {
         "name": "minecraft:sparkler",
-        "id": 636,
+        "id": 638,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:spawn_egg",
-        "id": 823,
+        "id": 786,
         "version": 2,
         "componentBased": false
     },
@@ -9379,13 +9379,13 @@
     },
     {
         "name": "minecraft:spire_armor_trim_smithing_template",
-        "id": 726,
+        "id": 728,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:splash_potion",
-        "id": 593,
+        "id": 594,
         "version": 2,
         "componentBased": false
     },
@@ -9415,13 +9415,13 @@
     },
     {
         "name": "minecraft:spruce_chest_boat",
-        "id": 676,
+        "id": 678,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:spruce_door",
-        "id": 585,
+        "id": 586,
         "version": 2,
         "componentBased": false
     },
@@ -9487,7 +9487,7 @@
     },
     {
         "name": "minecraft:spruce_sign",
-        "id": 608,
+        "id": 609,
         "version": 2,
         "componentBased": false
     },
@@ -9529,7 +9529,7 @@
     },
     {
         "name": "minecraft:spyglass",
-        "id": 660,
+        "id": 662,
         "version": 2,
         "componentBased": false
     },
@@ -9721,7 +9721,7 @@
     },
     {
         "name": "minecraft:strider_spawn_egg",
-        "id": 522,
+        "id": 523,
         "version": 2,
         "componentBased": false
     },
@@ -9913,7 +9913,7 @@
     },
     {
         "name": "minecraft:suspicious_stew",
-        "id": 624,
+        "id": 625,
         "version": 0,
         "componentBased": false
     },
@@ -9931,13 +9931,13 @@
     },
     {
         "name": "minecraft:tadpole_bucket",
-        "id": 665,
+        "id": 667,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:tadpole_spawn_egg",
-        "id": 664,
+        "id": 666,
         "version": 2,
         "componentBased": false
     },
@@ -9967,7 +9967,7 @@
     },
     {
         "name": "minecraft:tide_armor_trim_smithing_template",
-        "id": 723,
+        "id": 725,
         "version": 2,
         "componentBased": false
     },
@@ -9985,7 +9985,7 @@
     },
     {
         "name": "minecraft:tnt_minecart",
-        "id": 557,
+        "id": 558,
         "version": 2,
         "componentBased": false
     },
@@ -10015,13 +10015,13 @@
     },
     {
         "name": "minecraft:totem_of_undying",
-        "id": 600,
+        "id": 601,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:trader_llama_spawn_egg",
-        "id": 683,
+        "id": 685,
         "version": 2,
         "componentBased": false
     },
@@ -10051,7 +10051,7 @@
     },
     {
         "name": "minecraft:trident",
-        "id": 578,
+        "id": 579,
         "version": 2,
         "componentBased": false
     },
@@ -10081,7 +10081,7 @@
     },
     {
         "name": "minecraft:tropical_fish_spawn_egg",
-        "id": 506,
+        "id": 507,
         "version": 2,
         "componentBased": false
     },
@@ -10177,19 +10177,19 @@
     },
     {
         "name": "minecraft:turtle_helmet",
-        "id": 605,
+        "id": 606,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:turtle_scute",
-        "id": 604,
+        "id": 605,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:turtle_spawn_egg",
-        "id": 512,
+        "id": 513,
         "version": 2,
         "componentBased": false
     },
@@ -10255,13 +10255,13 @@
     },
     {
         "name": "minecraft:vex_armor_trim_smithing_template",
-        "id": 722,
+        "id": 724,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:vex_spawn_egg",
-        "id": 503,
+        "id": 504,
         "version": 2,
         "componentBased": false
     },
@@ -10273,7 +10273,7 @@
     },
     {
         "name": "minecraft:vindicator_spawn_egg",
-        "id": 501,
+        "id": 502,
         "version": 2,
         "componentBased": false
     },
@@ -10297,19 +10297,19 @@
     },
     {
         "name": "minecraft:wandering_trader_spawn_egg",
-        "id": 519,
+        "id": 520,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:ward_armor_trim_smithing_template",
-        "id": 720,
+        "id": 722,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:warden_spawn_egg",
-        "id": 667,
+        "id": 669,
         "version": 2,
         "componentBased": false
     },
@@ -10321,7 +10321,7 @@
     },
     {
         "name": "minecraft:warped_door",
-        "id": 653,
+        "id": 655,
         "version": 2,
         "componentBased": false
     },
@@ -10351,7 +10351,7 @@
     },
     {
         "name": "minecraft:warped_fungus_on_a_stick",
-        "id": 654,
+        "id": 656,
         "version": 2,
         "componentBased": true
     },
@@ -10399,7 +10399,7 @@
     },
     {
         "name": "minecraft:warped_sign",
-        "id": 651,
+        "id": 653,
         "version": 2,
         "componentBased": false
     },
@@ -10849,7 +10849,7 @@
     },
     {
         "name": "minecraft:wayfinder_armor_trim_smithing_template",
-        "id": 728,
+        "id": 730,
         "version": 2,
         "componentBased": false
     },
@@ -11071,7 +11071,7 @@
     },
     {
         "name": "minecraft:wild_armor_trim_smithing_template",
-        "id": 719,
+        "id": 721,
         "version": 2,
         "componentBased": false
     },
@@ -11113,7 +11113,7 @@
     },
     {
         "name": "minecraft:wither_spawn_egg",
-        "id": 535,
+        "id": 536,
         "version": 2,
         "componentBased": false
     },
@@ -11197,13 +11197,13 @@
     },
     {
         "name": "minecraft:writable_book",
-        "id": 543,
+        "id": 544,
         "version": 2,
         "componentBased": false
     },
     {
         "name": "minecraft:written_book",
-        "id": 544,
+        "id": 545,
         "version": 2,
         "componentBased": false
     },
@@ -11293,7 +11293,7 @@
     },
     {
         "name": "minecraft:zoglin_spawn_egg",
-        "id": 525,
+        "id": 526,
         "version": 2,
         "componentBased": false
     },
@@ -11323,8 +11323,20 @@
     },
     {
         "name": "minecraft:zombie_villager_spawn_egg",
-        "id": 504,
+        "id": 505,
         "version": 2,
         "componentBased": false
+    },
+    {
+        "name": "minecraft:mod",
+        "id": 629
+    },
+    {
+        "name": "minecraft:mod_ex",
+        "id": 630
+    },
+    {
+        "name": "micro_block",
+        "id": -9735
     }
 ]
