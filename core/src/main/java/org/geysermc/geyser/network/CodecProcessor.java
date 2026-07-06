@@ -26,8 +26,6 @@
 package org.geysermc.geyser.network;
 
 import io.netty.buffer.ByteBuf;
-import org.cloudburstmc.math.vector.Vector2f;
-import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketSerializer;
@@ -41,17 +39,11 @@ import org.cloudburstmc.protocol.bedrock.codec.v407.serializer.InventorySlotSeri
 import org.cloudburstmc.protocol.bedrock.codec.v419.serializer.MovePlayerSerializer_v419;
 import org.cloudburstmc.protocol.bedrock.codec.v486.serializer.BossEventSerializer_v486;
 import org.cloudburstmc.protocol.bedrock.codec.v557.serializer.SetEntityDataSerializer_v557;
-import org.cloudburstmc.protocol.bedrock.codec.v662.serializer.PlayerAuthInputSerializer_v662;
 import org.cloudburstmc.protocol.bedrock.codec.v662.serializer.SetEntityMotionSerializer_v662;
-import org.cloudburstmc.protocol.bedrock.codec.v685.serializer.TextSerializer_v685;
 import org.cloudburstmc.protocol.bedrock.codec.v712.serializer.MobArmorEquipmentSerializer_v712;
 import org.cloudburstmc.protocol.bedrock.codec.v748.serializer.InventoryContentSerializer_v748;
 import org.cloudburstmc.protocol.bedrock.codec.v748.serializer.InventorySlotSerializer_v748;
 import org.cloudburstmc.protocol.bedrock.codec.v776.serializer.BossEventSerializer_v776;
-import org.cloudburstmc.protocol.bedrock.data.ClientPlayMode;
-import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
-import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.ItemUseTransaction;
-import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.LegacySetItemSlotData;
 import org.cloudburstmc.protocol.bedrock.packet.AnvilDamagePacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BossEventPacket;
@@ -79,7 +71,6 @@ import org.cloudburstmc.protocol.bedrock.packet.MultiplayerSettingsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.NpcRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PhotoInfoRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PhotoTransferPacket;
-import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerHotbarPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerInputPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
@@ -94,10 +85,8 @@ import org.cloudburstmc.protocol.bedrock.packet.SettingsCommandPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SimpleEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SubChunkRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SubClientLoginPacket;
-import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
 import org.cloudburstmc.protocol.common.util.VarInts;
-
-import java.util.Set;
+import org.geysermc.geyser.network.netease.NeteaseCodecProcessor;
 
 /**
  * Processes the Bedrock codec to remove or modify unused or unsafe packets and fields.
@@ -165,331 +154,6 @@ class CodecProcessor {
         @Override
         public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, InventorySlotPacket packet) {
             throw new IllegalArgumentException("Client cannot send InventorySlotPacket in server-auth inventory environment!");
-        }
-    };
-    private static final BedrockPacketSerializer<TextPacket> TEXT_SERIALIZER_NETEASE = new TextSerializer_v685() {
-        @Override
-        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, TextPacket packet) {
-            //V554
-
-            TextPacket.Type type = packet.getType();
-            // 网易客户端收到聊天包会掉线，目前将所有聊天都视作系统命令
-            if (type.equals(TextPacket.Type.CHAT)) {
-                type = TextPacket.Type.SYSTEM;
-            }
-            buffer.writeByte(type.ordinal());
-            buffer.writeBoolean(packet.isNeedsTranslation());
-
-            switch (type) {
-                case WHISPER:
-                case ANNOUNCEMENT:
-                    helper.writeString(buffer, packet.getSourceName());
-                case CHAT:
-                case RAW:
-                case TIP:
-                case SYSTEM:
-                case JSON:
-                case WHISPER_JSON:
-                case ANNOUNCEMENT_JSON:
-                    helper.writeString(buffer, packet.getMessage());
-                    break;
-                case TRANSLATION:
-                case POPUP:
-                case JUKEBOX_POPUP:
-                    helper.writeString(buffer, packet.getMessage());
-                    helper.writeArray(buffer, packet.getParameters(), helper::writeString);
-                    break;
-                default:
-                    throw new UnsupportedOperationException("Unsupported TextType " + type);
-            }
-
-            helper.writeString(buffer, packet.getXuid());
-            helper.writeString(buffer, packet.getPlatformChatId());
-
-            //V685
-            helper.writeString(buffer, packet.getFilteredMessage());
-        }
-
-        @Override
-        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, TextPacket packet) {
-            //V554
-            TextPacket.Type type = TextPacket.Type.values()[buffer.readUnsignedByte()];
-            packet.setType(type);
-            packet.setNeedsTranslation(buffer.readBoolean());
-
-            switch (type) {
-                case CHAT:
-                case WHISPER:
-                case ANNOUNCEMENT:
-                    packet.setSourceName(helper.readString(buffer));
-                case RAW:
-                case TIP:
-                case SYSTEM:
-                case JSON:
-                case WHISPER_JSON:
-                case ANNOUNCEMENT_JSON:
-                    packet.setMessage(helper.readString(buffer));
-                    break;
-                case TRANSLATION:
-                case POPUP:
-                case JUKEBOX_POPUP:
-                    packet.setMessage(helper.readString(buffer));
-                    helper.readArray(buffer, packet.getParameters(), helper::readString);
-                    break;
-                default:
-                    throw new UnsupportedOperationException("Unsupported TextType " + type);
-            }
-
-            packet.setXuid(helper.readString(buffer));
-            packet.setPlatformChatId(helper.readString(buffer));
-
-            //V685
-            packet.setFilteredMessage(helper.readString(buffer));
-
-        }
-    };
-
-
-    private static final BedrockPacketSerializer<PlayerAuthInputPacket> PLAYER_AUTH_INPUT_NETEASE_766 = new PlayerAuthInputSerializer_v662() {
-        @Override
-        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
-            super.serialize(buffer, helper, packet);
-        }
-
-        @Override
-        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
-            //v388
-            float x = buffer.readFloatLE();
-            float y = buffer.readFloatLE();
-            float px = buffer.readFloatLE();
-            float py = buffer.readFloatLE();
-            float pz = buffer.readFloatLE();
-
-            packet.setPosition(Vector3f.from(px, py, pz));
-            packet.setMotion(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
-            float z = buffer.readFloatLE();
-            packet.setRotation(Vector3f.from(x, y, z));
-            long flagValue = VarInts.readUnsignedLong(buffer);
-
-            Set<PlayerAuthInputData> flags = packet.getInputData();
-//            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
-//                if ((flagValue & (1L << flag.ordinal())) != 0) {
-//                    flags.add(flag);
-//                }
-//            }
-            // copy from nukkit-mot :>
-            int inClientPredictedInVehicleOrdinal = PlayerAuthInputData.RECEIVED_SERVER_DATA.ordinal();
-            for (int i = 0; i < PlayerAuthInputData.values().length; i++) {
-                int offset = 0;
-                if (i >= inClientPredictedInVehicleOrdinal) {
-                    offset = -1;
-                }
-                if ((flagValue & (1L << i)) != 0) {
-                    PlayerAuthInputData value = PlayerAuthInputData.values()[i + offset];
-                    flags.add(value);
-                }
-            }
-            packet.setInputMode(INPUT_MODES[VarInts.readUnsignedInt(buffer)]);
-            packet.setPlayMode(CLIENT_PLAY_MODES[VarInts.readUnsignedInt(buffer)]);
-            readInteractionModel(buffer, helper, packet);
-
-            packet.setInteractRotation(helper.readVector2f(buffer));
-
-            //v419
-            packet.setTick(VarInts.readUnsignedLong(buffer));
-            packet.setDelta(helper.readVector3f(buffer));
-
-            //v428
-            //Netease Only Start
-            packet.setCameraDeparted(buffer.readBoolean());
-            //Netease Only End
-
-
-            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_INTERACTION)) {
-                packet.setItemUseTransaction(this.readItemUseTransaction(buffer, helper));
-            }
-
-            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_STACK_REQUEST)) {
-                packet.setItemStackRequest(helper.readItemStackRequest(buffer));
-            }
-
-            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_BLOCK_ACTIONS)) {
-                helper.readArray(buffer, packet.getPlayerActions(), VarInts::readInt, this::readPlayerBlockActionData, 32); // 32 is more than enough
-            }
-
-            //v662
-            if (packet.getInputData().contains(PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE)) {
-                packet.setVehicleRotation(helper.readVector2f(buffer));
-                packet.setPredictedVehicle(VarInts.readLong(buffer));
-            }
-            packet.setAnalogMoveVector(helper.readVector2f(buffer));
-            packet.setCameraOrientation(helper.readVector3f(buffer));
-            packet.setRawMoveVector(helper.readVector2f(buffer));
-
-            //Netease Only Start
-            packet.setThirdPersonPerspective(buffer.readBoolean());
-            packet.setPlayerRotationToCamera(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
-            packet.setReadyPosDetalDirty(buffer.readBoolean());
-            packet.setOnGround(buffer.readBoolean());
-            packet.setResetPosition(buffer.readByte());
-
-            if (buffer.readableBytes() > 0) {
-                System.out.println("异常输入包!");
-                System.out.println(buffer.readableBytes());
-            }
-            //Netease Only End
-        }
-
-
-        @Override
-        protected ItemUseTransaction readItemUseTransaction(ByteBuf buffer, BedrockCodecHelper helper) {
-            ItemUseTransaction itemTransaction = new ItemUseTransaction();
-
-            int legacyRequestId = VarInts.readInt(buffer);
-            itemTransaction.setLegacyRequestId(legacyRequestId);
-
-            if (legacyRequestId < -1 && (legacyRequestId & 1) == 0) {
-                helper.readArray(buffer, itemTransaction.getLegacySlots(), (buf, packetHelper) -> {
-                    byte containerId = buf.readByte();
-                    byte[] slots = packetHelper.readByteArray(buf, 89);
-                    return new LegacySetItemSlotData(containerId, slots);
-                });
-            }
-
-            boolean hasNetIds = helper.readInventoryActions(buffer, itemTransaction.getActions());
-            itemTransaction.setActionType(VarInts.readUnsignedInt(buffer));
-            itemTransaction.setTriggerType(ItemUseTransaction.TriggerType.values()[VarInts.readUnsignedInt(buffer)]);
-            itemTransaction.setBlockPosition(helper.readBlockPosition(buffer));
-            itemTransaction.setBlockFace(VarInts.readInt(buffer));
-            itemTransaction.setHotbarSlot(VarInts.readInt(buffer));
-            itemTransaction.setItemInHand(helper.readItem(buffer));
-            itemTransaction.setPlayerPosition(helper.readVector3f(buffer));
-            itemTransaction.setClickPosition(helper.readVector3f(buffer));
-            itemTransaction.setBlockDefinition(helper.getBlockDefinitions().getDefinition(VarInts.readUnsignedInt(buffer)));
-            itemTransaction.setClientInteractPrediction(ItemUseTransaction.PredictedResult.values()[VarInts.readUnsignedInt(buffer)]);
-            return itemTransaction;
-        }
-    };
-
-
-    private static final BedrockPacketSerializer<PlayerAuthInputPacket> PLAYER_AUTH_INPUT_NETEASE_819 = new PlayerAuthInputSerializer_v662() {
-        @Override
-        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
-            super.serialize(buffer, helper, packet);
-        }
-
-        @Override
-        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
-            //v388
-            float x = buffer.readFloatLE();
-            float y = buffer.readFloatLE();
-            Vector3f position = helper.readVector3f(buffer);
-            packet.setPosition(position);
-            packet.setMotion(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
-            float z = buffer.readFloatLE();
-            packet.setRotation(Vector3f.from(x, y, z));
-            long flagValue = VarInts.readUnsignedLong(buffer);
-
-            Set<PlayerAuthInputData> flags = packet.getInputData();
-//            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
-//                if ((flagValue & (1L << flag.ordinal())) != 0) {
-//                    flags.add(flag);
-//                }
-//            }
-            // copy from nukkit-mot :>
-            int inClientPredictedInVehicleOrdinal = PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE.ordinal();
-            for (int i = 0; i < PlayerAuthInputData.values().length; i++) {
-                int offset = 0;
-                if (i >= inClientPredictedInVehicleOrdinal) {
-                    offset = -2;
-                }
-                if ((flagValue & (1L << i)) != 0) {
-                    PlayerAuthInputData value = PlayerAuthInputData.values()[i + offset];
-//                    if (value != PlayerAuthInputData.VERTICAL_COLLISION) {
-//                        System.out.println("v819 offset-2 -> " + value + " | base -> " + PlayerAuthInputData.values()[i] + " | offset-1 -> " +  PlayerAuthInputData.values()[i - 1]);
-//                    }
-                    flags.add(value);
-                }
-            }
-            packet.setInputMode(INPUT_MODES[VarInts.readUnsignedInt(buffer)]);
-            packet.setPlayMode(CLIENT_PLAY_MODES[VarInts.readUnsignedInt(buffer)]);
-            readInteractionModel(buffer, helper, packet);
-
-            packet.setInteractRotation(helper.readVector2f(buffer));
-
-            //v419
-            packet.setTick(VarInts.readUnsignedLong(buffer));
-            packet.setDelta(helper.readVector3f(buffer));
-
-            //v428
-            //Netease Only Start
-            packet.setCameraDeparted(buffer.readBoolean());
-            //Netease Only End
-
-
-            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_INTERACTION)) {
-                packet.setItemUseTransaction(this.readItemUseTransaction(buffer, helper));
-            }
-
-            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_ITEM_STACK_REQUEST)) {
-                packet.setItemStackRequest(helper.readItemStackRequest(buffer));
-            }
-
-            if (packet.getInputData().contains(PlayerAuthInputData.PERFORM_BLOCK_ACTIONS)) {
-                helper.readArray(buffer, packet.getPlayerActions(), VarInts::readInt, this::readPlayerBlockActionData, 32); // 32 is more than enough
-            }
-
-            //v662
-            if (packet.getInputData().contains(PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE)) {
-                packet.setVehicleRotation(helper.readVector2f(buffer));
-                packet.setPredictedVehicle(VarInts.readLong(buffer));
-            }
-            packet.setAnalogMoveVector(helper.readVector2f(buffer));
-            packet.setCameraOrientation(helper.readVector3f(buffer));
-            packet.setRawMoveVector(helper.readVector2f(buffer));
-
-            //Netease Only Start
-            packet.setThirdPersonPerspective(buffer.readBoolean());
-            packet.setPlayerRotationToCamera(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
-            packet.setReadyPosDetalDirty(buffer.readBoolean());
-            packet.setOnGround(buffer.readBoolean());
-            packet.setResetPosition(buffer.readByte());
-
-            if (buffer.readableBytes() > 0) {
-                System.out.println("异常输入包!");
-                System.out.println(buffer.readableBytes());
-            }
-            //Netease Only End
-        }
-
-
-        @Override
-        protected ItemUseTransaction readItemUseTransaction(ByteBuf buffer, BedrockCodecHelper helper) {
-            ItemUseTransaction itemTransaction = new ItemUseTransaction();
-
-            int legacyRequestId = VarInts.readInt(buffer);
-            itemTransaction.setLegacyRequestId(legacyRequestId);
-
-            if (legacyRequestId < -1 && (legacyRequestId & 1) == 0) {
-                helper.readArray(buffer, itemTransaction.getLegacySlots(), (buf, packetHelper) -> {
-                    byte containerId = buf.readByte();
-                    byte[] slots = packetHelper.readByteArray(buf, 89);
-                    return new LegacySetItemSlotData(containerId, slots);
-                });
-            }
-
-            boolean hasNetIds = helper.readInventoryActions(buffer, itemTransaction.getActions());
-            itemTransaction.setActionType(VarInts.readUnsignedInt(buffer));
-            itemTransaction.setTriggerType(ItemUseTransaction.TriggerType.values()[VarInts.readUnsignedInt(buffer)]);
-            itemTransaction.setBlockPosition(helper.readBlockPosition(buffer));
-            itemTransaction.setBlockFace(VarInts.readInt(buffer));
-            itemTransaction.setHotbarSlot(VarInts.readInt(buffer));
-            itemTransaction.setItemInHand(helper.readItem(buffer));
-            itemTransaction.setPlayerPosition(helper.readVector3f(buffer));
-            itemTransaction.setClickPosition(helper.readVector3f(buffer));
-            itemTransaction.setBlockDefinition(helper.getBlockDefinitions().getDefinition(VarInts.readUnsignedInt(buffer)));
-            itemTransaction.setClientInteractPrediction(ItemUseTransaction.PredictedResult.values()[VarInts.readUnsignedInt(buffer)]);
-            return itemTransaction;
         }
     };
     private static final BedrockPacketSerializer<MovePlayerPacket> MOVE_PLAYER_SERIALIZER = new MovePlayerSerializer_v419() {
@@ -671,14 +335,7 @@ class CodecProcessor {
                 .updateSerializer(PlayerInputPacket.class, ILLEGAL_SERIALIZER);
         }
 
-        if (protocolVersion == 766 || protocolVersion == 819) {
-            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE_766);
-            codecBuilder.updateSerializer(TextPacket.class, TEXT_SERIALIZER_NETEASE);
-        }
-
-        if (protocolVersion == 819) {
-            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, PLAYER_AUTH_INPUT_NETEASE_819);
-        }
+        NeteaseCodecProcessor.processCodec(codecBuilder, protocolVersion);
 
         if (!Boolean.getBoolean("Geyser.ReceiptPackets")) {
             codecBuilder.updateSerializer(RefreshEntitlementsPacket.class, IGNORED_SERIALIZER);

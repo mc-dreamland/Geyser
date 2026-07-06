@@ -44,15 +44,7 @@ import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.nbt.NbtUtils;
-import org.cloudburstmc.protocol.bedrock.codec.v766.Bedrock_v766;
-import org.cloudburstmc.protocol.bedrock.codec.v776.Bedrock_v776;
-import org.cloudburstmc.protocol.bedrock.codec.v786.Bedrock_v786;
-import org.cloudburstmc.protocol.bedrock.codec.v800.Bedrock_v800;
-import org.cloudburstmc.protocol.bedrock.codec.v818.Bedrock_v818;
 import org.cloudburstmc.protocol.bedrock.codec.v819.Bedrock_v819;
-import org.cloudburstmc.protocol.bedrock.codec.v827.Bedrock_v827;
-import org.cloudburstmc.protocol.bedrock.codec.v844.Bedrock_v844;
-import org.cloudburstmc.protocol.bedrock.codec.v859.Bedrock_v859;
 import org.cloudburstmc.protocol.bedrock.codec.v860.Bedrock_v860;
 import org.cloudburstmc.protocol.bedrock.codec.v898.Bedrock_v898;
 import org.cloudburstmc.protocol.bedrock.data.BlockPropertyData;
@@ -61,19 +53,14 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
 import org.geysermc.geyser.api.block.custom.nonvanilla.JavaBlockState;
-import org.geysermc.geyser.level.block.BlockStateValues;
 import org.geysermc.geyser.level.block.Blocks;
 import org.geysermc.geyser.level.block.property.Properties;
 import org.geysermc.geyser.level.block.type.Block;
 import org.geysermc.geyser.level.block.type.BlockState;
 import org.geysermc.geyser.level.block.type.FlowerPotBlock;
 import org.geysermc.geyser.registry.BlockRegistries;
-import org.geysermc.geyser.registry.populator.conversion.Conversion776_766;
-import org.geysermc.geyser.registry.populator.conversion.Conversion786_776;
-import org.geysermc.geyser.registry.populator.conversion.Conversion800_786;
-import org.geysermc.geyser.registry.populator.conversion.Conversion827_819;
 import org.geysermc.geyser.registry.populator.conversion.Conversion827_819_netease;
-import org.geysermc.geyser.registry.populator.conversion.Conversion844_827;
+import org.geysermc.geyser.registry.populator.conversion.Conversion860_netease;
 import org.geysermc.geyser.registry.type.BlockMappings;
 import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
 import org.geysermc.geyser.util.JsonUtils;
@@ -139,19 +126,9 @@ public final class BlockRegistryPopulator {
 
     private static void registerBedrockBlocks() {
         var blockMappers = ImmutableMap.<ObjectIntPair<String>, Remapper>builder()
-                .put(ObjectIntPair.of("1_21_50", Bedrock_v766.CODEC.getProtocolVersion()), Conversion776_766::remapBlock)
-                .put(ObjectIntPair.of("1_21_60", Bedrock_v776.CODEC.getProtocolVersion()), Conversion786_776::remapBlock)
-                .put(ObjectIntPair.of("1_21_70", Bedrock_v786.CODEC.getProtocolVersion()), Conversion800_786::remapBlock)
-                .put(ObjectIntPair.of("1_21_80", Bedrock_v800.CODEC.getProtocolVersion()), Conversion827_819::remapBlock)
-                .put(ObjectIntPair.of("1_21_90", Bedrock_v818.CODEC.getProtocolVersion()), Conversion827_819::remapBlock)
                 .put(ObjectIntPair.of("1_21_93", Bedrock_v819.CODEC.getProtocolVersion()), Conversion827_819_netease::remapBlock)
-                .put(ObjectIntPair.of("1_21_100", Bedrock_v827.CODEC.getProtocolVersion()), Conversion844_827::remapBlock)
-                .put(ObjectIntPair.of("1_21_110", Bedrock_v844.CODEC.getProtocolVersion()), tag -> tag)
-                // 1.21.110 -> 1.21.12x doesn't change the block palette
-                .put(ObjectIntPair.of("1_21_110", Bedrock_v859.CODEC.getProtocolVersion()), tag -> tag)
-                .put(ObjectIntPair.of("1_21_110", Bedrock_v860.CODEC.getProtocolVersion()), tag -> tag)
-                // No changes in .130 block palette either!
-                .put(ObjectIntPair.of("1_21_110", Bedrock_v898.CODEC.getProtocolVersion()), tag -> tag)
+                .put(ObjectIntPair.of("1_21_120", Bedrock_v860.CODEC.getProtocolVersion()), Conversion860_netease::remapBlock)
+                .put(ObjectIntPair.of("1_21_120", Bedrock_v898.CODEC.getProtocolVersion()), Conversion860_netease::remapBlock)
             .build();
 
         // We can keep this strong as nothing should be garbage collected
