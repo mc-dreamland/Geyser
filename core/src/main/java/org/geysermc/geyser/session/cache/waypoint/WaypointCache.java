@@ -29,13 +29,16 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerLocationPacket;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.skin.SkinManager;
+import org.geysermc.geyser.util.PlayerListUtils;
 import org.geysermc.mcprotocollib.protocol.data.game.level.waypoint.TrackedWaypoint;
 import org.geysermc.mcprotocollib.protocol.data.game.level.waypoint.WaypointOperation;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundTrackedWaypointPacket;
 
 import java.awt.Color;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -165,15 +168,12 @@ public final class WaypointCache {
         }
         PlayerListPacket.Entry entry = SkinManager.buildCachedEntry(session, player);
 
-        PlayerListPacket removePacket = new PlayerListPacket();
-        removePacket.setAction(PlayerListPacket.Action.REMOVE);
-        removePacket.getEntries().add(entry);
-        session.sendUpstreamPacket(removePacket);
-
-        PlayerListPacket addPacket = new PlayerListPacket();
-        addPacket.setAction(PlayerListPacket.Action.ADD);
-        addPacket.getEntries().add(entry);
-        session.sendUpstreamPacket(addPacket);
+        PlayerListUtils.batchSendPlayerList(session, List.of(entry), PlayerListPacket.Action.REMOVE);
+        if (GameProtocol.isV860(session)) {
+            PlayerListUtils.sendPlayerListAddAndConfirmSkin(session, entry);
+        } else {
+            PlayerListUtils.batchSendPlayerList(session, List.of(entry), PlayerListPacket.Action.ADD);
+        }
     }
 
     public void clear() {
