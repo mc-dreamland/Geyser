@@ -34,7 +34,6 @@ import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.skin.ImageData;
 import org.cloudburstmc.protocol.bedrock.data.skin.SerializedSkin;
-import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
 import org.geysermc.geyser.GeyserImpl;
@@ -49,6 +48,7 @@ import org.geysermc.geyser.session.auth.BedrockClientData;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.FileUtils;
 import org.geysermc.geyser.util.JsonUtils;
+import org.geysermc.geyser.util.PlayerListUtils;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.ResolvableProfile;
 
@@ -191,14 +191,7 @@ public class SkinManager {
                 color
             );
 
-            PlayerListPacket playerAddPacket = new PlayerListPacket();
-            playerAddPacket.setAction(PlayerListPacket.Action.ADD);
-            playerAddPacket.getEntries().add(updatedEntry);
-            session.sendUpstreamPacket(playerAddPacket);
-
-            // 应用自己的皮肤
-            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket(List.of(updatedEntry));
-            session.sendUpstreamPacket(confirmSkinPacket);
+            PlayerListUtils.sendPlayerListAddAndConfirmSkin(session, updatedEntry);
         }else {
             PlayerSkinPacket packet = new PlayerSkinPacket();
             packet.setUuid(entity.getUuid());

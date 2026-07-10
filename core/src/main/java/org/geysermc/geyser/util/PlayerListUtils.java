@@ -25,8 +25,11 @@
 
 package org.geysermc.geyser.util;
 
+import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.EntityCache;
 
 import java.util.List;
 
@@ -59,5 +62,42 @@ public class PlayerListUtils {
             packet.getEntries().addAll(entries);
             session.sendUpstreamPacket(packet);
         }
+
+        if (GameProtocol.isV860(session) && action == PlayerListPacket.Action.REMOVE) {
+            for (PlayerListPacket.Entry entry : entries) {
+                session.getEntityCache().removeV860PlayerListEntry(entry.getUuid());
+            }
+        }
+    }
+
+    /**
+     * Sends the NetEase player-list skin handshake. V860 hides an entity if the same
+     * entry is added and confirmed again without first being removed.
+     */
+    public static void sendPlayerListAddAndConfirmSkin(GeyserSession session, PlayerListPacket.Entry entry) {
+        session.ensureInEventLoop(() -> {
+            if (GameProtocol.isV860(session)) {
+                EntityCache.V860PlayerListAddAction action = session.getEntityCache()
+                    .prepareV860PlayerListAdd(entry.getUuid(), entry.getSkin());
+                if (action == EntityCache.V860PlayerListAddAction.SUPPRESS) {
+                    return;
+                }
+                if (action == EntityCache.V860PlayerListAddAction.REPLACE) {
+                    PlayerListPacket removePacket = new PlayerListPacket();
+                    removePacket.setAction(PlayerListPacket.Action.REMOVE);
+                    removePacket.getEntries().add(new PlayerListPacket.Entry(entry.getUuid()));
+                    session.sendUpstreamPacket(removePacket);
+                }
+            }
+
+            PlayerListPacket addPacket = new PlayerListPacket();
+            addPacket.setAction(PlayerListPacket.Action.ADD);
+            addPacket.getEntries().add(entry);
+            session.sendUpstreamPacket(addPacket);
+
+            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+            confirmSkinPacket.setEntries(List.of(entry));
+            session.sendUpstreamPacket(confirmSkinPacket);
+        });
     }
 }

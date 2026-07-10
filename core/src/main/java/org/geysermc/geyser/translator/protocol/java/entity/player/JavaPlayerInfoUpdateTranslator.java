@@ -27,7 +27,6 @@ package org.geysermc.geyser.translator.protocol.java.entity.player;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.vector.Vector3f;
-import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
@@ -161,16 +160,10 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                 session.getWaypointCache().getWaypointColor(entity.getUuid()).orElse(Color.WHITE)
             );
 
-            PlayerListPacket playerAddPacket = new PlayerListPacket();
-            playerAddPacket.setAction(PlayerListPacket.Action.ADD);
-            playerAddPacket.getEntries().add(updatedEntry);
-            session.sendUpstreamPacket(playerAddPacket);
-            session.getWaypointCache().listPlayer(entity);
-
-            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
-            confirmSkinPacket.setEntries(List.of(updatedEntry));
-
-            session.sendUpstreamPacket(confirmSkinPacket);
+            session.ensureInEventLoop(() -> {
+                PlayerListUtils.sendPlayerListAddAndConfirmSkin(session, updatedEntry);
+                session.getWaypointCache().listPlayer(entity);
+            });
         });
     }
 }

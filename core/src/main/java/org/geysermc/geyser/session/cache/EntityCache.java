@@ -38,6 +38,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import lombok.Getter;
+import org.cloudburstmc.protocol.bedrock.data.skin.SerializedSkin;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.Tickable;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
@@ -59,6 +60,7 @@ public class EntityCache {
     private final Int2LongMap entityIdTranslations = new Int2LongOpenHashMap();
     private final Map<UUID, PlayerEntity> playerEntities = new Object2ObjectOpenHashMap<>();
     private final Map<UUID, BossBar> bossBars = new Object2ObjectOpenHashMap<>();
+    private final Map<UUID, SerializedSkin> v860ConfirmedPlayerListEntries = new Object2ObjectOpenHashMap<>();
 
     @Getter
     private final AtomicLong nextEntityId = new AtomicLong(2L);
@@ -194,6 +196,30 @@ public class EntityCache {
         synchronized (playerEntities) {
             playerEntities.clear();
         }
+    }
+
+    public V860PlayerListAddAction prepareV860PlayerListAdd(UUID uuid, SerializedSkin skin) {
+        synchronized (v860ConfirmedPlayerListEntries) {
+            SerializedSkin previousSkin = v860ConfirmedPlayerListEntries.get(uuid);
+            if (previousSkin != null && previousSkin.equals(skin)) {
+                return V860PlayerListAddAction.SUPPRESS;
+            }
+
+            v860ConfirmedPlayerListEntries.put(uuid, skin);
+            return previousSkin == null ? V860PlayerListAddAction.ADD : V860PlayerListAddAction.REPLACE;
+        }
+    }
+
+    public void removeV860PlayerListEntry(UUID uuid) {
+        synchronized (v860ConfirmedPlayerListEntries) {
+            v860ConfirmedPlayerListEntries.remove(uuid);
+        }
+    }
+
+    public enum V860PlayerListAddAction {
+        ADD,
+        REPLACE,
+        SUPPRESS
     }
 
     public void addBossBar(UUID uuid, BossBar bossBar) {
