@@ -184,33 +184,6 @@ public class BlockCollision {
         return false;
     }
 
-    /**
-     * Returns whether this collision provides a horizontal support surface at the player's feet.
-     * Merely touching a side face or edge does not count as support.
-     */
-    public boolean supportsPlayer(int x, int y, int z, BoundingBox playerCollision) {
-        double playerMinY = playerCollision.getMin(Axis.Y);
-        double playerMinX = playerCollision.getMin(Axis.X);
-        double playerMaxX = playerCollision.getMax(Axis.X);
-        double playerMinZ = playerCollision.getMin(Axis.Z);
-        double playerMaxZ = playerCollision.getMax(Axis.Z);
-        for (BoundingBox box : boundingBoxes) {
-            double boxMaxY = box.getMax(Axis.Y) + y;
-            if (Math.abs(boxMaxY - playerMinY) > CollisionManager.COLLISION_TOLERANCE) {
-                continue;
-            }
-
-            double overlapX = Math.min(playerMaxX, box.getMax(Axis.X) + x)
-                    - Math.max(playerMinX, box.getMin(Axis.X) + x);
-            double overlapZ = Math.min(playerMaxZ, box.getMax(Axis.Z) + z)
-                    - Math.max(playerMinZ, box.getMin(Axis.Z) + z);
-            if (overlapX > 0.0D && overlapZ > 0.0D) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public boolean checkIntersection(Vector3i position, BoundingBox playerCollision) {
         return checkIntersection(position.getX(), position.getY(), position.getZ(), playerCollision);
     }
