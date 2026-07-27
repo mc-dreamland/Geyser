@@ -51,7 +51,6 @@ import org.geysermc.geyser.translator.collision.BlockCollision;
 import org.geysermc.geyser.translator.collision.OtherCollision;
 import org.geysermc.geyser.translator.collision.ScaffoldingCollision;
 import org.geysermc.geyser.translator.collision.SolidCollision;
-import org.geysermc.geyser.translator.collision.StairCollision;
 import org.geysermc.geyser.util.BlockUtils;
 
 import java.text.DecimalFormat;
@@ -211,8 +210,7 @@ public class CollisionManager {
         boolean invalidUpwardCorrection = !teleported
                 && pistonCache.getPlayerMotion().equals(Vector3f.ZERO)
                 && movement.getY() <= COLLISION_TOLERANCE
-                && (position.getY() - startingPos.getY() > PLAYER_STEP_UP + COLLISION_TOLERANCE
-                || unsupportedStairCorrection);
+                && (position.getY() - startingPos.getY() > PLAYER_STEP_UP + COLLISION_TOLERANCE);
         if (invalidUpwardCorrection) {
             playerBoundingBox.setMiddleX(startingMiddleX);
             playerBoundingBox.setMiddleY(startingMiddleY);
@@ -314,7 +312,6 @@ public class CollisionManager {
         // These may be set to true by the correctPosition method in ScaffoldingCollision
         touchingScaffolding = false;
         onScaffolding = false;
-        unsupportedStairCorrection = false;
 
         // Used when correction code needs to be run before the main correction
         BlockPositionIterator iter = session.getCollisionManager().playerCollidableBlocksIterator();
@@ -334,7 +331,6 @@ public class CollisionManager {
 
         // Main correction code
         IntArrayList collisionIgnoredBlocks = session.getBlockMappings().getCollisionIgnoredBlocks();
-        boolean stairCorrectedUp = false;
         for (iter.reset(); iter.hasNext(); iter.next()) {
             final int iteration = iter.getIteration();
             final int blockId = blocks[iteration];
@@ -353,33 +349,9 @@ public class CollisionManager {
             final int x = iter.getX();
             final int y = iter.getY();
             final int z = iter.getZ();
-            double previousPlayerMinY = playerBoundingBox.getMin(Axis.Y);
             if (!blockCollision.correctPosition(session, x, y, z, playerBoundingBox)) {
                 return false;
             }
-            if (blockCollision instanceof StairCollision
-                    && playerBoundingBox.getMin(Axis.Y) > previousPlayerMinY + COLLISION_TOLERANCE) {
-                stairCorrectedUp = true;
-            }
-        }
-
-        if (stairCorrectedUp) {
-            boolean supported = false;
-            for (iter.reset(); iter.hasNext(); iter.next()) {
-                final int iteration = iter.getIteration();
-                final int blockId = blocks[iteration];
-                if (collisionIgnoredBlocks.contains(blockId)) {
-                    continue;
-                }
-
-                BlockCollision blockCollision = BlockUtils.getCollision(blockId);
-                if (blockCollision != null && blockCollision.supportsPlayer(
-                        iter.getX(), iter.getY(), iter.getZ(), playerBoundingBox)) {
-                    supported = true;
-                    break;
-                }
-            }
-            unsupportedStairCorrection = !supported;
         }
 
         updateScaffoldingFlags(true);
