@@ -26,38 +26,20 @@
 package org.geysermc.geyser.translator.collision;
 
 import lombok.EqualsAndHashCode;
-import org.geysermc.geyser.level.block.property.Properties;
 import org.geysermc.geyser.level.block.type.BlockState;
 import org.geysermc.geyser.level.physics.BoundingBox;
-import org.geysermc.geyser.level.physics.Direction;
 
 @EqualsAndHashCode(callSuper = true)
-@CollisionRemapper(regex = "_stairs$", usesParams = true, passDefaultBoxes = true)
-public final class StairCollision extends BlockCollision {
-    private final Direction facing;
-    public StairCollision(BlockState state, BoundingBox[] defaultBoxes) {
-        this(state.getValue(Properties.HORIZONTAL_FACING), defaultBoxes);
-    }
-
-    StairCollision(Direction facing, BoundingBox[] defaultBoxes) {
+@CollisionRemapper(regex = "_slab$", passDefaultBoxes = true)
+public final class SlabCollision extends BlockCollision {
+    public SlabCollision(BlockState state, BoundingBox[] defaultBoxes) {
         super(defaultBoxes);
-        this.facing = facing;
     }
 
     @Override
     protected boolean canCorrectPositionUp(int x, int y, int z, BoundingBox playerCollision) {
-        // The facing side is the stair's full-height back. A player whose center is
-        // still outside that block face must be separated horizontally, not lifted.
-        // The center must also remain within the stair width: diagonal movement can
-        // make the bounding box graze the side of an adjacent stair while climbing.
-        double playerX = playerCollision.getMiddleX();
-        double playerZ = playerCollision.getMiddleZ();
-        return switch (facing) {
-            case NORTH -> playerX > x && playerX < x + 1.0D && playerZ > z;
-            case SOUTH -> playerX > x && playerX < x + 1.0D && playerZ < z + 1.0D;
-            case WEST -> playerZ > z && playerZ < z + 1.0D && playerX > x;
-            case EAST -> playerZ > z && playerZ < z + 1.0D && playerX < x + 1.0D;
-            default -> true;
-        };
+        // A bounding-box edge can graze an adjacent slab while the player climbs
+        // another slab. That side contact must not add a second half-block step-up.
+        return isPlayerCenterInsideHorizontalBounds(x, z, playerCollision);
     }
 }
