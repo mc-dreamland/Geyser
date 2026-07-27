@@ -187,6 +187,14 @@ public class CollisionManager {
         }
 
         Vector3d startingPos = playerBoundingBox.getBottomCenter();
+        double startingMiddleX = playerBoundingBox.getMiddleX();
+        double startingMiddleY = playerBoundingBox.getMiddleY();
+        double startingMiddleZ = playerBoundingBox.getMiddleZ();
+        double startingSizeX = playerBoundingBox.getSizeX();
+        double startingSizeY = playerBoundingBox.getSizeY();
+        double startingSizeZ = playerBoundingBox.getSizeZ();
+        boolean startingTouchingScaffolding = touchingScaffolding;
+        boolean startingOnScaffolding = onScaffolding;
         Vector3d movement = position.sub(startingPos);
         Vector3d adjustedMovement = correctPlayerMovement(movement, false, teleported);
         playerBoundingBox.translate(adjustedMovement.getX(), adjustedMovement.getY(), adjustedMovement.getZ());
@@ -194,6 +202,24 @@ public class CollisionManager {
         // Correct player position
         if (!correctPlayerPosition()) {
             // Cancel the movement if it needs to be cancelled
+            recalculatePosition();
+            return null;
+        }
+        position = playerBoundingBox.getBottomCenter();
+        boolean invalidUpwardCorrection = !teleported
+                && pistonCache.getPlayerMotion().equals(Vector3f.ZERO)
+                && movement.getY() <= COLLISION_TOLERANCE
+                && position.getY() - startingPos.getY() > PLAYER_STEP_UP + COLLISION_TOLERANCE;
+        if (invalidUpwardCorrection) {
+            playerBoundingBox.setMiddleX(startingMiddleX);
+            playerBoundingBox.setMiddleY(startingMiddleY);
+            playerBoundingBox.setMiddleZ(startingMiddleZ);
+            playerBoundingBox.setSizeX(startingSizeX);
+            playerBoundingBox.setSizeY(startingSizeY);
+            playerBoundingBox.setSizeZ(startingSizeZ);
+            touchingScaffolding = startingTouchingScaffolding;
+            onScaffolding = startingOnScaffolding;
+            updateScaffoldingFlags(true);
             recalculatePosition();
             return null;
         }
@@ -214,7 +240,6 @@ public class CollisionManager {
             }
         }
 
-        position = playerBoundingBox.getBottomCenter();
 
         if (!newOnGround) {
             // Trim the position to prevent rounding errors that make Java think we are clipping into a block

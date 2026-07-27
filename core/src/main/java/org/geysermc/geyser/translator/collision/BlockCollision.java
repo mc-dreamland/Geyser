@@ -67,6 +67,15 @@ public class BlockCollision {
     public void beforeCorrectPosition(int x, int y, int z, BoundingBox playerCollision) {}
 
     /**
+     * Whether static position correction may move the player onto this block.
+     * Subclasses can disable the vertical correction when another separation
+     * axis is authoritative for the current contact.
+     */
+    protected boolean canCorrectPositionUp(int x, int y, int z, BoundingBox playerCollision) {
+        return true;
+    }
+
+    /**
      * Returns false if the movement is invalid, and in this case it shouldn't be sent to the server and should be
      * cancelled
      * While the Java server should do this, it could result in false flags by anticheat
@@ -74,10 +83,11 @@ public class BlockCollision {
      */
     public boolean correctPosition(GeyserSession session, int x, int y, int z, BoundingBox playerCollision) {
         double playerMinY = playerCollision.getMiddleY() - (playerCollision.getSizeY() / 2);
+        boolean canCorrectPositionUp = canCorrectPositionUp(x, y, z, playerCollision);
         for (BoundingBox b : this.boundingBoxes) {
             double boxMinY = (b.getMiddleY() + y) - (b.getSizeY() / 2);
             double boxMaxY = (b.getMiddleY() + y) + (b.getSizeY() / 2);
-            if (b.checkIntersection(x, y, z, playerCollision) && (playerMinY + pushUpTolerance) >= boxMinY) {
+            if (canCorrectPositionUp && b.checkIntersection(x, y, z, playerCollision) && (playerMinY + pushUpTolerance) >= boxMinY) {
                 // Max steppable distance in Minecraft as far as we know is 0.5625 blocks (for beds)
                 if (boxMaxY - playerMinY <= 0.5625) {
                     playerCollision.translate(0, boxMaxY - playerMinY, 0);
