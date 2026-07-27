@@ -68,6 +68,11 @@ public class GlassPaneAndIronBarsCollision extends BlockCollision {
     }
 
     @Override
+    protected boolean canCorrectPositionUp(int x, int y, int z, BoundingBox playerCollision) {
+        return isPlayerCenterInsideHorizontalBounds(x, z, playerCollision);
+    }
+
+    @Override
     public boolean correctPosition(GeyserSession session, int x, int y, int z, BoundingBox playerCollision) {
         boolean result = super.correctPosition(session, x, y, z, playerCollision);
         playerCollision.setSizeX(playerCollision.getSizeX() - 0.0001);
