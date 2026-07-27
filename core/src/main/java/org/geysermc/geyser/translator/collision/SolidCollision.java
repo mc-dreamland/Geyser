@@ -37,4 +37,9 @@ public class SolidCollision extends BlockCollision {
             new BoundingBox(0.5, 0.5, 0.5, 1, 1, 1)
         });
     }
+
+    @Override
+    protected boolean canCorrectPositionUp(int x, int y, int z, BoundingBox playerCollision) {
+        return isPlayerCenterInsideHorizontalBounds(x, z, playerCollision);
+    }
 }
