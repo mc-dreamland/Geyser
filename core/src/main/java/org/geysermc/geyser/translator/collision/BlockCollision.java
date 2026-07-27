@@ -76,6 +76,27 @@ public class BlockCollision {
     }
 
     /**
+     * Returns whether the player's center is over one of this collision's horizontal faces.
+     * A center outside every face means the intersection is a side contact and should be
+     * resolved horizontally rather than by lifting the player onto the block.
+     */
+    protected final boolean isPlayerCenterInsideHorizontalBounds(int x, int z, BoundingBox playerCollision) {
+        double playerX = playerCollision.getMiddleX();
+        double playerZ = playerCollision.getMiddleZ();
+        for (BoundingBox box : boundingBoxes) {
+            double halfSizeX = box.getSizeX() / 2.0D;
+            double halfSizeZ = box.getSizeZ() / 2.0D;
+            if (playerX > x + box.getMiddleX() - halfSizeX
+                    && playerX < x + box.getMiddleX() + halfSizeX
+                    && playerZ > z + box.getMiddleZ() - halfSizeZ
+                    && playerZ < z + box.getMiddleZ() + halfSizeZ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Returns false if the movement is invalid, and in this case it shouldn't be sent to the server and should be
      * cancelled
      * While the Java server should do this, it could result in false flags by anticheat
@@ -157,6 +178,33 @@ public class BlockCollision {
     public boolean checkIntersection(double x, double y, double z, BoundingBox playerCollision) {
         for (BoundingBox b : boundingBoxes) {
             if (b.checkIntersection(x, y, z, playerCollision)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns whether this collision provides a horizontal support surface at the player's feet.
+     * Merely touching a side face or edge does not count as support.
+     */
+    public boolean supportsPlayer(int x, int y, int z, BoundingBox playerCollision) {
+        double playerMinY = playerCollision.getMin(Axis.Y);
+        double playerMinX = playerCollision.getMin(Axis.X);
+        double playerMaxX = playerCollision.getMax(Axis.X);
+        double playerMinZ = playerCollision.getMin(Axis.Z);
+        double playerMaxZ = playerCollision.getMax(Axis.Z);
+        for (BoundingBox box : boundingBoxes) {
+            double boxMaxY = box.getMax(Axis.Y) + y;
+            if (Math.abs(boxMaxY - playerMinY) > CollisionManager.COLLISION_TOLERANCE) {
+                continue;
+            }
+
+            double overlapX = Math.min(playerMaxX, box.getMax(Axis.X) + x)
+                    - Math.max(playerMinX, box.getMin(Axis.X) + x);
+            double overlapZ = Math.min(playerMaxZ, box.getMax(Axis.Z) + z)
+                    - Math.max(playerMinZ, box.getMin(Axis.Z) + z);
+            if (overlapX > 0.0D && overlapZ > 0.0D) {
                 return true;
             }
         }
