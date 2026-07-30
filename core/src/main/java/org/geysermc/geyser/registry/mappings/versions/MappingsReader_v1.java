@@ -47,6 +47,7 @@ import org.geysermc.geyser.api.block.custom.component.PlacementConditions.Face;
 import org.geysermc.geyser.api.block.custom.component.TransformationComponent;
 import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.api.item.custom.CustomItemOptions;
+import org.geysermc.geyser.api.item.custom.NeteaseFrameAnimationComponent;
 import org.geysermc.geyser.api.util.CreativeCategory;
 import org.geysermc.geyser.item.exception.InvalidCustomMappingsFileException;
 import org.geysermc.geyser.level.block.GeyserCustomBlockComponents;
@@ -83,6 +84,8 @@ import java.util.stream.IntStream;
  * A class responsible for reading custom item and block mappings from a JSON file
  */
 public class MappingsReader_v1 extends MappingsReader {
+    private static final String NETEASE_FRAME_ANIMATION_MAPPING = "netease_frame_anim_in_scene";
+    private static final String NETEASE_FRAME_ANIMATION_COMPONENT = "netease:frame_anim_in_scene";
     private static final int[] ROTATIONS = {0, -90, 180, 90};
     private static final String BITS_A_PROPERTY = "geyser_skull:bits_a";
     private static final String BITS_B_PROPERTY = "geyser_skull:bits_b";
@@ -267,6 +270,11 @@ public class MappingsReader_v1 extends MappingsReader {
             customItemData.renderOffsets(fromJsonObject(tmpNode));
         }
 
+        NeteaseFrameAnimationComponent frameAnimation = readNeteaseFrameAnimationComponent(node);
+        if (frameAnimation != null) {
+            customItemData.neteaseFrameAnimation(frameAnimation);
+        }
+
         if (node.get("tags") instanceof JsonArray tags) {
             Set<String> tagsSet = new ObjectOpenHashSet<>();
             tags.forEach(tag -> tagsSet.add(tag.getAsString()));
@@ -274,6 +282,42 @@ public class MappingsReader_v1 extends MappingsReader {
         }
 
         return customItemData.build();
+    }
+
+    static @Nullable NeteaseFrameAnimationComponent readNeteaseFrameAnimationComponent(JsonObject node) throws InvalidCustomMappingsFileException {
+        JsonElement element = node.get(NETEASE_FRAME_ANIMATION_MAPPING);
+        if (element == null) {
+            element = node.get(NETEASE_FRAME_ANIMATION_COMPONENT);
+        }
+        if (element == null) {
+            return null;
+        }
+        if (!(element instanceof JsonObject component)) {
+            throw new InvalidCustomMappingsFileException(NETEASE_FRAME_ANIMATION_MAPPING + " must be an object");
+        }
+
+        JsonElement ticksNode = component.get("ticks_per_frame");
+        if (!(ticksNode instanceof JsonPrimitive ticksPrimitive) || !ticksPrimitive.isNumber()) {
+            throw new InvalidCustomMappingsFileException(NETEASE_FRAME_ANIMATION_MAPPING + ".ticks_per_frame must be an integer");
+        }
+
+        int ticksPerFrame;
+        try {
+            ticksPerFrame = Integer.parseInt(ticksPrimitive.getAsString());
+        } catch (NumberFormatException exception) {
+            throw new InvalidCustomMappingsFileException(NETEASE_FRAME_ANIMATION_MAPPING + ".ticks_per_frame must be an integer");
+        }
+        if (ticksPerFrame <= 0) {
+            throw new InvalidCustomMappingsFileException(NETEASE_FRAME_ANIMATION_MAPPING + ".ticks_per_frame must be greater than zero");
+        }
+
+        JsonElement texturePathNode = component.get("texture_path");
+        if (!(texturePathNode instanceof JsonPrimitive texturePathPrimitive) || !texturePathPrimitive.isString()
+                || texturePathPrimitive.getAsString().isBlank()) {
+            throw new InvalidCustomMappingsFileException(NETEASE_FRAME_ANIMATION_MAPPING + ".texture_path must be a non-empty string");
+        }
+
+        return new NeteaseFrameAnimationComponent(ticksPerFrame, texturePathPrimitive.getAsString());
     }
 
     /**

@@ -107,6 +107,15 @@ public interface CustomItemData {
     @Nullable CustomRenderOffsets renderOffsets();
 
     /**
+     * Gets the NetEase in-scene frame animation component for this item.
+     *
+     * @return the frame animation component, or null if the item is not animated
+     */
+    default @Nullable NeteaseFrameAnimationComponent neteaseFrameAnimation() {
+        return null;
+    }
+
+    /**
      * Gets the item's set of tags that can be used in Molang.
      * Equivalent to "tag:some_tag"
      *
@@ -141,6 +150,10 @@ public interface CustomItemData {
         Builder textureSize(int textureSize);
 
         Builder renderOffsets(@Nullable CustomRenderOffsets renderOffsets);
+
+        default Builder neteaseFrameAnimation(@Nullable NeteaseFrameAnimationComponent frameAnimation) {
+            return this;
+        }
 
         Builder tags(@Nullable Set<String> tags);
 
