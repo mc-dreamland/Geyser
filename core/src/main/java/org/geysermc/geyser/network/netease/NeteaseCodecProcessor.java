@@ -40,10 +40,13 @@ import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
  */
 public final class NeteaseCodecProcessor {
 
+    private static final int SET_ENTITY_GRAVITY_PACKET_ID = 0xCB;
     private static final int SET_DIMENSION_LOCAL_TIME_PACKET_ID = 208;
 
     public static void processCodec(BedrockCodec.Builder codecBuilder, int protocolVersion) {
 
+        codecBuilder.registerPacket(SetEntityGravityPacket::new, SetEntityGravitySerializer.INSTANCE,
+                SET_ENTITY_GRAVITY_PACKET_ID, PacketRecipient.BOTH);
         codecBuilder.registerPacket(SetDimensionLocalTimePacket::new, SetDimensionLocalTimeSerializer.INSTANCE,
                 SET_DIMENSION_LOCAL_TIME_PACKET_ID, PacketRecipient.CLIENT);
 
