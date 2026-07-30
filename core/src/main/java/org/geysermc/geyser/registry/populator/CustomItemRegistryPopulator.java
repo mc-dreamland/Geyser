@@ -37,6 +37,7 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.ItemVersion;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.api.item.custom.CustomRenderOffsets;
+import org.geysermc.geyser.api.item.custom.NeteaseFrameAnimationComponent;
 import org.geysermc.geyser.api.item.custom.NonVanillaCustomItemData;
 import org.geysermc.geyser.api.util.TriState;
 import org.geysermc.geyser.event.type.GeyserDefineCustomItemsEventImpl;
@@ -279,6 +280,7 @@ public class CustomItemRegistryPopulator {
         }
 
         componentBuilder.putCompound("minecraft:display_name", NbtMap.builder().putString("value", customItemData.displayName()).build());
+        addNeteaseFrameAnimationComponent(customItemData, componentBuilder);
 
         // Add a Geyser tag to the item, allowing Molang queries
         addItemTag(componentBuilder, "geyser:is_custom");
@@ -305,6 +307,18 @@ public class CustomItemRegistryPopulator {
                     .build());
             itemProperties.putBoolean("use_duration", true);
         }
+    }
+
+    static void addNeteaseFrameAnimationComponent(CustomItemData customItemData, NbtMapBuilder componentBuilder) {
+        NeteaseFrameAnimationComponent frameAnimation = customItemData.neteaseFrameAnimation();
+        if (frameAnimation == null) {
+            return;
+        }
+
+        componentBuilder.putCompound("netease:frame_anim_in_scene", NbtMap.builder()
+                .putInt("ticks_per_frame", frameAnimation.ticksPerFrame())
+                .putString("texture_path", frameAnimation.texturePath())
+                .build());
     }
 
     /**

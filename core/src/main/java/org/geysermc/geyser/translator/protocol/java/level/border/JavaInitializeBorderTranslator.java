@@ -41,7 +41,7 @@ public class JavaInitializeBorderTranslator extends PacketTranslator<Clientbound
         worldBorder.setCenter(Vector2d.from(packet.getNewCenterX(), packet.getNewCenterZ()));
         worldBorder.setOldDiameter(packet.getOldSize());
         worldBorder.setNewDiameter(packet.getNewSize());
-        worldBorder.setSpeed(packet.getLerpTime());
+        worldBorder.setSpeed(packet.getLerpTime() * 50);
         worldBorder.setWarningDelay(packet.getWarningTime());
         worldBorder.setWarningBlocks(packet.getWarningBlocks());
         worldBorder.setResizing(packet.getLerpTime() > 0);
