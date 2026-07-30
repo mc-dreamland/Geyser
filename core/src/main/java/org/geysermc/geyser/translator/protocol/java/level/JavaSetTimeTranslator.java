@@ -25,11 +25,12 @@
 
 package org.geysermc.geyser.translator.protocol.java.level;
 
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetTimePacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetTimePacket;
+import org.geysermc.geyser.network.netease.SetDimensionLocalTimePacket;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetTimePacket;
 
 @Translator(packet = ClientboundSetTimePacket.class)
 public class JavaSetTimeTranslator extends PacketTranslator<ClientboundSetTimePacket> {
@@ -41,12 +42,17 @@ public class JavaSetTimeTranslator extends PacketTranslator<ClientboundSetTimePa
         long time = packet.getDayTime();
 
         // https://minecraft.wiki/w/Day-night_cycle#24-hour_Minecraft_day
-        SetTimePacket setTimePacket = new SetTimePacket();
         // We use modulus to prevent an integer overflow
         // 24000 is the range of ticks that a Minecraft day can be; we times by 8 so all moon phases are visible
         // (Last verified behavior: Bedrock 1.18.12 / Java 1.18.2)
-        setTimePacket.setTime((int) (Math.abs(time) % (24000 * 8)));
-        session.sendUpstreamPacket(setTimePacket);
+        int bedrockTime = (int) (Math.abs(time) % (24000 * 8));
+        if (session.getLastNormalDimId() == 3) {
+            session.sendUpstreamPacket(new SetDimensionLocalTimePacket(true, bedrockTime, packet.isTickDayTime()));
+        } else {
+            SetTimePacket setTimePacket = new SetTimePacket();
+            setTimePacket.setTime(bedrockTime);
+            session.sendUpstreamPacket(setTimePacket);
+        }
 
         // We need to send a gamerule if this changed
         if (session.isDaylightCycle() != packet.isTickDayTime()) {

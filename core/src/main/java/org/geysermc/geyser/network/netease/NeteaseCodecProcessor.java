@@ -26,8 +26,8 @@
 package org.geysermc.geyser.network.netease;
 
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
+import org.cloudburstmc.protocol.bedrock.data.PacketRecipient;
 import org.cloudburstmc.protocol.bedrock.packet.BiomeDefinitionListPacket;
-import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerOpenPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
@@ -37,7 +37,12 @@ import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
  */
 public final class NeteaseCodecProcessor {
 
+    private static final int SET_DIMENSION_LOCAL_TIME_PACKET_ID = 208;
+
     public static void processCodec(BedrockCodec.Builder codecBuilder, int protocolVersion) {
+
+        codecBuilder.registerPacket(SetDimensionLocalTimePacket::new, SetDimensionLocalTimeSerializer.INSTANCE,
+                SET_DIMENSION_LOCAL_TIME_PACKET_ID, PacketRecipient.CLIENT);
 
         if (protocolVersion >= 819) {
             codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V819_860);
