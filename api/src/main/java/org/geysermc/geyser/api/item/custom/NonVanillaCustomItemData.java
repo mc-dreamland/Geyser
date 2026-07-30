@@ -244,6 +244,11 @@ public interface NonVanillaCustomItemData extends CustomItemData {
         Builder renderOffsets(@Nullable CustomRenderOffsets renderOffsets);
 
         @Override
+        default Builder neteaseFrameAnimation(@Nullable NeteaseFrameAnimationComponent frameAnimation) {
+            return this;
+        }
+
+        @Override
         Builder tags(@Nullable Set<String> tags);
 
         NonVanillaCustomItemData build();
