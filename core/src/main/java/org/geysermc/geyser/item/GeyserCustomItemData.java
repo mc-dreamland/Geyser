@@ -32,6 +32,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.api.item.custom.CustomItemOptions;
 import org.geysermc.geyser.api.item.custom.CustomRenderOffsets;
+import org.geysermc.geyser.api.item.custom.NeteaseFrameAnimationComponent;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -51,6 +52,7 @@ public class GeyserCustomItemData implements CustomItemData {
     private final String creativeGroup;
     private final int textureSize;
     private final CustomRenderOffsets renderOffsets;
+    private final NeteaseFrameAnimationComponent neteaseFrameAnimation;
     private final Set<String> tags;
 
     public GeyserCustomItemData(String name,
@@ -63,6 +65,7 @@ public class GeyserCustomItemData implements CustomItemData {
                                 String creativeGroup,
                                 int textureSize,
                                 CustomRenderOffsets renderOffsets,
+                                NeteaseFrameAnimationComponent neteaseFrameAnimation,
                                 Set<String> tags) {
         this.name = name;
         this.customItemOptions = customItemOptions;
@@ -74,6 +77,7 @@ public class GeyserCustomItemData implements CustomItemData {
         this.creativeGroup = creativeGroup;
         this.textureSize = textureSize;
         this.renderOffsets = renderOffsets;
+        this.neteaseFrameAnimation = neteaseFrameAnimation;
         this.tags = tags;
     }
 
@@ -128,6 +132,11 @@ public class GeyserCustomItemData implements CustomItemData {
     }
 
     @Override
+    public @Nullable NeteaseFrameAnimationComponent neteaseFrameAnimation() {
+        return neteaseFrameAnimation;
+    }
+
+    @Override
     public @NonNull Set<String> tags() {
         return tags;
     }
@@ -143,6 +152,7 @@ public class GeyserCustomItemData implements CustomItemData {
         protected String creativeGroup = null;
         protected int textureSize = 16;
         protected CustomRenderOffsets renderOffsets = null;
+        protected NeteaseFrameAnimationComponent neteaseFrameAnimation = null;
         protected Set<String> tags = new HashSet<>();
 
         @Override
@@ -206,6 +216,12 @@ public class GeyserCustomItemData implements CustomItemData {
         }
 
         @Override
+        public Builder neteaseFrameAnimation(@Nullable NeteaseFrameAnimationComponent frameAnimation) {
+            this.neteaseFrameAnimation = frameAnimation;
+            return this;
+        }
+
+        @Override
         public Builder tags(@Nullable Set<String> tags) {
             this.tags = Objects.requireNonNullElseGet(tags, Set::of);
             return this;
@@ -224,7 +240,8 @@ public class GeyserCustomItemData implements CustomItemData {
                 this.icon = this.name;
             }
             return new GeyserCustomItemData(this.name, this.customItemOptions, this.displayName, this.icon, this.allowOffhand,
-                    this.displayHandheld, this.creativeCategory, this.creativeGroup, this.textureSize, this.renderOffsets, this.tags);
+                    this.displayHandheld, this.creativeCategory, this.creativeGroup, this.textureSize, this.renderOffsets,
+                    this.neteaseFrameAnimation, this.tags);
         }
     }
 }
