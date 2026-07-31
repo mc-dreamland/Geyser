@@ -25,6 +25,12 @@
 
 package org.geysermc.geyser.translator.protocol.java.level;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.hash.Funnels;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
@@ -42,6 +48,7 @@ import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtUtils;
 import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 import org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket;
+import org.cloudburstmc.protocol.bedrock.packet.UpdateBlockPacket;
 import org.geysermc.geyser.entity.type.ItemFrameEntity;
 import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.level.block.type.Block;
@@ -75,8 +82,11 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 
 import java.io.IOException;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.geysermc.geyser.util.ChunkUtils.*;
 
@@ -84,8 +94,41 @@ import static org.geysermc.geyser.util.ChunkUtils.*;
 public class JavaLevelChunkWithLightTranslator extends PacketTranslator<ClientboundLevelChunkWithLightPacket> {
     private static final boolean USE_EXPERIMENTAL_CHUNK_TRANSLATION =
             Boolean.parseBoolean(System.getProperty("Geyser.ExperimentalChunkTranslation", "true"));
+    private static final boolean USE_GLOBAL_CHUNK_TRANSLATION_CACHE =
+            Boolean.parseBoolean(System.getProperty("Geyser.GlobalChunkTranslationCache", "true"));
+    private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_MAX_BYTES =
+            Long.getLong("Geyser.GlobalChunkTranslationCacheMaxBytes", 256L * 1024L * 1024L);
+    private static final int GLOBAL_CHUNK_TRANSLATION_CACHE_HOT_THRESHOLD =
+            Math.max(1, Integer.getInteger("Geyser.GlobalChunkTranslationCacheHotThreshold", 3));
+    private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_WINDOW_SECONDS =
+            Math.max(1L, Long.getLong("Geyser.GlobalChunkTranslationCacheFrequencyWindowSeconds", 60L));
+    private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_MAX_ENTRIES =
+            Math.max(1L, Long.getLong("Geyser.GlobalChunkTranslationCacheFrequencyMaxEntries", 100_000L));
+    private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_EXPIRE_AFTER_ACCESS_MINUTES =
+            Math.max(1L, Long.getLong("Geyser.GlobalChunkTranslationCacheExpireAfterAccessMinutes", 10L));
+    private static final Cache<HashCode, CachedChunkPayload> GLOBAL_CHUNK_TRANSLATION_CACHE =
+            CacheBuilder.<HashCode, CachedChunkPayload>newBuilder()
+                    .maximumWeight(GLOBAL_CHUNK_TRANSLATION_CACHE_MAX_BYTES)
+                    .weigher((HashCode key, CachedChunkPayload value) -> value.payload.length)
+                    .expireAfterAccess(GLOBAL_CHUNK_TRANSLATION_CACHE_EXPIRE_AFTER_ACCESS_MINUTES, TimeUnit.MINUTES)
+                    .build();
+    private static final Cache<HashCode, AtomicLong> GLOBAL_CHUNK_TRANSLATION_FREQUENCY =
+            CacheBuilder.<HashCode, AtomicLong>newBuilder()
+                    .maximumSize(GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_MAX_ENTRIES)
+                    .expireAfterWrite(GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_WINDOW_SECONDS, TimeUnit.SECONDS)
+                    .build();
     private static final int[] YZX_TO_XZY = createYzxToXzyMap();
     private static final ThreadLocal<ExtendedCollisionsStorage> EXTENDED_COLLISIONS_STORAGE = ThreadLocal.withInitial(ExtendedCollisionsStorage::new);
+
+    private static final class CachedChunkPayload {
+        private final byte[] payload;
+        private final int sectionCount;
+
+        private CachedChunkPayload(byte[] payload, int sectionCount) {
+            this.payload = payload;
+            this.sectionCount = sectionCount;
+        }
+    }
 
     private static int[] createYzxToXzyMap() {
         int[] indexes = new int[BlockStorage.SIZE];
@@ -112,6 +155,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
     }
 
     private void translateExperimental(GeyserSession session, ClientboundLevelChunkWithLightPacket packet) {
+        final long startNanos = System.nanoTime();
         final boolean useExtendedCollisions = !session.getBlockMappings().getExtendedCollisionBoxes().isEmpty();
         final int chunkX = packet.getX();
         final int chunkZ = packet.getZ();
@@ -135,7 +179,183 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
 
         BedrockDimension bedrockDimension = session.getBedrockDimension();
         int maxBedrockSectionY = (bedrockDimension.height() >> 4) - 1;
+        var biomeTranslations = session.getRegistryCache().registry(JavaRegistries.BIOME);
+        int dimension = bedrockDimension.bedrockId();
+        int lastNormalDimId = session.getLastNormalDimId();
+        if (dimension != lastNormalDimId && (dimension == 0 || dimension == 3)) {
+            dimension = lastNormalDimId;
+        }
 
+        long cacheKeyStartNanos = System.nanoTime();
+        HashCode cacheKey = null;
+        CachedChunkPayload cachedPayload = null;
+        if (USE_GLOBAL_CHUNK_TRANSLATION_CACHE) {
+            try {
+                Hasher hasher = Hashing.sha256().newHasher();
+                hasher.putInt(2); // Cache key format version
+                hasher.putInt(session.protocolVersion());
+                hasher.putInt(System.identityHashCode(session.getBlockMappings()));
+                hasher.putInt(bedrockDimension.bedrockId());
+                hasher.putInt(dimension);
+                hasher.putInt(bedrockDimension.minY());
+                hasher.putInt(bedrockDimension.height());
+                hasher.putInt(yOffset);
+                hasher.putInt(chunkSize);
+                hasher.putInt(chunkX);
+                hasher.putInt(chunkZ);
+                hasher.putBoolean(useExtendedCollisions);
+                hasher.putBoolean(session.getPreferencesCache().showCustomSkulls());
+                hasher.putInt(biomeTranslations.size());
+                for (var biome : biomeTranslations.entries()) {
+                    hasher.putInt(biome.id());
+                    hasher.putInt(biome.data() == null ? -1 : biome.data());
+                }
+
+                byte[] chunkData = packet.getChunkData();
+                hasher.putInt(chunkData.length);
+                hasher.putBytes(chunkData);
+                hasher.putInt(blockEntities.length);
+
+                try (NBTOutputStream cacheKeyNbtStream = NbtUtils.createNetworkWriter(Funnels.asOutputStream(hasher))) {
+                    for (BlockEntityInfo blockEntity : blockEntities) {
+                        BlockEntityType type = blockEntity.getType();
+                        String typeName = type == null ? "<null>" : type.toString();
+                        hasher.putInt(typeName.length());
+                        hasher.putUnencodedChars(typeName);
+                        hasher.putInt(blockEntity.getX());
+                        hasher.putInt(blockEntity.getY());
+                        hasher.putInt(blockEntity.getZ());
+
+                        NbtMap tag = blockEntity.getNbt();
+                        if (tag == null) {
+                            hasher.putBoolean(false);
+                        } else {
+                            hasher.putBoolean(true);
+                            cacheKeyNbtStream.writeTag(tag);
+                        }
+                    }
+                }
+
+                cacheKey = hasher.hash();
+                cachedPayload = GLOBAL_CHUNK_TRANSLATION_CACHE.getIfPresent(cacheKey);
+            } catch (IOException e) {
+                session.getGeyser().getLogger().error("Failed to calculate global chunk cache key", e);
+            }
+        }
+        long cacheKeyElapsedNanos = System.nanoTime() - cacheKeyStartNanos;
+        long requestCount = 0L;
+        boolean hot = false;
+        if (cacheKey != null) {
+            AtomicLong frequency = GLOBAL_CHUNK_TRANSLATION_FREQUENCY.asMap()
+                    .computeIfAbsent(cacheKey, ignored -> new AtomicLong());
+            requestCount = frequency.incrementAndGet();
+            hot = cachedPayload != null || requestCount >= GLOBAL_CHUNK_TRANSLATION_CACHE_HOT_THRESHOLD;
+        }
+
+        if (USE_GLOBAL_CHUNK_TRANSLATION_CACHE) {
+            session.getGeyser().getLogger().info("[GlobalChunkCacheKeyTiming] chunkX=" + chunkX
+                    + " chunkZ=" + chunkZ
+                    + " key=" + (cacheKey == null ? "<failed>" : cacheKey)
+                    + " elapsedMs=" + (cacheKeyElapsedNanos / 1_000_000.0D)
+                    + " bedrockDimension=" + bedrockDimension.bedrockId()
+                    + " lastNormalDimId=" + lastNormalDimId
+                    + " packetDimension=" + dimension
+                    + " cacheHit=" + (cachedPayload != null)
+                    + " hot=" + hot
+                    + " requestCount=" + requestCount
+                    + " hotThreshold=" + GLOBAL_CHUNK_TRANSLATION_CACHE_HOT_THRESHOLD
+                    + " cacheEntries=" + GLOBAL_CHUNK_TRANSLATION_CACHE.size()
+                    + " frequencyEntries=" + GLOBAL_CHUNK_TRANSLATION_FREQUENCY.size());
+        }
+
+        if (cachedPayload != null) {
+            ByteBuf cachedInput = Unpooled.wrappedBuffer(packet.getChunkData());
+            try {
+                for (int sectionY = 0; sectionY < chunkSize; sectionY++) {
+                    ChunkSection javaSection = MinecraftTypes.readChunkSection(cachedInput, BlockRegistries.BLOCK_STATES.get().size(),
+                            biomeTranslations.size());
+                    javaChunks[sectionY] = javaSection.getBlockData();
+                }
+            } catch (RuntimeException e) {
+                session.getGeyser().getLogger().error("Error while restoring a globally cached chunk", e);
+                cachedPayload = null;
+            } finally {
+                cachedInput.release();
+            }
+        }
+
+        if (cachedPayload != null) {
+            Map<Vector3i, BlockDefinition> customSkullUpdates = null;
+            if (!session.getErosionHandler().isActive()) {
+                session.getChunkCache().addToCache(chunkX, chunkZ, javaChunks);
+            }
+
+            if (session.getPreferencesCache().showCustomSkulls()) {
+                final int chunkBlockX = chunkX << 4;
+                final int chunkBlockZ = chunkZ << 4;
+                for (BlockEntityInfo blockEntity : blockEntities) {
+                    NbtMap tag = blockEntity.getNbt();
+                    if (blockEntity.getType() != BlockEntityType.SKULL || tag == null || !tag.containsKey("profile")) {
+                        continue;
+                    }
+
+                    int x = blockEntity.getX();
+                    int y = blockEntity.getY();
+                    int z = blockEntity.getZ();
+                    DataPalette section = javaChunks[(y >> 4) - yOffset];
+                    BlockState blockState = BlockState.of(section.get(x, y & 0xF, z));
+                    if (blockEntity.getType() == blockState.block().blockEntityType()) {
+                        Vector3i position = Vector3i.from(x + chunkBlockX, y, z + chunkBlockZ);
+                        BlockDefinition blockDefinition = SkullBlockEntityTranslator.translateSkull(session, tag, position, blockState);
+                        if (blockDefinition != null) {
+                            if (customSkullUpdates == null) {
+                                customSkullUpdates = new HashMap<>();
+                            }
+                            customSkullUpdates.put(position, blockDefinition);
+                        }
+                    }
+                }
+            }
+
+            LevelChunkPacket cachedLevelChunkPacket = new LevelChunkPacket();
+            cachedLevelChunkPacket.setSubChunksLength(cachedPayload.sectionCount);
+            cachedLevelChunkPacket.setCachingEnabled(false);
+            cachedLevelChunkPacket.setChunkX(chunkX);
+            cachedLevelChunkPacket.setChunkZ(chunkZ);
+            cachedLevelChunkPacket.setData(Unpooled.wrappedBuffer(cachedPayload.payload));
+            cachedLevelChunkPacket.setDimension(dimension);
+            session.sendUpstreamPacket(cachedLevelChunkPacket);
+
+            if (customSkullUpdates != null) {
+                for (Map.Entry<Vector3i, BlockDefinition> entry : customSkullUpdates.entrySet()) {
+                    UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
+                    updateBlockPacket.setDataLayer(0);
+                    updateBlockPacket.setBlockPosition(entry.getKey());
+                    updateBlockPacket.setDefinition(entry.getValue());
+                    updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NEIGHBORS);
+                    updateBlockPacket.getFlags().add(UpdateBlockPacket.Flag.NETWORK);
+                    session.sendUpstreamPacket(updateBlockPacket);
+                }
+            }
+
+            for (Map.Entry<Vector3i, ItemFrameEntity> entry : session.getItemFrameCache().entrySet()) {
+                Vector3i position = entry.getKey();
+                if ((position.getX() >> 4) == chunkX && (position.getZ() >> 4) == chunkZ) {
+                    entry.getValue().updateBlock(true);
+                }
+            }
+
+            session.getGeyser().getLogger().info("[ChunkTranslationTiming] translateExperimental chunkX=" + chunkX
+                    + " chunkZ=" + chunkZ
+                    + " cacheHit=true"
+                    + " hot=true"
+                    + " keyElapsedMs=" + (cacheKeyElapsedNanos / 1_000_000.0D)
+                    + " totalElapsedMs=" + ((System.nanoTime() - startNanos) / 1_000_000.0D)
+                    + " requestCount=" + requestCount);
+            return;
+        }
+
+        long translationStartNanos = System.nanoTime();
         int sectionCount;
         byte[] payload;
         ByteBuf byteBuf = null;
@@ -548,13 +768,6 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             }
         }
 
-        int lastNormalDimId = session.getLastNormalDimId();
-        int dimension = session.getBedrockDimension().bedrockId();
-        if (dimension != lastNormalDimId) {
-            if (dimension == 0 || dimension == 3) {
-                dimension = lastNormalDimId;
-            }
-        }
         LevelChunkPacket levelChunkPacket = new LevelChunkPacket();
         levelChunkPacket.setSubChunksLength(sectionCount);
         levelChunkPacket.setCachingEnabled(false);
@@ -562,6 +775,16 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         levelChunkPacket.setChunkZ(chunkZ);
         levelChunkPacket.setData(Unpooled.wrappedBuffer(payload));
         levelChunkPacket.setDimension(dimension);
+
+        boolean cacheStored = false;
+        if (USE_GLOBAL_CHUNK_TRANSLATION_CACHE && cacheKey != null && hot) {
+            CachedChunkPayload newCachedPayload = new CachedChunkPayload(payload, sectionCount);
+            CachedChunkPayload existingCachedPayload = GLOBAL_CHUNK_TRANSLATION_CACHE.asMap().putIfAbsent(cacheKey, newCachedPayload);
+            if (existingCachedPayload == null) {
+                cacheStored = true;
+            }
+        }
+
         session.sendUpstreamPacket(levelChunkPacket);
 
         for (Map.Entry<Vector3i, ItemFrameEntity> entry : session.getItemFrameCache().entrySet()) {
@@ -572,6 +795,18 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 entry.getValue().updateBlock(true);
             }
         }
+
+        session.getGeyser().getLogger().info("[ChunkTranslationTiming] translateExperimental chunkX=" + chunkX
+                + " chunkZ=" + chunkZ
+                + " cacheHit=false"
+                + " hot=" + hot
+                + " cacheStored=" + cacheStored
+                + " keyElapsedMs=" + (cacheKeyElapsedNanos / 1_000_000.0D)
+                + " translationElapsedMs=" + ((System.nanoTime() - translationStartNanos) / 1_000_000.0D)
+                + " totalElapsedMs=" + ((System.nanoTime() - startNanos) / 1_000_000.0D)
+                + " requestCount=" + requestCount
+                + " payloadBytes=" + payload.length
+                + " cacheEntries=" + GLOBAL_CHUNK_TRANSLATION_CACHE.size());
     }
 
     private void translateOld(GeyserSession session, ClientboundLevelChunkWithLightPacket packet) {
