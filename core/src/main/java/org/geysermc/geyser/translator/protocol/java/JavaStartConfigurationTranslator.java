@@ -47,6 +47,8 @@ public class JavaStartConfigurationTranslator extends PacketTranslator<Clientbou
         // Reset code of conduct being accepted
         session.hasAcceptedCodeOfConduct(false);
 
-        ChunkUtils.sendEmptyChunks(session, session.getPlayerEntity().position().toInt(), session.getServerRenderDistance(), false);
+        if (session.isQuickSwitchDimension()) {
+            ChunkUtils.sendEmptyChunks(session, session.getPlayerEntity().position().toInt(), session.getServerRenderDistance(), false);
+        }
     }
 }
