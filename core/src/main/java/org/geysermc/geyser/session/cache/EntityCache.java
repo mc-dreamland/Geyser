@@ -63,7 +63,7 @@ public class EntityCache {
     private final Map<UUID, SerializedSkin> v860ConfirmedPlayerListEntries = new Object2ObjectOpenHashMap<>();
 
     @Getter
-    private final AtomicLong nextEntityId = new AtomicLong(2L);
+    private final AtomicLong nextEntityId = new AtomicLong(114514L);
 
     public EntityCache(GeyserSession session) {
         this.session = session;
