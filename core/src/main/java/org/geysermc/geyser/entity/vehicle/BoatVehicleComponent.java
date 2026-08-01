@@ -62,7 +62,7 @@ public class BoatVehicleComponent extends VehicleComponent<BoatEntity> {
 
     @Override
     public void tickVehicle() {
-        if (!vehicle.isClientControlled()) {
+        if (!vehicle.shouldSimulateMovement()) {
             return;
         }
 

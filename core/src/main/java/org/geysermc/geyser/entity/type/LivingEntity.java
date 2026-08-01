@@ -374,7 +374,7 @@ public class LivingEntity extends Entity implements Tickable {
     @Override
     public void moveRelative(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
         if (this instanceof ClientVehicle clientVehicle) {
-            if (clientVehicle.isClientControlled()) {
+            if (clientVehicle.shouldSimulateMovement()) {
                 return;
             }
             clientVehicle.getVehicleComponent().moveRelative(relX, relY, relZ);
@@ -420,6 +420,10 @@ public class LivingEntity extends Entity implements Tickable {
     }
 
     public boolean shouldLerp() {
+        // Do not interpolate vehicles whose movement is already predicted locally or by the client.
+        if (this instanceof ClientVehicle clientVehicle) {
+            return !clientVehicle.shouldSimulateMovement() && !session.isInClientPredictedVehicle();
+        }
         return true;
     }
 
