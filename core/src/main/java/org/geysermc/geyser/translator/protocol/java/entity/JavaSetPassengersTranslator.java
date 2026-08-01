@@ -84,6 +84,7 @@ public class JavaSetPassengersTranslator extends PacketTranslator<ClientboundSet
             EntityUtils.updateMountOffset(passenger, entity, rider, true, i, packet.getPassengerIds().length);
             // Force an update to the passenger metadata
             passenger.updateBedrockMetadata();
+            passenger.setMotion(Vector3f.ZERO);
         }
 
         // Handle passengers that were removed
@@ -105,12 +106,15 @@ public class JavaSetPassengersTranslator extends PacketTranslator<ClientboundSet
                 passenger.updateBedrockMetadata();
 
                 if (passenger == session.getPlayerEntity()) {
+                    session.getPlayerEntity().setRemovedPlayerVehicleId(null);
+
                     //TODO test
                     if (session.getMountVehicleScheduledFuture() != null) {
                         // Cancel this task as it is now unnecessary.
                         // Note that this isn't present in JavaSetPassengersTranslator as that code is not called for players
                         // as of Java 1.19.3, but the scheduled future checks for the vehicle being null anyway.
                         session.getMountVehicleScheduledFuture().cancel(false);
+                        session.setShouldSendSneak(false);
                     }
 
                     // Reset steering to avoid session#isHandsBusy from triggering

@@ -53,6 +53,7 @@ import org.geysermc.geyser.entity.properties.GeyserEntityPropertyManager;
 import org.geysermc.geyser.entity.properties.type.PropertyType;
 import org.geysermc.geyser.entity.type.living.MobEntity;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
+import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
 import org.geysermc.geyser.entity.vehicle.ClientVehicle;
 import org.geysermc.geyser.item.Items;
 import org.geysermc.geyser.registry.Registries;
@@ -102,6 +103,7 @@ public class Entity implements GeyserEntity {
 
     protected Vector3f position;
     protected Vector3f motion;
+
 
     /**
      * x = Yaw, y = Pitch, z = HeadYaw
@@ -321,6 +323,10 @@ public class Entity implements GeyserEntity {
             passenger.setVehicle(null);
             passenger.setFlag(EntityFlag.RIDING, false);
             passenger.updateBedrockMetadata();
+
+            if (passenger instanceof SessionPlayerEntity sessionPlayer) {
+                sessionPlayer.setRemovedPlayerVehicleId(this.entityId);
+            }
         }
 
         RemoveEntityPacket removeEntityPacket = new RemoveEntityPacket();
@@ -763,6 +769,7 @@ public class Entity implements GeyserEntity {
     }
 
     /**
+
      * Update the mount offsets of each passenger on this vehicle
      */
     protected void updatePassengerOffsets() {

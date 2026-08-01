@@ -103,7 +103,7 @@ public class LivingEntity extends Entity {
      */
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
-    private float attributeScale;
+    protected float attributeScale;
 
     public LivingEntity(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, float pitch, float headYaw) {
         super(session, entityId, geyserId, uuid, definition, position, motion, yaw, pitch, headYaw);
@@ -319,7 +319,7 @@ public class LivingEntity extends Entity {
         applyScale();
     }
 
-    private void setAttributeScale(float scale) {
+    protected void setAttributeScale(float scale) {
         this.attributeScale = MathUtils.clamp(scale, GeyserAttributeType.SCALE.getMinimum(), GeyserAttributeType.SCALE.getMaximum());
         applyScale();
     }
@@ -525,6 +525,9 @@ public class LivingEntity extends Entity {
                     // Attribute on Java, entity data on Bedrock
                     setAttributeScale((float) AttributeUtils.calculateValue(javaAttribute));
                     updateBedrockMetadata();
+                    if (this instanceof ClientVehicle clientVehicle) {
+                        clientVehicle.getVehicleComponent().setScale(scale * attributeScale);
+                    }
                 }
                 case WATER_MOVEMENT_EFFICIENCY -> {
                     if (this instanceof ClientVehicle clientVehicle) {

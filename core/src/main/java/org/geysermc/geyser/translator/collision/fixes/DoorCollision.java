@@ -29,7 +29,6 @@ import lombok.EqualsAndHashCode;
 import org.geysermc.geyser.level.block.property.Properties;
 import org.geysermc.geyser.level.block.type.BlockState;
 import org.geysermc.geyser.level.physics.BoundingBox;
-import org.geysermc.geyser.level.physics.CollisionManager;
 import org.geysermc.geyser.level.physics.Direction;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.collision.BlockCollision;
@@ -38,40 +37,39 @@ import org.geysermc.geyser.translator.collision.CollisionRemapper;
 @EqualsAndHashCode(callSuper = true)
 @CollisionRemapper(regex = "_door$", usesParams = true, passDefaultBoxes = true)
 public class DoorCollision extends BlockCollision {
-    private final static double MAX_PUSH_DISTANCE = 0.005 + CollisionManager.COLLISION_TOLERANCE * 1.01;
-
     /**
      * 1 = north
      * 2 = east
      * 3 = south
      * 4 = west
      */
-    private int facing;
+    private final int facing;
 
     public DoorCollision(BlockState state, BoundingBox[] defaultBoxes) {
         super(defaultBoxes);
-        facing = switch (state.getValue(Properties.HORIZONTAL_FACING)) {
+
+        Direction direction = state.getValue(Properties.HORIZONTAL_FACING);
+        if (state.getValue(Properties.OPEN)) {
+            direction = state.getValue(Properties.DOOR_HINGE).equals("right") ? direction.counterClockWise() : direction.clockWise();
+        }
+
+        this.facing = switch (direction) {
             case NORTH -> 1;
             case EAST -> 2;
             case SOUTH -> 3;
             case WEST -> 4;
             default -> throw new IllegalStateException();
         };
-
-        // If the door is open it changes direction
-        if (state.getValue(Properties.OPEN)) {
-            facing = facing % 2 + 1;
-        }
     }
 
     @Override
-    protected void correctPosition(GeyserSession session, int x, int y, int z, BoundingBox blockCollision, BoundingBox playerCollision) {
+    protected void correctPosition(GeyserSession session, int x, int y, int z, BoundingBox blockCollision, BoundingBox playerCollision, double ulpX, double ulpZ) {
         // Check for door bug (doors are 0.1875 blocks thick on Java but 0.1825 blocks thick on Bedrock)
         switch (this.facing) {
-            case 1 -> blockCollision.pushOutOfBoundingBox(playerCollision, Direction.NORTH, MAX_PUSH_DISTANCE);
-            case 2 -> blockCollision.pushOutOfBoundingBox(playerCollision, Direction.EAST, MAX_PUSH_DISTANCE);
-            case 3 -> blockCollision.pushOutOfBoundingBox(playerCollision, Direction.SOUTH, MAX_PUSH_DISTANCE);
-            case 4 -> blockCollision.pushOutOfBoundingBox(playerCollision, Direction.WEST, MAX_PUSH_DISTANCE);
+            case 1 -> blockCollision.pushOutOfBoundingBox(playerCollision, Direction.NORTH, 0.005 + ulpZ);
+            case 2 -> blockCollision.pushOutOfBoundingBox(playerCollision, Direction.EAST, 0.005 + ulpX);
+            case 3 -> blockCollision.pushOutOfBoundingBox(playerCollision, Direction.SOUTH, 0.005 + ulpZ);
+            case 4 -> blockCollision.pushOutOfBoundingBox(playerCollision, Direction.WEST, 0.005 + ulpX);
         }
     }
 }

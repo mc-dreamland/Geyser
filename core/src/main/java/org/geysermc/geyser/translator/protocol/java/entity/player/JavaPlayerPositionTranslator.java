@@ -54,6 +54,12 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
         }
 
         final SessionPlayerEntity entity = session.getPlayerEntity();
+        if (entity.getVehicle() != null) {
+            // Vanilla ignores player teleports while mounted, but still acknowledges them.
+            acceptTeleport(session, entity.getPosition().down(EntityDefinitions.PLAYER.offset()).toDouble(),
+                entity.getJavaYaw(), entity.getPitch(), packet.getId());
+            return;
+        }
         Vector3d position = packet.getPosition();
 
         position = position.add(
@@ -94,10 +100,10 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
             // Log out and back in - and you're looking elsewhere :)
             entity.updateOwnRotation(entity.getYaw(), entity.getPitch(), entity.getHeadYaw());
             session.setSpawned(true);
-            // DataComponentHashers.testHashing(session); // TODO remove me
 
             // Make sure the player moves away from (0, 32767, 0) before accepting movement packets
-            session.setUnconfirmedTeleport(new TeleportCache(entity.position(), packet.getXRot(), packet.getYRot(), packet.getId()));
+            Vector3f entityPosition = entity.position();
+            session.setUnconfirmedTeleport(new TeleportCache(session, entityPosition, packet.getXRot(), packet.getYRot(), packet.getId()));
 
             if (session.getServerRenderDistance() > 32 && !session.isEmulatePost1_13Logic()) {
                 // See DimensionUtils for an explanation
@@ -108,7 +114,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
                 session.setLastChunkPosition(null);
             }
 
-            ChunkUtils.updateChunkPosition(session, position.toInt());
+            ChunkUtils.updateChunkPosition(session, entityPosition.toInt());
 
             if (session.getGeyser().config().debugMode()) {
                 session.getGeyser().getLogger().debug("Spawned player at " + packet.getPosition());
@@ -133,26 +139,26 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
             deltaMovement = MathUtils.xYRot(deltaMovement, (float) Math.toRadians(lastPlayerPitch - newPitch), (float) Math.toRadians(lastPlayerYaw - newYaw));
         }
 
-        entity.moveAbsolute(teleportDestination, newYaw, newPitch, false, true);
+        TeleportCache.TeleportType type = (deltaMovement.distanceSquared(Vector3f.ZERO) > 1.0E-8F) ?
+            TeleportCache.TeleportType.KEEP_VELOCITY : TeleportCache.TeleportType.NORMAL;
 
-        TeleportCache.TeleportType type = TeleportCache.TeleportType.NORMAL;
-        if (deltaMovement.distanceSquared(Vector3f.ZERO) > 1.0E-8F) {
+        // Cache and send the collision-adjusted Bedrock destination while preserving the exact Java destination.
+        TeleportCache teleport = new TeleportCache(session, teleportDestination, deltaMovement, newPitch, newYaw, teleportId, type);
+        session.setUnconfirmedTeleport(teleport);
+        entity.moveAbsolute(teleport.getAdjustedPosition(), newYaw, newPitch, false, true);
+
+        // Bedrock ignores teleports that are extremely close to the player's original position and orientation, so check if we need to cache the teleport
+        if (lastPlayerPosition.distanceSquared(teleportDestination) < 0.001 && Math.abs(newPitch - lastPlayerPitch) < 5 && Math.abs(newYaw - lastPlayerYaw) < 5) {
+            session.setUnconfirmedTeleport(null);
+        }
+
+        if (type == TeleportCache.TeleportType.KEEP_VELOCITY) {
             entity.setMotion(deltaMovement);
-
             // Our motion got reset by the teleport but the deltaMovement is not 0 so send a motion packet to fix that.
             SetEntityMotionPacket entityMotionPacket = new SetEntityMotionPacket();
             entityMotionPacket.setRuntimeEntityId(entity.getGeyserId());
             entityMotionPacket.setMotion(entity.getMotion());
             session.sendUpstreamPacket(entityMotionPacket);
-
-            type = TeleportCache.TeleportType.KEEP_VELOCITY;
-        }
-
-        // Bedrock ignores teleports that are extremely close to the player's original position and orientation, so check if we need to cache the teleport
-        if (lastPlayerPosition.distanceSquared(teleportDestination) < 0.001 && Math.abs(newPitch - lastPlayerPitch) < 5 && Math.abs(newYaw - lastPlayerYaw) < 5) {
-            session.setUnconfirmedTeleport(null);
-        } else {
-            session.setUnconfirmedTeleport(new TeleportCache(teleportDestination, deltaMovement, newPitch, newYaw, teleportId, type));
         }
 
         session.getGeyser().getLogger().debug("to " + entity.getPosition().getX() + " " + (entity.getPosition().getY() - EntityDefinitions.PLAYER.offset()) + " " + entity.getPosition().getZ());
