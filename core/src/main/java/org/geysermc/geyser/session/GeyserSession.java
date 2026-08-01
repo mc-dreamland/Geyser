@@ -751,6 +751,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private final Queue<Long> keepAliveCache = new ConcurrentLinkedQueue<>();
 
     /**
+     * Queued packets to be sent immediately at the end of each tick.
+     */
+    private final List<BedrockPacket> queuedImmediatelyPackets = new ArrayList<>();
+
+    /**
      * Stores the book that is currently being read. Used in {@link org.geysermc.geyser.translator.protocol.java.inventory.JavaOpenBookTranslator}
      */
     @Setter
@@ -1220,6 +1225,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
             tickThread.cancel(false);
         }
 
+        queuedImmediatelyPackets.clear();
+
         // Mark session as closed before cancelling erosion futures
         closed = true;
         erosionHandler.close();
@@ -1359,8 +1366,13 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
             this.bundleCache.tick();
             this.dialogManager.tick();
             this.waypointCache.tick();
+
+            if (!queuedImmediatelyPackets.isEmpty()) {
+                this.upstream.getSession().getPeer().sendPacketsImmediately(0, 0, queuedImmediatelyPackets.toArray(BedrockPacket[]::new));
+                queuedImmediatelyPackets.clear();
+            }
         } catch (Throwable throwable) {
-            throwable.printStackTrace();
+            geyser.getLogger().error("Error while ticking " + this.bedrockUsername(), throwable);
         }
 
         ticks++;
