@@ -196,6 +196,7 @@ public class WorldBorder {
 
     /**
 
+
      * Same as {@link #isInsideBorderBoundaries()} but using the warning boundaries.
      *
      * @return true as long the entity is within the world limits and not in the warning zone at the edge to the border.
