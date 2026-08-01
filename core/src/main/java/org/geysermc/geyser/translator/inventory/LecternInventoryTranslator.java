@@ -132,8 +132,16 @@ public class LecternInventoryTranslator extends AbstractBlockInventoryTranslator
     public void updateProperty(GeyserSession session, LecternContainer container, int key, int value) {
         if (key == 0) { // Lectern page update
             container.setCurrentBedrockPage(value / 2);
-            container.setBlockEntityTag(container.getBlockEntityTag().toBuilder().putInt("page", container.getCurrentBedrockPage()).build());
-            BlockEntityUtils.updateBlockEntity(session, container.getBlockEntityTag(), container.getHolderPosition());
+            NbtMap blockEntityTag = container.getBlockEntityTag();
+            if (blockEntityTag == null) {
+                // The page property can arrive before the book contents. updateBook will include the saved page
+                // when it creates the complete lectern tag.
+                return;
+            }
+
+            blockEntityTag = blockEntityTag.toBuilder().putInt("page", container.getCurrentBedrockPage()).build();
+            container.setBlockEntityTag(blockEntityTag);
+            BlockEntityUtils.updateBlockEntity(session, blockEntityTag, container.getHolderPosition());
         }
     }
 

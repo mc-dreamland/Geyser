@@ -26,8 +26,11 @@
 package org.geysermc.geyser.network.netease;
 
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
+import org.cloudburstmc.protocol.bedrock.codec.v361.serializer.ClientCacheStatusSerializer_v361;
 import org.cloudburstmc.protocol.bedrock.data.PacketRecipient;
 import org.cloudburstmc.protocol.bedrock.packet.BiomeDefinitionListPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ClientCacheBlobStatusPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ClientCacheStatusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerOpenPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
@@ -43,6 +46,12 @@ public final class NeteaseCodecProcessor {
 
         codecBuilder.registerPacket(SetDimensionLocalTimePacket::new, SetDimensionLocalTimeSerializer.INSTANCE,
                 SET_DIMENSION_LOCAL_TIME_PACKET_ID, PacketRecipient.CLIENT);
+
+        // The base Geyser codec rejects/ignores these packets because upstream does not implement
+        // the client blob cache. NetEase clients use the vanilla packet layout, so restore the
+        // original serializers here alongside the other NetEase-specific codec overrides.
+        codecBuilder.updateSerializer(ClientCacheBlobStatusPacket.class, NeteaseClientCacheBlobStatusSerializer.INSTANCE);
+        codecBuilder.updateSerializer(ClientCacheStatusPacket.class, ClientCacheStatusSerializer_v361.INSTANCE);
 
         if (protocolVersion >= 819) {
             codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V819_860);

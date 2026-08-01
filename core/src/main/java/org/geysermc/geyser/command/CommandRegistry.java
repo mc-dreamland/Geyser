@@ -45,6 +45,7 @@ import org.geysermc.geyser.api.util.TriState;
 import org.geysermc.geyser.command.defaults.AdvancedTooltipsCommand;
 import org.geysermc.geyser.command.defaults.AdvancementsCommand;
 import org.geysermc.geyser.command.defaults.ClearSkinCommand;
+import org.geysermc.geyser.command.defaults.ChunkCacheCommand;
 import org.geysermc.geyser.command.defaults.ConnectionTestCommand;
 import org.geysermc.geyser.command.defaults.CustomOptionsCommand;
 import org.geysermc.geyser.command.defaults.DumpCommand;
@@ -180,6 +181,7 @@ public class CommandRegistry implements EventRegistrar {
         registerBuiltInCommand(new CustomOptionsCommand("options", "geyser.commands.options.desc", "geyser.command.options"));
         registerBuiltInCommand(new QuickActionsCommand("quickactions", "geyser.commands.quickactions.desc", "geyser.command.quickactions"));
         registerBuiltInCommand(new TestPacketCommand(geyser, "testpacket", "自定义包", "geyser.command.quickactions"));
+        registerBuiltInCommand(new ChunkCacheCommand(geyser, "chunkcache", "管理 Chunk 转义缓存和 Blob Cache", "geyser.command.chunkcache"));
 
         if (this.geyser.platformType() == PlatformType.STANDALONE) {
             registerBuiltInCommand(new StopCommand(geyser, "stop", "geyser.commands.stop.desc", "geyser.command.stop"));

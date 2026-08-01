@@ -26,13 +26,19 @@
 package org.geysermc.geyser.level.chunk;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import lombok.Getter;
+import org.cloudburstmc.nbt.NBTOutputStream;
+import org.cloudburstmc.nbt.NbtUtils;
 import org.cloudburstmc.protocol.common.util.VarInts;
 import org.geysermc.geyser.level.chunk.bitarray.BitArray;
 import org.geysermc.geyser.level.chunk.bitarray.BitArrayVersion;
+import org.geysermc.geyser.registry.type.BlockMappings;
+import org.geysermc.geyser.registry.type.GeyserBedrockBlock;
 
+import java.io.IOException;
 import java.util.function.IntConsumer;
 
 @Getter
@@ -80,6 +86,28 @@ public class BlockStorage {
 
         bitArray.writeSizeToNetwork(buffer, palette.size());
         palette.forEach((IntConsumer) id -> VarInts.writeInt(buffer, id));
+    }
+
+    /**
+     * Writes the persistent palette representation required by the Bedrock client blob cache.
+     * Unlike the normal network representation, palette entries are block-state NBT compounds.
+     */
+    public void writeToCache(ByteBuf buffer, BlockMappings blockMappings) throws IOException {
+        buffer.writeByte(getPaletteHeader(bitArray.getVersion(), false));
+
+        for (int word : bitArray.getWords()) {
+            buffer.writeIntLE(word);
+        }
+
+        bitArray.writeSizeToNetwork(buffer, palette.size());
+        NBTOutputStream nbtStream = NbtUtils.createNetworkWriter(new ByteBufOutputStream(buffer));
+        for (int runtimeId : palette) {
+            GeyserBedrockBlock definition = blockMappings.getDefinition(runtimeId);
+            if (definition == null) {
+                definition = blockMappings.getBedrockAir();
+            }
+            nbtStream.writeTag(definition.getPersistentState(blockMappings.getBlockStateVersion()));
+        }
     }
 
     public int estimateNetworkSize() {

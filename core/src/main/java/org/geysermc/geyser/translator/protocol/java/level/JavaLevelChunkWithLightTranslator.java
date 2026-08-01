@@ -60,6 +60,7 @@ import org.geysermc.geyser.level.chunk.bitarray.BitArrayVersion;
 import org.geysermc.geyser.level.chunk.bitarray.SingletonBitArray;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.ClientBlobCache;
 import org.geysermc.geyser.session.cache.registry.JavaRegistries;
 import org.geysermc.geyser.translator.level.BiomeTranslator;
 import org.geysermc.geyser.translator.level.block.entity.BedrockChunkWantsBlockEntityTag;
@@ -87,6 +88,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import static org.geysermc.geyser.util.ChunkUtils.*;
 
@@ -94,10 +96,10 @@ import static org.geysermc.geyser.util.ChunkUtils.*;
 public class JavaLevelChunkWithLightTranslator extends PacketTranslator<ClientboundLevelChunkWithLightPacket> {
     private static final boolean USE_EXPERIMENTAL_CHUNK_TRANSLATION =
             Boolean.parseBoolean(System.getProperty("Geyser.ExperimentalChunkTranslation", "true"));
-    private static final boolean USE_GLOBAL_CHUNK_TRANSLATION_CACHE =
+    private static volatile boolean globalChunkTranslationCacheEnabled =
             Boolean.parseBoolean(System.getProperty("Geyser.GlobalChunkTranslationCache", "true"));
     private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_MAX_BYTES =
-            Long.getLong("Geyser.GlobalChunkTranslationCacheMaxBytes", 256L * 1024L * 1024L);
+            Long.getLong("Geyser.GlobalChunkTranslationCacheMaxBytes", 512L * 1024L * 1024L);
     private static final int GLOBAL_CHUNK_TRANSLATION_CACHE_HOT_THRESHOLD =
             Math.max(1, Integer.getInteger("Geyser.GlobalChunkTranslationCacheHotThreshold", 3));
     private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_WINDOW_SECONDS =
@@ -106,10 +108,14 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             Math.max(1L, Long.getLong("Geyser.GlobalChunkTranslationCacheFrequencyMaxEntries", 100_000L));
     private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_EXPIRE_AFTER_ACCESS_MINUTES =
             Math.max(1L, Long.getLong("Geyser.GlobalChunkTranslationCacheExpireAfterAccessMinutes", 10L));
+    private static final long CHUNK_TRANSLATION_SUMMARY_INTERVAL_SECONDS =
+            Math.max(1L, Long.getLong("Geyser.ChunkTranslationSummaryIntervalSeconds", 60L));
+    private static final long CHUNK_TRANSLATION_SUMMARY_INTERVAL_NANOS =
+            TimeUnit.SECONDS.toNanos(CHUNK_TRANSLATION_SUMMARY_INTERVAL_SECONDS);
     private static final Cache<HashCode, CachedChunkPayload> GLOBAL_CHUNK_TRANSLATION_CACHE =
             CacheBuilder.<HashCode, CachedChunkPayload>newBuilder()
                     .maximumWeight(GLOBAL_CHUNK_TRANSLATION_CACHE_MAX_BYTES)
-                    .weigher((HashCode key, CachedChunkPayload value) -> value.payload.length)
+                    .weigher((HashCode key, CachedChunkPayload value) -> value.weight())
                     .expireAfterAccess(GLOBAL_CHUNK_TRANSLATION_CACHE_EXPIRE_AFTER_ACCESS_MINUTES, TimeUnit.MINUTES)
                     .build();
     private static final Cache<HashCode, AtomicLong> GLOBAL_CHUNK_TRANSLATION_FREQUENCY =
@@ -117,16 +123,47 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                     .maximumSize(GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_MAX_ENTRIES)
                     .expireAfterWrite(GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_WINDOW_SECONDS, TimeUnit.SECONDS)
                     .build();
+    private static final LongAdder GLOBAL_CHUNK_TRANSLATION_CACHE_HITS = new LongAdder();
+    private static final LongAdder GLOBAL_CHUNK_TRANSLATION_CACHE_MISSES = new LongAdder();
+    private static final LongAdder GLOBAL_CHUNK_TRANSLATION_CACHE_FAILURES = new LongAdder();
+    private static final LongAdder SUMMARY_CHUNKS = new LongAdder();
+    private static final LongAdder SUMMARY_CACHE_HITS = new LongAdder();
+    private static final LongAdder SUMMARY_TRANSLATED = new LongAdder();
+    private static final LongAdder SUMMARY_HOT = new LongAdder();
+    private static final LongAdder SUMMARY_CACHE_STORED = new LongAdder();
+    private static final LongAdder SUMMARY_BLOB_SENT = new LongAdder();
+    private static final LongAdder SUMMARY_KEY_NANOS = new LongAdder();
+    private static final LongAdder SUMMARY_TRANSLATION_NANOS = new LongAdder();
+    private static final LongAdder SUMMARY_TOTAL_NANOS = new LongAdder();
+    private static final LongAdder SUMMARY_PAYLOAD_BYTES = new LongAdder();
+    private static final AtomicLong SUMMARY_MAX_KEY_NANOS = new AtomicLong();
+    private static final AtomicLong SUMMARY_MAX_TRANSLATION_NANOS = new AtomicLong();
+    private static final AtomicLong SUMMARY_MAX_TOTAL_NANOS = new AtomicLong();
+    private static final AtomicLong SUMMARY_LAST_LOG_NANOS = new AtomicLong(System.nanoTime());
     private static final int[] YZX_TO_XZY = createYzxToXzyMap();
     private static final ThreadLocal<ExtendedCollisionsStorage> EXTENDED_COLLISIONS_STORAGE = ThreadLocal.withInitial(ExtendedCollisionsStorage::new);
 
     private static final class CachedChunkPayload {
         private final byte[] payload;
         private final int sectionCount;
+        private final byte[][] blobPayloads;
+        private final int cachePayloadOffset;
 
-        private CachedChunkPayload(byte[] payload, int sectionCount) {
+        private CachedChunkPayload(byte[] payload, int sectionCount, byte[][] blobPayloads, int cachePayloadOffset) {
             this.payload = payload;
             this.sectionCount = sectionCount;
+            this.blobPayloads = blobPayloads;
+            this.cachePayloadOffset = cachePayloadOffset;
+        }
+
+        private int weight() {
+            long weight = this.payload.length;
+            if (this.blobPayloads != null) {
+                for (byte[] blobPayload : this.blobPayloads) {
+                    weight += blobPayload.length;
+                }
+            }
+            return (int) Math.min(Integer.MAX_VALUE, weight);
         }
     }
 
@@ -136,6 +173,26 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             indexes[yzx] = indexYZXtoXZY(yzx);
         }
         return indexes;
+    }
+
+    public static boolean isGlobalChunkTranslationCacheEnabled() {
+        return globalChunkTranslationCacheEnabled;
+    }
+
+    public static void setGlobalChunkTranslationCacheEnabled(boolean enabled) {
+        globalChunkTranslationCacheEnabled = enabled;
+        if (!enabled) {
+            clearGlobalChunkTranslationCache();
+        }
+    }
+
+    public static void clearGlobalChunkTranslationCache() {
+        GLOBAL_CHUNK_TRANSLATION_CACHE.invalidateAll();
+        GLOBAL_CHUNK_TRANSLATION_CACHE.cleanUp();
+    }
+
+    public static long globalChunkTranslationCacheSize() {
+        return GLOBAL_CHUNK_TRANSLATION_CACHE.size();
     }
 
     @Override
@@ -189,7 +246,9 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         long cacheKeyStartNanos = System.nanoTime();
         HashCode cacheKey = null;
         CachedChunkPayload cachedPayload = null;
-        if (USE_GLOBAL_CHUNK_TRANSLATION_CACHE) {
+        boolean translationCacheEnabled = globalChunkTranslationCacheEnabled;
+        boolean blobCacheEnabled = ClientBlobCache.isGloballyEnabled();
+        if (translationCacheEnabled || blobCacheEnabled) {
             try {
                 Hasher hasher = Hashing.sha256().newHasher();
                 hasher.putInt(2); // Cache key format version
@@ -237,8 +296,16 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 }
 
                 cacheKey = hasher.hash();
-                cachedPayload = GLOBAL_CHUNK_TRANSLATION_CACHE.getIfPresent(cacheKey);
+                if (translationCacheEnabled) {
+                    cachedPayload = GLOBAL_CHUNK_TRANSLATION_CACHE.getIfPresent(cacheKey);
+                    if (cachedPayload == null) {
+                        GLOBAL_CHUNK_TRANSLATION_CACHE_MISSES.increment();
+                    } else {
+                        GLOBAL_CHUNK_TRANSLATION_CACHE_HITS.increment();
+                    }
+                }
             } catch (IOException e) {
+                GLOBAL_CHUNK_TRANSLATION_CACHE_FAILURES.increment();
                 session.getGeyser().getLogger().error("Failed to calculate global chunk cache key", e);
             }
         }
@@ -252,22 +319,6 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             hot = cachedPayload != null || requestCount >= GLOBAL_CHUNK_TRANSLATION_CACHE_HOT_THRESHOLD;
         }
 
-        if (USE_GLOBAL_CHUNK_TRANSLATION_CACHE) {
-            session.getGeyser().getLogger().info("[GlobalChunkCacheKeyTiming] chunkX=" + chunkX
-                    + " chunkZ=" + chunkZ
-                    + " key=" + (cacheKey == null ? "<failed>" : cacheKey)
-                    + " elapsedMs=" + (cacheKeyElapsedNanos / 1_000_000.0D)
-                    + " bedrockDimension=" + bedrockDimension.bedrockId()
-                    + " lastNormalDimId=" + lastNormalDimId
-                    + " packetDimension=" + dimension
-                    + " cacheHit=" + (cachedPayload != null)
-                    + " hot=" + hot
-                    + " requestCount=" + requestCount
-                    + " hotThreshold=" + GLOBAL_CHUNK_TRANSLATION_CACHE_HOT_THRESHOLD
-                    + " cacheEntries=" + GLOBAL_CHUNK_TRANSLATION_CACHE.size()
-                    + " frequencyEntries=" + GLOBAL_CHUNK_TRANSLATION_FREQUENCY.size());
-        }
-
         if (cachedPayload != null) {
             ByteBuf cachedInput = Unpooled.wrappedBuffer(packet.getChunkData());
             try {
@@ -277,6 +328,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                     javaChunks[sectionY] = javaSection.getBlockData();
                 }
             } catch (RuntimeException e) {
+                GLOBAL_CHUNK_TRANSLATION_CACHE_FAILURES.increment();
                 session.getGeyser().getLogger().error("Error while restoring a globally cached chunk", e);
                 cachedPayload = null;
             } finally {
@@ -319,11 +371,11 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
 
             LevelChunkPacket cachedLevelChunkPacket = new LevelChunkPacket();
             cachedLevelChunkPacket.setSubChunksLength(cachedPayload.sectionCount);
-            cachedLevelChunkPacket.setCachingEnabled(false);
             cachedLevelChunkPacket.setChunkX(chunkX);
             cachedLevelChunkPacket.setChunkZ(chunkZ);
-            cachedLevelChunkPacket.setData(Unpooled.wrappedBuffer(cachedPayload.payload));
             cachedLevelChunkPacket.setDimension(dimension);
+            boolean blobSent = session.getClientBlobCache().prepareChunkPacket(cachedLevelChunkPacket, cachedPayload.payload,
+                    cachedPayload.blobPayloads, cachedPayload.cachePayloadOffset);
             session.sendUpstreamPacket(cachedLevelChunkPacket);
 
             if (customSkullUpdates != null) {
@@ -345,19 +397,16 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 }
             }
 
-            session.getGeyser().getLogger().info("[ChunkTranslationTiming] translateExperimental chunkX=" + chunkX
-                    + " chunkZ=" + chunkZ
-                    + " cacheHit=true"
-                    + " hot=true"
-                    + " keyElapsedMs=" + (cacheKeyElapsedNanos / 1_000_000.0D)
-                    + " totalElapsedMs=" + ((System.nanoTime() - startNanos) / 1_000_000.0D)
-                    + " requestCount=" + requestCount);
+            recordChunkTranslationMetrics(session, true, true, false, blobSent,
+                    cacheKeyElapsedNanos, 0L, System.nanoTime() - startNanos, cachedPayload.payload.length);
             return;
         }
 
         long translationStartNanos = System.nanoTime();
         int sectionCount;
         byte[] payload;
+        int biomePayloadOffset = 0;
+        int cachePayloadOffset = 0;
         ByteBuf byteBuf = null;
 
         // calculate the difference between the java dimension minY and the bedrock dimension minY as
@@ -730,6 +779,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 }
             }
 
+            biomePayloadOffset = byteBuf.writerIndex();
             int dimensionOffset = bedrockDimension.minY() >> 4;
             for (int i = 0; i < biomeCount; i++) {
                 int biomeYOffset = dimensionOffset + i;
@@ -750,6 +800,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 biomeStorage.writeToNetwork(byteBuf);
             }
 
+            cachePayloadOffset = byteBuf.writerIndex();
             byteBuf.writeByte(0); // Border blocks - Edu edition only
 
             // Encode tile entities into buffer
@@ -768,17 +819,28 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             }
         }
 
+        byte[][] blobPayloads = null;
+        if (hot && ClientBlobCache.isGloballyEnabled()) {
+            try {
+                blobPayloads = createBlobPayloads(session, sections, sectionCount, payload,
+                        biomePayloadOffset, cachePayloadOffset, bedrockDimension.minY() >> 4);
+            } catch (IOException e) {
+                session.getClientBlobCache().recordFailure("encodeBlobPayload");
+                session.getGeyser().getLogger().error("IO error while encoding chunk blob cache payload", e);
+            }
+        }
+
         LevelChunkPacket levelChunkPacket = new LevelChunkPacket();
         levelChunkPacket.setSubChunksLength(sectionCount);
-        levelChunkPacket.setCachingEnabled(false);
         levelChunkPacket.setChunkX(chunkX);
         levelChunkPacket.setChunkZ(chunkZ);
-        levelChunkPacket.setData(Unpooled.wrappedBuffer(payload));
         levelChunkPacket.setDimension(dimension);
+        boolean blobSent = session.getClientBlobCache().prepareChunkPacket(levelChunkPacket, payload, blobPayloads,
+                cachePayloadOffset);
 
         boolean cacheStored = false;
-        if (USE_GLOBAL_CHUNK_TRANSLATION_CACHE && cacheKey != null && hot) {
-            CachedChunkPayload newCachedPayload = new CachedChunkPayload(payload, sectionCount);
+        if (globalChunkTranslationCacheEnabled && cacheKey != null && hot) {
+            CachedChunkPayload newCachedPayload = new CachedChunkPayload(payload, sectionCount, blobPayloads, cachePayloadOffset);
             CachedChunkPayload existingCachedPayload = GLOBAL_CHUNK_TRANSLATION_CACHE.asMap().putIfAbsent(cacheKey, newCachedPayload);
             if (existingCachedPayload == null) {
                 cacheStored = true;
@@ -796,17 +858,82 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             }
         }
 
-        session.getGeyser().getLogger().info("[ChunkTranslationTiming] translateExperimental chunkX=" + chunkX
-                + " chunkZ=" + chunkZ
-                + " cacheHit=false"
-                + " hot=" + hot
-                + " cacheStored=" + cacheStored
-                + " keyElapsedMs=" + (cacheKeyElapsedNanos / 1_000_000.0D)
-                + " translationElapsedMs=" + ((System.nanoTime() - translationStartNanos) / 1_000_000.0D)
-                + " totalElapsedMs=" + ((System.nanoTime() - startNanos) / 1_000_000.0D)
-                + " requestCount=" + requestCount
-                + " payloadBytes=" + payload.length
-                + " cacheEntries=" + GLOBAL_CHUNK_TRANSLATION_CACHE.size());
+        recordChunkTranslationMetrics(session, false, hot, cacheStored, blobSent, cacheKeyElapsedNanos,
+                System.nanoTime() - translationStartNanos, System.nanoTime() - startNanos, payload.length);
+    }
+
+    private static void recordChunkTranslationMetrics(GeyserSession session, boolean cacheHit, boolean hot,
+                                                      boolean cacheStored, boolean blobSent, long keyNanos,
+                                                      long translationNanos, long totalNanos, int payloadBytes) {
+        SUMMARY_CHUNKS.increment();
+        SUMMARY_KEY_NANOS.add(keyNanos);
+        SUMMARY_TOTAL_NANOS.add(totalNanos);
+        SUMMARY_PAYLOAD_BYTES.add(payloadBytes);
+        SUMMARY_MAX_KEY_NANOS.accumulateAndGet(keyNanos, Math::max);
+        SUMMARY_MAX_TOTAL_NANOS.accumulateAndGet(totalNanos, Math::max);
+        if (cacheHit) {
+            SUMMARY_CACHE_HITS.increment();
+        } else {
+            SUMMARY_TRANSLATED.increment();
+            SUMMARY_TRANSLATION_NANOS.add(translationNanos);
+            SUMMARY_MAX_TRANSLATION_NANOS.accumulateAndGet(translationNanos, Math::max);
+        }
+        if (hot) {
+            SUMMARY_HOT.increment();
+        }
+        if (cacheStored) {
+            SUMMARY_CACHE_STORED.increment();
+        }
+        if (blobSent) {
+            SUMMARY_BLOB_SENT.increment();
+        }
+
+        long now = System.nanoTime();
+        long previousLog = SUMMARY_LAST_LOG_NANOS.get();
+        if (now - previousLog < CHUNK_TRANSLATION_SUMMARY_INTERVAL_NANOS
+                || !SUMMARY_LAST_LOG_NANOS.compareAndSet(previousLog, now)) {
+            return;
+        }
+
+        long chunks = SUMMARY_CHUNKS.sumThenReset();
+        long cacheHits = SUMMARY_CACHE_HITS.sumThenReset();
+        long translated = SUMMARY_TRANSLATED.sumThenReset();
+        long hotChunks = SUMMARY_HOT.sumThenReset();
+        long cacheStores = SUMMARY_CACHE_STORED.sumThenReset();
+        long blobSends = SUMMARY_BLOB_SENT.sumThenReset();
+        long keyTotalNanos = SUMMARY_KEY_NANOS.sumThenReset();
+        long translationTotalNanos = SUMMARY_TRANSLATION_NANOS.sumThenReset();
+        long totalNanosSum = SUMMARY_TOTAL_NANOS.sumThenReset();
+        long payloadBytesSum = SUMMARY_PAYLOAD_BYTES.sumThenReset();
+        long maxKeyNanos = SUMMARY_MAX_KEY_NANOS.getAndSet(0L);
+        long maxTranslationNanos = SUMMARY_MAX_TRANSLATION_NANOS.getAndSet(0L);
+        long maxTotalNanos = SUMMARY_MAX_TOTAL_NANOS.getAndSet(0L);
+
+        session.getGeyser().getLogger().info("[ChunkTranslationSummary] windowSeconds="
+                + ((now - previousLog) / 1_000_000_000.0D)
+                + " chunks=" + chunks
+                + " cacheHits=" + cacheHits
+                + " cacheMisses=" + (chunks - cacheHits)
+                + " translated=" + translated
+                + " hot=" + hotChunks
+                + " cacheStored=" + cacheStores
+                + " blobSent=" + blobSends
+                + " keyAvgMs=" + averageMillis(keyTotalNanos, chunks)
+                + " keyMaxMs=" + (maxKeyNanos / 1_000_000.0D)
+                + " translationAvgMs=" + averageMillis(translationTotalNanos, translated)
+                + " translationMaxMs=" + (maxTranslationNanos / 1_000_000.0D)
+                + " totalAvgMs=" + averageMillis(totalNanosSum, chunks)
+                + " totalMaxMs=" + (maxTotalNanos / 1_000_000.0D)
+                + " payloadBytes=" + payloadBytesSum
+                + " cacheEntries=" + GLOBAL_CHUNK_TRANSLATION_CACHE.size()
+                + " frequencyEntries=" + GLOBAL_CHUNK_TRANSLATION_FREQUENCY.size()
+                + " totalLookupHits=" + GLOBAL_CHUNK_TRANSLATION_CACHE_HITS.sum()
+                + " totalLookupMisses=" + GLOBAL_CHUNK_TRANSLATION_CACHE_MISSES.sum()
+                + " totalCacheFailures=" + GLOBAL_CHUNK_TRANSLATION_CACHE_FAILURES.sum());
+    }
+
+    private static double averageMillis(long nanos, long count) {
+        return count == 0L ? 0.0D : (nanos / 1_000_000.0D) / count;
     }
 
     private void translateOld(GeyserSession session, ClientboundLevelChunkWithLightPacket packet) {
@@ -1245,11 +1372,11 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         }
         LevelChunkPacket levelChunkPacket = new LevelChunkPacket();
         levelChunkPacket.setSubChunksLength(sectionCount);
-        levelChunkPacket.setCachingEnabled(false);
         levelChunkPacket.setChunkX(chunkX);
         levelChunkPacket.setChunkZ(chunkZ);
-        levelChunkPacket.setData(Unpooled.wrappedBuffer(payload));
         levelChunkPacket.setDimension(dimension);
+        levelChunkPacket.setCachingEnabled(false);
+        levelChunkPacket.setData(Unpooled.wrappedBuffer(payload));
         session.sendUpstreamPacket(levelChunkPacket);
 
         for (Map.Entry<Vector3i, ItemFrameEntity> entry : session.getItemFrameCache().entrySet()) {
@@ -1260,6 +1387,36 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 entry.getValue().updateBlock(true);
             }
         }
+    }
+
+    private static byte[][] createBlobPayloads(GeyserSession session, GeyserChunkSection[] sections,
+                                                int sectionCount, byte[] payload, int biomePayloadOffset,
+                                                int cachePayloadOffset, int dimensionOffset) throws IOException {
+        byte[][] blobs = new byte[sectionCount + 1][];
+        ByteBuf blobBuffer = ByteBufAllocator.DEFAULT.ioBuffer();
+        try {
+            for (int i = 0; i < sectionCount; i++) {
+                blobBuffer.clear();
+                GeyserChunkSection section = sections[i];
+                if (section == null) {
+                    section = new GeyserChunkSection(session.getBlockMappings().getBedrockAir().getRuntimeId(),
+                            i + dimensionOffset);
+                }
+                section.writeToCache(blobBuffer, session.getBlockMappings());
+
+                byte[] blob = new byte[blobBuffer.readableBytes()];
+                blobBuffer.getBytes(blobBuffer.readerIndex(), blob);
+                blobs[i] = blob;
+            }
+        } finally {
+            blobBuffer.release();
+        }
+
+        int biomeLength = cachePayloadOffset - biomePayloadOffset;
+        byte[] biomeBlob = new byte[biomeLength];
+        System.arraycopy(payload, biomePayloadOffset, biomeBlob, 0, biomeLength);
+        blobs[sectionCount] = biomeBlob;
+        return blobs;
     }
 
     private static void addBedrockOnlyBlockEntity(GeyserSession session, List<NbtMap> bedrockBlockEntities,

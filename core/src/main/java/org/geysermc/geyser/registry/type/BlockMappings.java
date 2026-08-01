@@ -61,6 +61,7 @@ public class BlockMappings implements DefinitionRegistry<BlockDefinition> {
 
     Map<NbtMap, GeyserBedrockBlock> stateDefinitionMap;
     GeyserBedrockBlock[] bedrockRuntimeMap;
+    int blockStateVersion;
     int[] remappedVanillaIds;
 
     BlockDefinition commandBlock;

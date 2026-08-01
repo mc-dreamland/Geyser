@@ -27,11 +27,15 @@ package org.geysermc.geyser.level.chunk;
 
 import io.netty.buffer.ByteBuf;
 import org.cloudburstmc.protocol.common.util.Preconditions;
+import org.geysermc.geyser.registry.type.BlockMappings;
+
+import java.io.IOException;
 
 public class GeyserChunkSection {
 
     // As of at least 1.19.80
     private static final int CHUNK_SECTION_VERSION = 9;
+    private static final int CACHED_CHUNK_SECTION_VERSION = 8;
 
     private final BlockStorage[] storage;
     // Counts up from 00 for y >= 0 and down from FF for y < 0
@@ -65,6 +69,17 @@ public class GeyserChunkSection {
         buffer.writeByte(this.subChunkIndex);
         for (BlockStorage blockStorage : this.storage) {
             blockStorage.writeToNetwork(buffer);
+        }
+    }
+
+    /**
+     * Writes the location-independent persistent subchunk format used by blob caching.
+     */
+    public void writeToCache(ByteBuf buffer, BlockMappings blockMappings) throws IOException {
+        buffer.writeByte(CACHED_CHUNK_SECTION_VERSION);
+        buffer.writeByte(this.storage.length);
+        for (BlockStorage blockStorage : this.storage) {
+            blockStorage.writeToCache(buffer, blockMappings);
         }
     }
 

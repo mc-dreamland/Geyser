@@ -32,6 +32,7 @@ public class GeyserBedrockBlock implements BlockDefinition {
     private final int runtimeId;
     private final NbtMap state;
     private final boolean neteaseFaceDirectional;
+    private volatile NbtMap persistentState;
 
     public GeyserBedrockBlock(int runtimeId, NbtMap state) {
         this.runtimeId = runtimeId;
@@ -58,6 +59,17 @@ public class GeyserBedrockBlock implements BlockDefinition {
 
     public NbtMap getState() {
         return state;
+    }
+
+    public NbtMap getPersistentState(int blockStateVersion) {
+        NbtMap persistentState = this.persistentState;
+        if (persistentState == null) {
+            persistentState = this.state.toBuilder()
+                    .putInt("version", blockStateVersion)
+                    .build();
+            this.persistentState = persistentState;
+        }
+        return persistentState;
     }
 
     public boolean isNeteaseFaceDirectional() {

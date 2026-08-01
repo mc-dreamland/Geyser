@@ -141,11 +141,13 @@ public final class BlockRegistryPopulator {
             List<GeyserBedrockBlock> customRuntimeIdList = new ArrayList<>();
             List<NbtMap> vanillaBlockStates;
             List<NbtMap> blockStates;
+            int blockStateVersion;
             try (InputStream stream = GeyserImpl.getInstance().getBootstrap().getResourceOrThrow(String.format("bedrock/block_palette.%s.nbt", palette.key()));
                 NBTInputStream nbtInputStream = new NBTInputStream(new DataInputStream(new GZIPInputStream(stream)), true, true)) {
                 NbtMap blockPalette = (NbtMap) nbtInputStream.readTag();
 
                 vanillaBlockStates = new ArrayList<>(blockPalette.getList("blocks", NbtType.COMPOUND));
+                blockStateVersion = vanillaBlockStates.isEmpty() ? 0 : vanillaBlockStates.get(0).getInt("version", 0);
                 for (int i = 0; i < vanillaBlockStates.size(); i++) {
                     NbtMapBuilder builder = vanillaBlockStates.get(i).toBuilder();
                     builder.remove("version"); // Remove all nbt tags which are not needed for differentiating states
@@ -419,6 +421,7 @@ public final class BlockRegistryPopulator {
             });
 
             BlockRegistries.BLOCKS.register(palette.valueInt(), builder.bedrockRuntimeMap(bedrockRuntimeMap)
+                    .blockStateVersion(blockStateVersion)
                     .javaToBedrockBlocks(javaToBedrockBlocks)
                     .javaToVanillaBedrockBlocks(javaToVanillaBedrockBlocks)
                     .javaToBedrockIdentifiers(javaToBedrockIdentifiers)
