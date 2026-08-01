@@ -49,8 +49,8 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.PistonCache;
 import org.geysermc.geyser.translator.collision.BlockCollision;
 import org.geysermc.geyser.translator.collision.OtherCollision;
-import org.geysermc.geyser.translator.collision.ScaffoldingCollision;
 import org.geysermc.geyser.translator.collision.SolidCollision;
+import org.geysermc.geyser.translator.collision.fixes.ScaffoldingCollision;
 import org.geysermc.geyser.util.BlockUtils;
 
 import java.text.DecimalFormat;
@@ -192,11 +192,7 @@ public class CollisionManager {
         playerBoundingBox.translate(adjustedMovement.getX(), adjustedMovement.getY(), adjustedMovement.getZ());
         playerBoundingBox.translate(pistonCache.getPlayerMotion().getX(), pistonCache.getPlayerMotion().getY(), pistonCache.getPlayerMotion().getZ());
         // Correct player position
-        if (!correctPlayerPosition()) {
-            // Cancel the movement if it needs to be cancelled
-            recalculatePosition();
-            return null;
-        }
+        correctPlayerPosition();
         // The server can't complain about our movement if we never send it
         // TODO get rid of this and handle teleports smoothly
         if (pistonCache.isPlayerCollided()) {
@@ -213,8 +209,8 @@ public class CollisionManager {
                 return null;
             }
         }
-
         position = playerBoundingBox.getBottomCenter();
+
 
         if (!newOnGround) {
             // Trim the position to prevent rounding errors that make Java think we are clipping into a block
@@ -251,9 +247,7 @@ public class CollisionManager {
     }
 
     public BlockPositionIterator collidableBlocksIterator(BoundingBox box) {
-        Vector3d position = Vector3d.from(box.getMiddleX(),
-                box.getMiddleY() - (box.getSizeY() / 2),
-                box.getMiddleZ());
+        Vector3d position = Vector3d.from(box.getMiddleX(), box.getMiddleY() - (box.getSizeY() / 2), box.getMiddleZ());
 
         // Expand volume by 1 in each direction to include moving blocks
         double pistonExpand = session.getPistonCache().getPistons().isEmpty() ? 0 : 1;
@@ -277,12 +271,10 @@ public class CollisionManager {
     }
 
     /**
-     * Returns false if the movement is invalid, and in this case it shouldn't be sent to the server and should be
-     * cancelled
+     * Silently compensate for movement problems due to collision and floating points errors on bedrock.
      * See {@link BlockCollision#correctPosition(GeyserSession, int, int, int, BoundingBox)} for more info
      */
-    public boolean correctPlayerPosition() {
-
+    public void correctPlayerPosition() {
         // These may be set to true by the correctPosition method in ScaffoldingCollision
         touchingScaffolding = false;
         onScaffolding = false;
@@ -291,17 +283,6 @@ public class CollisionManager {
         BlockPositionIterator iter = session.getCollisionManager().playerCollidableBlocksIterator();
         int[] blocks = collidableBlockBuffer(iter.getMaxIterations());
         session.getGeyser().getWorldManager().getBlocksAt(session, iter, blocks);
-        for (iter.reset(); iter.hasNext(); iter.next()) {
-            final int iteration = iter.getIteration();
-
-            BlockCollision blockCollision = BlockUtils.getCollision(blocks[iteration]);
-            if (blockCollision != null) {
-                final int x = iter.getX();
-                final int y = iter.getY();
-                final int z = iter.getZ();
-                blockCollision.beforeCorrectPosition(x, y, z, playerBoundingBox);
-            }
-        }
 
         // Main correction code
         IntArrayList collisionIgnoredBlocks = session.getBlockMappings().getCollisionIgnoredBlocks();
@@ -314,23 +295,13 @@ public class CollisionManager {
                 continue;
             }
 
-            // These block have different offset between BE and JE so we ignore them because if we "correct" the position
-            // it will lead to complication and more inaccurate movement.
-            if (collisionIgnoredBlocks.contains(blockId)) {
-                continue;
-            }
-
-            final int x = iter.getX();
-            final int y = iter.getY();
-            final int z = iter.getZ();
-            if (!blockCollision.correctPosition(session, x, y, z, playerBoundingBox)) {
-                return false;
+            // These blocks have different offsets between Bedrock and Java, so correcting them would introduce more inaccurate movement.
+            if (!collisionIgnoredBlocks.contains(blockId)) {
+                blockCollision.correctPosition(session, iter.getX(), iter.getY(), iter.getZ(), playerBoundingBox);
             }
         }
 
         updateScaffoldingFlags(true);
-
-        return true;
     }
 
     private int[] collidableBlockBuffer(int requiredSize) {

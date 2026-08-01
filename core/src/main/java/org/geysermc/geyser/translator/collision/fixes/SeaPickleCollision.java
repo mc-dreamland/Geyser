@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 GeyserMC. http://geysermc.org
+ * Copyright (c) 2025 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,19 +23,29 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.translator.collision;
+package org.geysermc.geyser.translator.collision.fixes;
 
 import lombok.EqualsAndHashCode;
 import org.geysermc.geyser.level.block.type.BlockState;
+import org.geysermc.geyser.level.physics.Axis;
 import org.geysermc.geyser.level.physics.BoundingBox;
+import org.geysermc.geyser.level.physics.CollisionManager;
+import org.geysermc.geyser.level.physics.Direction;
+import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.translator.collision.BlockCollision;
+import org.geysermc.geyser.translator.collision.CollisionRemapper;
 
 @EqualsAndHashCode(callSuper = true)
-@CollisionRemapper(regex = "shulker_box$") // These have no collision in the mappings as it depends on the NBT data
-public class SolidCollision extends BlockCollision {
-    public SolidCollision(BlockState state) {
-        super(new BoundingBox[] {
-            new BoundingBox(0.5, 0.5, 0.5, 1, 1, 1)
-        });
+@CollisionRemapper(regex = "^sea_pickle$", passDefaultBoxes = true)
+public class SeaPickleCollision extends BlockCollision {
+    public SeaPickleCollision(BlockState state, BoundingBox[] boxes) {
+        super(boxes);
     }
 
+    @Override
+    protected void correctPosition(GeyserSession session, int x, int y, int z, BoundingBox blockCollision, BoundingBox playerCollision) {
+        // Sea pickles have no collision on Bedrock but do on Java).
+        double maxY = blockCollision.getMax(Axis.Y) - y;
+        blockCollision.pushOutOfBoundingBox(playerCollision, Direction.UP, maxY + CollisionManager.COLLISION_TOLERANCE * 1.01F);
+    }
 }
