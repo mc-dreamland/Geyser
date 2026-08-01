@@ -35,6 +35,7 @@ import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.level.block.BlockStateValues;
 import org.geysermc.geyser.level.block.type.Block;
 import org.geysermc.geyser.level.physics.BoundingBox;
+import org.geysermc.geyser.level.physics.CollisionManager;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.collision.BlockCollision;
 import org.geysermc.geyser.util.BlockUtils;
@@ -89,7 +90,7 @@ public class FishingHookEntity extends ThrowableEntity {
 
         boolean touchingWater = false;
         boolean collided = false;
-        for (BlockPositionIterator iter = session.getCollisionManager().collidableBlocksIterator(boundingBox); iter.hasNext(); iter.next()) {
+        for (BlockPositionIterator iter = CollisionManager.collidableBlocksIterator(session, boundingBox); iter.hasNext(); iter.next()) {
             int blockID = session.getGeyser().getWorldManager().getBlockAt(session, iter.getX(), iter.getY(), iter.getZ());
             BlockCollision blockCollision = BlockUtils.getCollision(blockID);
             if (blockCollision != null) {
@@ -134,7 +135,7 @@ public class FishingHookEntity extends ThrowableEntity {
 
     @Override
     public void tick() {
-        if (removedInVoid()) {
+        if (removedInVoid() || vehicle != null) {
             return;
         }
         if (hooked || !isInAir() && !isInWater() || isOnGround()) {

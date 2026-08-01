@@ -136,6 +136,12 @@ public class SessionPlayerEntity extends PlayerEntity {
     @Getter @Setter
     private boolean collidingVertically;
 
+    /**
+     * Java entity ID of the vehicle removed immediately before a vehicle teleport packet.
+     */
+    @Getter @Setter
+    private Integer removedPlayerVehicleId;
+
     public SessionPlayerEntity(GeyserSession session) {
         super(session, -1, -10, null, Vector3f.ZERO, Vector3f.ZERO, 0, 0, 0, null, null);
 
@@ -184,6 +190,17 @@ public class SessionPlayerEntity extends PlayerEntity {
         this.position = position.add(0, definition.offset(), 0);
     }
 
+    @Override
+    public void updateHeadLookRotation(float headYaw) {
+        // Sending a Bedrock head rotation packet while riding causes the client to dismount.
+        if (this.vehicle != null) {
+            setHeadYaw(headYaw);
+            return;
+        }
+
+        super.updateHeadLookRotation(headYaw);
+    }
+
     /**
      * Special method used only when updating the session player's rotation.
      * For some reason, Mode#NORMAL ignored rotation. Yay.
@@ -195,6 +212,11 @@ public class SessionPlayerEntity extends PlayerEntity {
         setYaw(yaw);
         setPitch(pitch);
         setHeadYaw(headYaw);
+
+        // Sending a Bedrock rotation packet while riding causes the client to dismount.
+        if (this.vehicle != null) {
+            return;
+        }
         
         MovePlayerPacket movePlayerPacket = new MovePlayerPacket();
         movePlayerPacket.setRuntimeEntityId(geyserId);
@@ -249,6 +271,13 @@ public class SessionPlayerEntity extends PlayerEntity {
             session.setShouldSendSneak(false);
             session.stopSneaking(false);
         }
+    }
+
+    @Override
+    protected void setAttributeScale(float scale) {
+        super.setAttributeScale(scale);
+        session.getCollisionManager().setScale(this.attributeScale);
+        session.getCollisionManager().updatePlayerBoundingBox();
     }
 
     /**
