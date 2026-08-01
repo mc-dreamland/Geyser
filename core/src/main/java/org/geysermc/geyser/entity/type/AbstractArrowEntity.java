@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.entity.type;
 
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.BooleanEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ByteEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.cloudburstmc.math.vector.Vector3f;
@@ -34,7 +35,8 @@ import org.geysermc.geyser.session.GeyserSession;
 
 import java.util.UUID;
 
-public class AbstractArrowEntity extends Entity {
+public class AbstractArrowEntity extends ThrowableEntity {
+    private boolean inGround;
 
     public AbstractArrowEntity(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, float pitch, float headYaw) {
         super(session, entityId, geyserId, uuid, definition, position, motion, yaw, pitch, headYaw);
@@ -45,10 +47,22 @@ public class AbstractArrowEntity extends Entity {
         setMotion(motion);
     }
 
+    @Override
+    public void tick() {
+        if (inGround) {
+            return;
+        }
+        super.tick();
+    }
+
     public void setArrowFlags(ByteEntityMetadata entityMetadata) {
         byte data = entityMetadata.getPrimitiveValue();
 
         setFlag(EntityFlag.CRITICAL, (data & 0x01) == 0x01);
+    }
+
+    public void setInGround(BooleanEntityMetadata entityMetadata) {
+        this.inGround = entityMetadata.getPrimitiveValue();
     }
 
     // Ignore the rotation sent by the Java server since the
@@ -66,6 +80,16 @@ public class AbstractArrowEntity extends Entity {
     }
 
     @Override
+    protected float getGravity() {
+        return getFlag(EntityFlag.HAS_GRAVITY) ? 0.05f : 0f;
+    }
+
+    @Override
+    protected float getDrag() {
+        return isInWater() ? 0.6f : 0.99f;
+    }
+
+    @Override
     public void setMotion(Vector3f motion) {
         super.setMotion(motion);
 
@@ -75,13 +99,4 @@ public class AbstractArrowEntity extends Entity {
         setHeadYaw(getYaw());
     }
 
-    /*
-    服务端似乎并不会在箭矢的move包中附带onGround状态
-    而箭矢在水中的气泡是由entity的onGround FLAG控制
-    此处判断当moveY=0时视作onGround，避免在水中持续产生大量气泡的情况发生从而导致客户端卡顿
-     */
-    @Override
-    public void updatePositionAndRotation(double moveX, double moveY, double moveZ, float yaw, float pitch, boolean isOnGround) {
-        super.updatePositionAndRotation(moveX, moveY, moveZ, yaw, pitch, moveY == 0);
-    }
 }
