@@ -114,6 +114,12 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
         // Send book updates before opening inventories
         session.getBookEditCache().checkForSend();
 
+        // Bedrock can send this action before MobEquipmentPacket in the same tick.
+        // Synchronize the selected slot first so use/drop targets the correct Java item.
+        if (packet.getHotbarSlot() != session.getPlayerInventory().getHeldItemSlot()) {
+            session.switchHeldSlot(packet.getHotbarSlot());
+        }
+
         switch (packet.getTransactionType()) {
             case NORMAL:
                 if (packet.getActions().size() == 2) {
