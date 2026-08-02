@@ -48,6 +48,7 @@ import org.geysermc.geyser.entity.vehicle.HorseVehicleComponent;
 import org.geysermc.geyser.level.physics.BoundingBox;
 import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.translator.protocol.bedrock.RiptideUseValidator;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.CooldownUtils;
@@ -81,6 +82,7 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
         session.getBlockBreakHandler().handlePlayerAuthInputPacket(packet);
 
         ServerboundPlayerCommandPacket sprintPacket = null;
+        boolean rejectRiptideMovement = false;
 
         // These inputs are sent in order, so if e.g. START_GLIDING and STOP_GLIDING are both present,
         // it's important to make sure we send the last known status instead of both to the Java server.
@@ -88,6 +90,10 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
         int stopSprintingIndex = -1;
         int stopGlidingIndex = -1;
         int inputIndex = 0;
+        if (session.getInvalidRiptideReleaseTick() != RiptideUseValidator.NO_REJECTED_RELEASE
+                && !RiptideUseValidator.shouldRejectSpinAttack(session.getInvalidRiptideReleaseTick(), packet.getTick())) {
+            session.setInvalidRiptideReleaseTick(RiptideUseValidator.NO_REJECTED_RELEASE);
+        }
         for (PlayerAuthInputData input : inputData) {
             switch (input) {
                 case START_SPRINTING -> startSprintingIndex = inputIndex;
@@ -176,8 +182,24 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
                         }
                     }
                 }
-                case START_SPIN_ATTACK -> entity.setFlag(EntityFlag.DAMAGE_NEARBY_MOBS, true);
-                case STOP_SPIN_ATTACK -> entity.setFlag(EntityFlag.DAMAGE_NEARBY_MOBS, false);
+                case START_SPIN_ATTACK -> {
+                    if (RiptideUseValidator.shouldRejectSpinAttack(session.getInvalidRiptideReleaseTick(), packet.getTick())
+                            || RiptideUseValidator.isLastDurabilityTrident(session.getPlayerInventory().getItemInHand())) {
+                        rejectRiptideMovement = true;
+                        session.setInvalidRiptideReleaseTick(RiptideUseValidator.NO_REJECTED_RELEASE);
+                        entity.setFlag(EntityFlag.DAMAGE_NEARBY_MOBS, false);
+                        entity.forceFlagUpdate();
+                        entity.updateBedrockMetadata();
+                        int heldSlot = session.getPlayerInventory().getOffsetForHotbar(session.getPlayerInventory().getHeldItemSlot());
+                        session.getPlayerInventoryHolder().updateSlot(heldSlot);
+                    } else {
+                        entity.setFlag(EntityFlag.DAMAGE_NEARBY_MOBS, true);
+                    }
+                }
+                case STOP_SPIN_ATTACK -> {
+                    session.setInvalidRiptideReleaseTick(RiptideUseValidator.NO_REJECTED_RELEASE);
+                    entity.setFlag(EntityFlag.DAMAGE_NEARBY_MOBS, false);
+                }
                 case STOP_GLIDING -> {
                     // Java doesn't allow elytra gliding to stop mid-air.
                     boolean shouldBeGliding = entity.isGliding() && entity.canStartGliding();
@@ -227,7 +249,11 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
             session.sendDownstreamGamePacket(sprintPacket);
         }
 
-        BedrockMovePlayer.translate(session, packet);
+        if (rejectRiptideMovement) {
+            session.getCollisionManager().recalculatePosition();
+        } else {
+            BedrockMovePlayer.translate(session, packet);
+        }
 
         // This is the best way send this since most modern anticheat will expect this to be in sync with the player movement packet.
         if (session.isSpawned()) {
