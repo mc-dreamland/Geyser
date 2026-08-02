@@ -37,12 +37,11 @@ public class JavaSetBorderLerpSizeTranslator extends PacketTranslator<Clientboun
     @Override
     public void translate(GeyserSession session, ClientboundSetBorderLerpSizePacket packet) {
         WorldBorder worldBorder = session.getWorldBorder();
-        worldBorder.setOldDiameter(packet.getOldSize());
-        worldBorder.setNewDiameter(packet.getNewSize());
-        // FixMe viaversion似乎在转换1.21.11协议的时候 将时间转成了tick，所以在此处我们需要*50 临时恢复为毫秒。在后续viaversion修复后再回滚。
-        worldBorder.setSpeed(packet.getLerpTime() * 50);
-        worldBorder.setResizing(true);
-
-        worldBorder.update();
+        if (packet.getLerpTime() > 0 && packet.getOldSize() != packet.getNewSize()) {
+            // WorldBorder advances once per client tick, and ViaVersion exposes this duration in ticks.
+            worldBorder.createMoving(packet.getOldSize(), packet.getNewSize(), packet.getLerpTime());
+        } else {
+            worldBorder.createStatic(packet.getNewSize());
+        }
     }
 }

@@ -26,7 +26,6 @@
 package org.geysermc.geyser.util;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import lombok.experimental.UtilityClass;
@@ -48,6 +47,8 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.registry.JavaRegistries;
 import org.geysermc.geyser.text.GeyserLocale;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 @UtilityClass
 public class ChunkUtils {
 
@@ -58,6 +59,7 @@ public class ChunkUtils {
     public static final BlockStorage[] EMPTY_BLOCK_STORAGE;
 
     public static final int EMPTY_CHUNK_SECTION_SIZE;
+    private static final ConcurrentHashMap<Integer, byte[]> EMPTY_CHUNK_PAYLOAD_CACHE = new ConcurrentHashMap<>(3);
 
     static {
         EMPTY_BLOCK_STORAGE = new BlockStorage[0];
@@ -162,38 +164,34 @@ public class ChunkUtils {
         BedrockDimension bedrockDimension = session.getBedrockDimension();
         int bedrockSubChunkCount = bedrockDimension.height() >> 4;
 
-        byte[] payload;
-        // Allocate output buffer
-        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(ChunkUtils.EMPTY_BIOME_DATA.length * bedrockSubChunkCount + 1); // Consists only of biome data and border blocks
-        try {
-            byteBuf.writeBytes(EMPTY_BIOME_DATA);
-            for (int i = 1; i < bedrockSubChunkCount; i++) {
-                byteBuf.writeByte((127 << 1) | 1);
+        byte[] payload = EMPTY_CHUNK_PAYLOAD_CACHE.computeIfAbsent(bedrockSubChunkCount, subChunkCount -> {
+            int biomeLength = EMPTY_BIOME_DATA.length;
+            int totalLength = biomeLength + subChunkCount;
+            byte[] data = new byte[totalLength];
+            System.arraycopy(EMPTY_BIOME_DATA, 0, data, 0, biomeLength);
+
+            byte marker = (byte) ((127 << 1) | 1);
+            for (int i = 0; i < subChunkCount - 1; i++) {
+                data[biomeLength + i] = marker;
             }
+            data[totalLength - 1] = 0; // Border blocks - Edu edition only
+            return data;
+        });
 
-            byteBuf.writeByte(0); // Border blocks - Edu edition only
-
-            payload = new byte[byteBuf.readableBytes()];
-            byteBuf.readBytes(payload);
-
-            int lastNormalDimId = session.getLastNormalDimId();
-            int dimension = session.getBedrockDimension().bedrockId();
-            if (dimension != lastNormalDimId) {
-                if (dimension == 0 || dimension == 3) {
-                    dimension = lastNormalDimId;
-                }
-            }
-            LevelChunkPacket data = new LevelChunkPacket();
-            data.setDimension(dimension);
-            data.setChunkX(chunkX);
-            data.setChunkZ(chunkZ);
-            data.setSubChunksLength(0);
-            data.setData(Unpooled.wrappedBuffer(payload));
-            data.setCachingEnabled(false);
-            session.sendUpstreamPacket(data);
-        } finally {
-            byteBuf.release();
+        int lastNormalDimId = session.getLastNormalDimId();
+        int dimension = bedrockDimension.bedrockId();
+        if (dimension != lastNormalDimId && (dimension == 0 || dimension == 3)) {
+            dimension = lastNormalDimId;
         }
+
+        LevelChunkPacket data = new LevelChunkPacket();
+        data.setDimension(dimension);
+        data.setChunkX(chunkX);
+        data.setChunkZ(chunkZ);
+        data.setSubChunksLength(0);
+        data.setData(Unpooled.wrappedBuffer(payload));
+        data.setCachingEnabled(false);
+        session.sendUpstreamPacket(data);
 
         if (forceUpdate) {
             Vector3i pos = Vector3i.from(chunkX << 4, 80, chunkZ << 4);
@@ -238,7 +236,5 @@ public class ChunkUtils {
 
         session.getChunkCache().setMinY(minY);
         session.getChunkCache().setHeightY(height);
-
-        session.getWorldBorder().setWorldCoordinateScale(dimension.worldCoordinateScale());
     }
 }

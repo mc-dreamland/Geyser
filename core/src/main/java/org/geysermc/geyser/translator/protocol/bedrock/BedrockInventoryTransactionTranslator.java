@@ -114,6 +114,12 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
         // Send book updates before opening inventories
         session.getBookEditCache().checkForSend();
 
+        // Bedrock can send this action before MobEquipmentPacket in the same tick.
+        // Synchronize the selected slot first so use/drop targets the correct Java item.
+        if (packet.getHotbarSlot() != session.getPlayerInventory().getHeldItemSlot()) {
+            session.switchHeldSlot(packet.getHotbarSlot());
+        }
+
         switch (packet.getTransactionType()) {
             case NORMAL:
                 if (packet.getActions().size() == 2) {
@@ -485,6 +491,18 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                 break;
             case ITEM_RELEASE:
                 if (packet.getActionType() == 0) {
+                    GeyserItemStack heldItem = session.getPlayerInventory().getItemInHand();
+                    if (RiptideUseValidator.isLastDurabilityTrident(heldItem)) {
+                        session.setInvalidRiptideReleaseTick(session.getClientTicks());
+                        session.getPlayerEntity().setFlag(EntityFlag.DAMAGE_NEARBY_MOBS, false);
+                        session.getPlayerEntity().forceFlagUpdate();
+                        session.getPlayerEntity().updateBedrockMetadata();
+                        int heldSlot = session.getPlayerInventory().getOffsetForHotbar(session.getPlayerInventory().getHeldItemSlot());
+                        session.getPlayerInventoryHolder().updateSlot(heldSlot);
+                    } else {
+                        session.setInvalidRiptideReleaseTick(RiptideUseValidator.NO_REJECTED_RELEASE);
+                    }
+
                     session.getPlayerEntity().setFlag(EntityFlag.USING_ITEM, false);
                     session.releaseItem();
                     session.getBundleCache().markRelease();
@@ -563,28 +581,20 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                     InteractAction.INTERACT_AT, clickPosition.getX(), clickPosition.getY(), clickPosition.getZ(),
                     hand, session.isSneaking()));
 
-            InteractionResult result;
-            if (isSpectator) {
-                result = InteractionResult.PASS;
-            } else {
-                result = entity.interactAt(hand);
-            }
-
-            if (!result.consumesAction()) {
-                session.sendDownstreamGamePacket(new ServerboundInteractPacket(entity.getEntityId(),
-                        InteractAction.INTERACT, hand, session.isSneaking()));
-                if (!isSpectator) {
+            if (!isSpectator) {
+                InteractionResult result = entity.interactAt(hand);
+                if (!result.consumesAction()) {
                     result = entity.interact(hand);
                 }
-            }
 
-            if (result.consumesAction()) {
-                if (result.shouldSwing() && hand == Hand.OFF_HAND) {
-                    // Currently, Bedrock will send us the arm swing packet in most cases. But it won't for offhand.
-                    session.sendDownstreamGamePacket(new ServerboundSwingPacket(hand));
-                    // Note here to look into sending the animation packet back to Bedrock
+                if (result.consumesAction()) {
+                    if (result.shouldSwing() && hand == Hand.OFF_HAND) {
+                        // Currently, Bedrock will send us the arm swing packet in most cases. But it won't for offhand.
+                        session.sendDownstreamGamePacket(new ServerboundSwingPacket(hand));
+                        // Note here to look into sending the animation packet back to Bedrock
+                    }
+                    return;
                 }
-                return;
             }
         }
     }

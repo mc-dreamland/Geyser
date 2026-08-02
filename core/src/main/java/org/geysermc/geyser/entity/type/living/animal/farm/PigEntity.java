@@ -106,6 +106,7 @@ public class PigEntity extends TemperatureVariantAnimal implements Tickable, Cli
 
     @Override
     public void tick() {
+        super.tick();
         PlayerEntity player = getPlayerPassenger();
         if (player == null) {
             return;
@@ -146,7 +147,7 @@ public class PigEntity extends TemperatureVariantAnimal implements Tickable, Cli
     }
 
     @Override
-    public boolean isClientControlled() {
+    public boolean shouldSimulateMovement() {
         return getPlayerPassenger() == session.getPlayerEntity() && session.getPlayerInventory().isHolding(Items.CARROT_ON_A_STICK);
     }
 

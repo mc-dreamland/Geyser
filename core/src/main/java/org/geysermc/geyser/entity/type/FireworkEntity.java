@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.entity.type;
 
+import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.MovementEffectType;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
@@ -35,18 +36,43 @@ import org.geysermc.geyser.item.TooltipOptions;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.item.BedrockItemBuilder;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.BooleanEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
 
 import java.util.OptionalInt;
 import java.util.UUID;
 
-public class FireworkEntity extends Entity {
+public class FireworkEntity extends ThrowableEntity {
 
     private boolean attachedToSession;
+    private boolean attachedToEntity;
+    private boolean shotAtAngle;
 
     public FireworkEntity(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, float pitch, float headYaw) {
         super(session, entityId, geyserId, uuid, definition, position, motion, yaw, pitch, headYaw);
+    }
+
+    public void setShotAtAngle(BooleanEntityMetadata entityMetadata) {
+        this.shotAtAngle = entityMetadata.getPrimitiveValue();
+    }
+
+    @Override
+    public void tick() {
+        // A rocket attached to an entity is moved by that entity instead.
+        if (removedInVoid() || vehicle != null || attachedToEntity) {
+            return;
+        }
+
+        // Rockets speed up as they fly unless launched at an angle by a crossbow or dispenser.
+        if (!shotAtAngle) {
+            setMotion(motion.mul(1.15f, 1.0f, 1.15f).add(0.0f, 0.04f, 0.0f));
+        }
+
+        float horizontalDistance = Vector2f.from(motion.getX(), motion.getZ()).length();
+        float yaw = (float) Math.toDegrees(Math.atan2(motion.getX(), motion.getZ()));
+        float pitch = (float) Math.toDegrees(Math.atan2(motion.getY(), horizontalDistance));
+        moveAbsoluteImmediate(position.add(motion), yaw, pitch, yaw, false, false);
     }
 
     public void setFireworkItem(EntityMetadata<ItemStack, ?> entityMetadata) {
@@ -72,6 +98,7 @@ public class FireworkEntity extends Entity {
         session.getAttachedFireworkRockets().remove(this.geyserId);
 
         OptionalInt optional = entityMetadata.getValue();
+        this.attachedToEntity = optional.isPresent();
         if (optional.isPresent() && optional.getAsInt() == session.getPlayerEntity().getEntityId()) {
             // If we don't send this, the bedrock client will always stop boosting after 20 ticks
             // However this is not the case for Java as the player will stop boosting after entity despawn.

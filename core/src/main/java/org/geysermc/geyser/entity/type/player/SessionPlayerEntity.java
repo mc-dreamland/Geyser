@@ -64,6 +64,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Pose;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ByteEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.FloatEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.Equippable;
 
@@ -136,6 +137,12 @@ public class SessionPlayerEntity extends PlayerEntity {
     @Getter @Setter
     private boolean collidingVertically;
 
+    /**
+     * Java entity ID of the vehicle removed immediately before a vehicle teleport packet.
+     */
+    @Getter @Setter
+    private Integer removedPlayerVehicleId;
+
     public SessionPlayerEntity(GeyserSession session) {
         super(session, -1, -10, null, Vector3f.ZERO, Vector3f.ZERO, 0, 0, 0, null, null);
 
@@ -167,8 +174,8 @@ public class SessionPlayerEntity extends PlayerEntity {
     }
 
     @Override
-    public void moveRelative(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
-        super.moveRelative(relX, relY, relZ, yaw, pitch, headYaw, isOnGround);
+    public void moveRelativeRaw(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
+        super.moveRelativeRaw(relX, relY, relZ, yaw, pitch, headYaw, isOnGround);
         session.getCollisionManager().updatePlayerBoundingBox(this.position.down(definition.offset()));
     }
 
@@ -184,6 +191,17 @@ public class SessionPlayerEntity extends PlayerEntity {
         this.position = position.add(0, definition.offset(), 0);
     }
 
+    @Override
+    public void updateHeadLookRotation(float headYaw) {
+        // Sending a Bedrock head rotation packet while riding causes the client to dismount.
+        if (this.vehicle != null) {
+            setHeadYaw(headYaw);
+            return;
+        }
+
+        super.updateHeadLookRotation(headYaw);
+    }
+
     /**
      * Special method used only when updating the session player's rotation.
      * For some reason, Mode#NORMAL ignored rotation. Yay.
@@ -195,6 +213,11 @@ public class SessionPlayerEntity extends PlayerEntity {
         setYaw(yaw);
         setPitch(pitch);
         setHeadYaw(headYaw);
+
+        // Sending a Bedrock rotation packet while riding causes the client to dismount.
+        if (this.vehicle != null) {
+            return;
+        }
         
         MovePlayerPacket movePlayerPacket = new MovePlayerPacket();
         movePlayerPacket.setRuntimeEntityId(geyserId);
@@ -249,6 +272,13 @@ public class SessionPlayerEntity extends PlayerEntity {
             session.setShouldSendSneak(false);
             session.stopSneaking(false);
         }
+    }
+
+    @Override
+    protected void setAttributeScale(float scale) {
+        super.setAttributeScale(scale);
+        session.getCollisionManager().setScale(this.attributeScale);
+        session.getCollisionManager().updatePlayerBoundingBox();
     }
 
     /**
@@ -325,6 +355,16 @@ public class SessionPlayerEntity extends PlayerEntity {
     }
 
     @Override
+    protected boolean hasEnderEye(boolean offhand) {
+        // Must be overridden to point to the player's inventory cache
+        if (offhand) {
+            return session.getPlayerInventory().getOffhand().is(Items.ENDER_EYE);
+        } else {
+            return session.getPlayerInventory().getItemInHand().is(Items.ENDER_EYE);
+        }
+    }
+
+    @Override
     protected boolean hasShield(boolean offhand) {
         // Must be overridden to point to the player's inventory cache
         if (offhand) {
@@ -332,6 +372,14 @@ public class SessionPlayerEntity extends PlayerEntity {
         } else {
             return session.getPlayerInventory().getItemInHand().is(Items.SHIELD);
         }
+    }
+
+    @Override
+    protected boolean hasChargedProjectiles() {
+        // The session player uses the inventory cache rather than entity equipment metadata.
+        List<ItemStack> chargedProjectiles = session.getPlayerInventory().getItemInHand()
+            .getComponent(DataComponentTypes.CHARGED_PROJECTILES);
+        return chargedProjectiles != null && !chargedProjectiles.isEmpty();
     }
 
     @Override
@@ -407,6 +455,12 @@ public class SessionPlayerEntity extends PlayerEntity {
     public void setLivingEntityFlags(ByteEntityMetadata entityMetadata) {
         super.setLivingEntityFlags(entityMetadata);
 
+        byte xd = entityMetadata.getPrimitiveValue();
+        boolean isUsingOffhand = (xd & 0x02) == 0x02;
+        if (session.getWorldCache().hasCooldown(isUsingOffhand ? getOffHandItem() : getMainHandItem())) {
+            setFlag(EntityFlag.BLOCKING, false);
+        }
+
         // Forcefully update flags since we're not tracking thing like using item properly.
         // For eg: when player start using item client-sided (and the USING_ITEM flag is false on geyser side)
         // If the server disagree with the player using item state, it will send a metadata set USING_ITEM flag to false
@@ -429,9 +483,9 @@ public class SessionPlayerEntity extends PlayerEntity {
                 GeyserAttributeType.ABSORPTION.getAttribute(0f)));
         session.sendUpstreamPacket(attributesPacket);
 
-        dirtyMetadata.put(EntityDataTypes.EFFECT_COLOR, 0);
         dirtyMetadata.put(EntityDataTypes.EFFECT_AMBIENCE, (byte) 0);
         dirtyMetadata.put(EntityDataTypes.FREEZING_EFFECT_STRENGTH, 0f);
+        dirtyMetadata.put(EntityDataTypes.VISIBLE_MOB_EFFECTS, 0L);
 
         silent = false;
     }

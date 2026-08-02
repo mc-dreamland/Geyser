@@ -25,15 +25,21 @@
 
 package org.geysermc.geyser.inventory.recipe;
 
+import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.RecipeData;
 import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.ShapedCraftingRecipeDisplay;
 import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.slot.SlotDisplay;
 
 import java.util.List;
 
-public record GeyserShapedRecipe(int width, int height, List<SlotDisplay> ingredients, SlotDisplay result) implements GeyserRecipe {
+public record GeyserShapedRecipe(int width, int height, List<SlotDisplay> ingredients, SlotDisplay result,
+                                 List<RecipeData> recipeData) implements GeyserRecipe {
 
-    public GeyserShapedRecipe(ShapedCraftingRecipeDisplay data) {
-        this(data.width(), data.height(), data.ingredients(), data.result());
+    public GeyserShapedRecipe(int width, int height, List<SlotDisplay> ingredients, SlotDisplay result) {
+        this(width, height, ingredients, result, List.of());
+    }
+
+    public GeyserShapedRecipe(ShapedCraftingRecipeDisplay data, List<RecipeData> recipeData) {
+        this(data.width(), data.height(), data.ingredients(), data.result(), recipeData);
     }
 
     @Override

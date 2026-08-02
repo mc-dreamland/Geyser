@@ -53,6 +53,7 @@ import org.geysermc.geyser.entity.properties.GeyserEntityPropertyManager;
 import org.geysermc.geyser.entity.properties.type.PropertyType;
 import org.geysermc.geyser.entity.type.living.MobEntity;
 import org.geysermc.geyser.entity.type.player.PlayerEntity;
+import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
 import org.geysermc.geyser.entity.vehicle.ClientVehicle;
 import org.geysermc.geyser.item.Items;
 import org.geysermc.geyser.registry.Registries;
@@ -102,6 +103,7 @@ public class Entity implements GeyserEntity {
 
     protected Vector3f position;
     protected Vector3f motion;
+
 
     /**
      * x = Yaw, y = Pitch, z = HeadYaw
@@ -321,6 +323,10 @@ public class Entity implements GeyserEntity {
             passenger.setVehicle(null);
             passenger.setFlag(EntityFlag.RIDING, false);
             passenger.updateBedrockMetadata();
+
+            if (passenger instanceof SessionPlayerEntity sessionPlayer) {
+                sessionPlayer.setRemovedPlayerVehicleId(this.entityId);
+            }
         }
 
         RemoveEntityPacket removeEntityPacket = new RemoveEntityPacket();
@@ -330,13 +336,13 @@ public class Entity implements GeyserEntity {
         valid = false;
     }
 
-    public void moveRelative(double relX, double relY, double relZ, float yaw, float pitch, boolean isOnGround) {
-        moveRelative(relX, relY, relZ, yaw, pitch, getHeadYaw(), isOnGround);
+    public void moveRelative(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
+        moveRelativeRaw(relX, relY, relZ, yaw, pitch, headYaw, isOnGround);
     }
 
-    public void moveRelative(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
+    public void moveRelativeRaw(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
         if (this instanceof ClientVehicle clientVehicle) {
-            if (clientVehicle.isClientControlled()) {
+            if (clientVehicle.shouldSimulateMovement()) {
                 return;
             }
             clientVehicle.getVehicleComponent().moveRelative(relX, relY, relZ);
@@ -385,6 +391,10 @@ public class Entity implements GeyserEntity {
     }
 
     public void moveAbsolute(Vector3f position, float yaw, float pitch, float headYaw, boolean isOnGround, boolean teleported) {
+        moveAbsoluteRaw(position, yaw, pitch, headYaw, isOnGround, teleported);
+    }
+
+    public void moveAbsoluteRaw(Vector3f position, float yaw, float pitch, float headYaw, boolean isOnGround, boolean teleported) {
         setPosition(position);
         // Setters are intentional so it can be overridden in places like AbstractArrowEntity
         setYaw(yaw);
@@ -419,7 +429,7 @@ public class Entity implements GeyserEntity {
      * @param headYaw The new head rotation of the entity.
      */
     public void updateHeadLookRotation(float headYaw) {
-        moveRelative(0, 0, 0, getYaw(), getPitch(), headYaw, isOnGround());
+        moveRelativeRaw(0, 0, 0, getYaw(), getPitch(), headYaw, isOnGround());
     }
 
     /**
@@ -763,6 +773,7 @@ public class Entity implements GeyserEntity {
     }
 
     /**
+
      * Update the mount offsets of each passenger on this vehicle
      */
     protected void updatePassengerOffsets() {

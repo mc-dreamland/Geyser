@@ -126,7 +126,7 @@ public class CamelEntity extends AbstractHorseEntity implements ClientVehicle {
         if (entityMetadata.getPrimitiveValue()) {
             setFlag(EntityFlag.HAS_DASH_COOLDOWN, true);
             vehicleComponent.startDashCooldown();
-        } else if (!isClientControlled()) { // Don't remove dash cooldown prematurely if client is controlling
+        } else if (!shouldSimulateMovement()) { // Don't remove dash cooldown prematurely if client is controlling
             setFlag(EntityFlag.HAS_DASH_COOLDOWN, false);
         }
     }
@@ -152,7 +152,7 @@ public class CamelEntity extends AbstractHorseEntity implements ClientVehicle {
     }
 
     @Override
-    public boolean isClientControlled() {
+    public boolean shouldSimulateMovement() {
         return getFlag(EntityFlag.SADDLED) && !passengers.isEmpty() && passengers.get(0) == session.getPlayerEntity();
     }
 
