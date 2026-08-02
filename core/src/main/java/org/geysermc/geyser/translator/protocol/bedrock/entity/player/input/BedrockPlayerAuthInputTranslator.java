@@ -42,6 +42,7 @@ import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.living.animal.horse.AbstractHorseEntity;
 import org.geysermc.geyser.entity.type.living.animal.horse.LlamaEntity;
 import org.geysermc.geyser.entity.type.living.animal.nautilus.AbstractNautilusEntity;
+import org.geysermc.geyser.entity.type.player.PlayerEntity;
 import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
 import org.geysermc.geyser.entity.vehicle.ClientVehicle;
 import org.geysermc.geyser.entity.vehicle.HorseVehicleComponent;
@@ -372,15 +373,11 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
             }
 
             if (session.getWorldBorder().isPassingIntoBorderBoundaries(vehiclePosition)) {
-                if (vehicle instanceof BoatEntity boat) {
-                    boat.moveAbsoluteWithoutAdjustments(position, vehicle.getYaw(), vehicle.isOnGround(), true);
-                } else {
-                    // This doesn't work if teleported is false
-                    vehicle.moveAbsoluteRaw(position,
-                        vehicle.getYaw(), vehicle.getPitch(), vehicle.getHeadYaw(),
-                        vehicle.isOnGround(), true);
-                }
-                session.getCollisionManager().recalculatePosition();
+                // This doesn't work if teleported is false
+                vehicle.moveAbsoluteRaw(position, vehicle instanceof BoatEntity ? vehicle.getYaw() - 90 : vehicle.getYaw(), vehicle.getPitch(), vehicle.getHeadYaw(), vehicle.isOnGround(), true);
+
+                final PlayerEntity playerEntity = session.getPlayerEntity();
+                playerEntity.moveAbsoluteRaw(playerEntity.position(), playerEntity.getYaw(), playerEntity.getPitch(), playerEntity.getHeadYaw(), playerEntity.isOnGround(), playerEntity.getVehicle() == null);
                 return;
             }
 
