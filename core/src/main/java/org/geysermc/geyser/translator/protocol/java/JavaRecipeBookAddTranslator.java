@@ -119,7 +119,7 @@ public class JavaRecipeBookAddTranslator extends PacketTranslator<ClientboundRec
                         int recipeNetworkId = netId++;
                         craftingDataPacket.getCraftingData().add(ShapedRecipeData.shaped(recipeId,
                             shapedRecipe.width(), shapedRecipe.height(), inputs,
-                            Collections.singletonList(output), UUID.randomUUID(), "crafting_table", 0, recipeNetworkId, false, RecipeUnlockingRequirement.INVALID));
+                            Collections.singletonList(output), UUID.randomUUID(), "crafting_table", 0, recipeNetworkId, true, RecipeUnlockingRequirement.INVALID));
                         recipesPacket.getUnlockedRecipes().add(recipeId);
                         bedrockRecipeIds.add(recipeId);
                         geyserRecipes.put(recipeNetworkId, geyserRecipe);

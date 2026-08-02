@@ -150,6 +150,7 @@ import org.geysermc.geyser.input.InputLocksFlag;
 import org.geysermc.geyser.inventory.Inventory;
 import org.geysermc.geyser.inventory.InventoryHolder;
 import org.geysermc.geyser.inventory.LecternContainer;
+import org.geysermc.geyser.inventory.GeyserItemStack;
 import org.geysermc.geyser.inventory.PlayerInventory;
 import org.geysermc.geyser.inventory.recipe.GeyserRecipe;
 import org.geysermc.geyser.inventory.recipe.GeyserSmithingRecipe;
@@ -196,6 +197,7 @@ import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.translator.inventory.InventoryTranslator;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.util.ChunkUtils;
+import org.geysermc.geyser.util.CooldownUtils;
 import org.geysermc.geyser.util.EntityUtils;
 import org.geysermc.geyser.util.InventoryUtils;
 import org.geysermc.geyser.util.LoginEncryptionUtils;
@@ -229,6 +231,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundPlayerAbilitiesPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundPlayerActionPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundUseItemPacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundCustomQueryAnswerPacket;
 
@@ -598,6 +601,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Getter
     @Setter
     private boolean inClientPredictedVehicle;
+
+    /**
+     * Store the last time the player charged a projectile (crossbow). Used to avoid discharging it immediately.
+     */
+    @Setter
+    private long lastChargedProjectilesTime;
 
     /**
      * Store the last time the player interacted. Used to fix a right-click spam bug.
@@ -1481,6 +1490,36 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     }
 
     /**
+     * Switch the currently selected hotbar slot before processing actions that depend on the held item.
+     */
+    public void switchHeldSlot(int slot) {
+        if (!spawned || slot < 0 || slot > 8 || playerInventoryHolder.inventory().getHeldItemSlot() == slot) {
+            // Re-sending the same slot is not Java behavior and can interfere with protection plugins.
+            return;
+        }
+
+        bookEditCache.checkForSend();
+
+        GeyserItemStack oldItem = playerInventoryHolder.inventory().getItemInHand();
+        playerInventoryHolder.inventory().setHeldItemSlot(slot);
+        sendDownstreamGamePacket(new ServerboundSetCarriedItemPacket(slot));
+
+        GeyserItemStack newItem = playerInventoryHolder.inventory().getItemInHand();
+        if (sneaking && newItem.is(Items.SHIELD)) {
+            // Java activates the newly selected shield while sneaking; defer one tick so the slot change is registered.
+            scheduleInEventLoop(() -> useItem(Hand.MAIN_HAND), nanosecondsPerTick, TimeUnit.NANOSECONDS);
+        }
+
+        if (!oldItem.isSameItem(newItem)) {
+            CooldownUtils.sendCooldown(this);
+        }
+
+        if (mouseoverEntity != null) {
+            mouseoverEntity.updateInteractiveTag();
+        }
+    }
+
+    /**
      * Same as useItem but always default to useTouchRotation false.
      */
     public void useItem(Hand hand) {
@@ -1492,6 +1531,19 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      */
     public void useItem(Hand hand, boolean useTouchRotation) {
         if (playerEntity.getFlag(EntityFlag.USING_ITEM)) {
+            return;
+        }
+
+        // Using another item ends an active shield block.
+        if (playerEntity.getFlag(EntityFlag.BLOCKING)) {
+            disableBlocking();
+        }
+
+        // Bedrock can immediately cycle a freshly charged crossbow while use is still held.
+        if (hand == Hand.MAIN_HAND && System.currentTimeMillis() - lastChargedProjectilesTime < 450L) {
+            lastChargedProjectilesTime = 0;
+            playerInventoryHolder.updateSlot(playerInventoryHolder.inventory().getOffsetForHotbar(
+                playerInventoryHolder.inventory().getHeldItemSlot()));
             return;
         }
 

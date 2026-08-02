@@ -67,6 +67,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.FloatE
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.IntEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ObjectEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.Equippable;
 import org.geysermc.mcprotocollib.protocol.data.game.level.particle.ColorParticleData;
@@ -217,8 +218,9 @@ public class LivingEntity extends Entity implements Tickable {
         boolean isUsingOffhand = (xd & 0x02) == 0x02;
 
         boolean isUsingShield = hasShield(isUsingOffhand);
+        boolean isChargedProjectilesItem = hasChargedProjectiles();
 
-        setFlag(EntityFlag.USING_ITEM, isUsingItem && !isUsingShield);
+        setFlag(EntityFlag.USING_ITEM, isUsingItem && !isUsingShield && !isChargedProjectilesItem);
         // Override the blocking
         setFlag(EntityFlag.BLOCKING, isUsingItem && isUsingShield);
 
@@ -297,6 +299,11 @@ public class LivingEntity extends Entity implements Tickable {
         } else {
             return getMainHandItem().is(Items.SHIELD);
         }
+    }
+
+    protected boolean hasChargedProjectiles() {
+        List<ItemStack> chargedProjectiles = getMainHandItem().getComponent(DataComponentTypes.CHARGED_PROJECTILES);
+        return chargedProjectiles != null && !chargedProjectiles.isEmpty();
     }
 
     @Override

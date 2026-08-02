@@ -196,7 +196,7 @@ public class JavaContainerSetSlotTranslator extends PacketTranslator<Clientbound
                     "crafting_table",
                     0,
                     newRecipeId,
-                    false,
+                    true,
                     RecipeUnlockingRequirement.INVALID
             ));
             craftPacket.setCleanRecipes(false);
