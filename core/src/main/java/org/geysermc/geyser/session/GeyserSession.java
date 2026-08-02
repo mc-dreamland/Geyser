@@ -723,6 +723,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private long clientTicks;
 
     /**
+     * The client tick at which a last-durability trident release was rejected.
+     */
+    @Setter
+    private long invalidRiptideReleaseTick = Long.MIN_VALUE;
+
+    /**
      * The world time in ticks according to the server
      * <p>
      * Note: The TickingStatePacket is currently ignored.

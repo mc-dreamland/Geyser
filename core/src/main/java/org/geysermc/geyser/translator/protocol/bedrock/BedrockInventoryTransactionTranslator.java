@@ -485,6 +485,18 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                 break;
             case ITEM_RELEASE:
                 if (packet.getActionType() == 0) {
+                    GeyserItemStack heldItem = session.getPlayerInventory().getItemInHand();
+                    if (RiptideUseValidator.isLastDurabilityTrident(heldItem)) {
+                        session.setInvalidRiptideReleaseTick(session.getClientTicks());
+                        session.getPlayerEntity().setFlag(EntityFlag.DAMAGE_NEARBY_MOBS, false);
+                        session.getPlayerEntity().forceFlagUpdate();
+                        session.getPlayerEntity().updateBedrockMetadata();
+                        int heldSlot = session.getPlayerInventory().getOffsetForHotbar(session.getPlayerInventory().getHeldItemSlot());
+                        session.getPlayerInventoryHolder().updateSlot(heldSlot);
+                    } else {
+                        session.setInvalidRiptideReleaseTick(RiptideUseValidator.NO_REJECTED_RELEASE);
+                    }
+
                     session.getPlayerEntity().setFlag(EntityFlag.USING_ITEM, false);
                     session.releaseItem();
                     session.getBundleCache().markRelease();
