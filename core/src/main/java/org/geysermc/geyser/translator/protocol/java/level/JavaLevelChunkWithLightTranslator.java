@@ -1341,7 +1341,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 }
 
                 DataPalette biomeData = javaBiomes[i + (dimensionOffset - yOffset)];
-                BlockStorage biomeStorage = BiomeTranslator.toNewBedrockBiomeOld(session, biomeData);
+                BlockStorage biomeStorage = BiomeTranslator.toNewBedrockBiome(session, biomeData);
                 biomeStorage.writeToNetwork(byteBuf);
             }
 
