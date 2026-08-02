@@ -218,9 +218,10 @@ public class LivingEntity extends Entity implements Tickable {
         boolean isUsingOffhand = (xd & 0x02) == 0x02;
 
         boolean isUsingShield = hasShield(isUsingOffhand);
+        boolean isUsingEnderEye = hasEnderEye(isUsingOffhand);
         boolean isChargedProjectilesItem = hasChargedProjectiles();
 
-        setFlag(EntityFlag.USING_ITEM, isUsingItem && !isUsingShield && !isChargedProjectilesItem);
+        setFlag(EntityFlag.USING_ITEM, isUsingItem && !isUsingShield && !isUsingEnderEye && !isChargedProjectilesItem);
         // Override the blocking
         setFlag(EntityFlag.BLOCKING, isUsingItem && isUsingShield);
 
@@ -318,6 +319,14 @@ public class LivingEntity extends Entity implements Tickable {
             setBoundingBoxHeight(0.2f);
         } else {
             super.setDimensionsFromPose(pose);
+        }
+    }
+
+    protected boolean hasEnderEye(boolean offhand) {
+        if (offhand) {
+            return getOffHandItem().is(Items.ENDER_EYE);
+        } else {
+            return getMainHandItem().is(Items.ENDER_EYE);
         }
     }
 
