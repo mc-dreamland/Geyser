@@ -389,7 +389,7 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
             vehicle.setPosition(vehiclePosition);
             ServerboundMoveVehiclePacket moveVehiclePacket = new ServerboundMoveVehiclePacket(
                 vehiclePosition.toDouble(),
-                vehicle instanceof BoatEntity ? vehicleRotation.getY() - 90 : vehicleRotation.getY(), vehiclePosition.getX(),
+                vehicle instanceof BoatEntity ? vehicleRotation.getY() - 90 : vehicleRotation.getY(), vehicleRotation.getX(),
                 vehicle.isOnGround()
             );
             session.sendDownstreamGamePacket(moveVehiclePacket);
