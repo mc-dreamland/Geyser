@@ -37,15 +37,9 @@ public class JavaPingTranslator extends PacketTranslator<ClientboundPingPacket> 
 
     @Override
     public void translate(GeyserSession session, ClientboundPingPacket packet) {
-        // We use this once the client replies
-        final int id = packet.getId();
-
-        if (!session.getGeyser().config().gameplay().forwardPlayerPing()) {
-            session.sendDownstreamPacket(new ServerboundPongPacket(id));
-            return;
-        }
-
-        // ClientboundPingPacket are sent in sync, hence we ensure they're sent in the event loop
-        session.sendNetworkLatencyStackPacket(id, true, () -> session.sendDownstreamPacket(new ServerboundPongPacket(id)));
+        // Unlike keep alive, this packet is a client main-thread barrier. A Bedrock network latency response
+        // does not guarantee that preceding game packets have been applied, so forwarding it can acknowledge
+        // anti-cheat transactions before movement or teleport state reaches the client.
+        session.sendDownstreamPacket(new ServerboundPongPacket(packet.getId()));
     }
 }
