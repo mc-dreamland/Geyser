@@ -354,7 +354,7 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
 
         if (sendMovement) {
             // We only need to determine onGround status this way for client predicted vehicles.
-            // For other vehicle, Geyser already handle it in VehicleComponent or the Java server handle it.
+            // For other vehicles: see the VehicleComponent class, otherwise the Java server handles it
             Vector3f position = vehicle.getPosition();
             final BoundingBox box = new BoundingBox(
                 position.down(vehicle instanceof BoatEntity ? vehicle.getDefinition().offset() : 0).up(vehicle.getBoundingBoxHeight() / 2f).toDouble(),
