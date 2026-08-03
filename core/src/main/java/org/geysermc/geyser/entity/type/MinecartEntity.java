@@ -122,7 +122,9 @@ public class MinecartEntity extends Entity implements Tickable {
             setHeadYaw(headYaw);
             setOnGround(isOnGround);
 
-            this.lerpPosition = Vector3f.from(position.getX() + relX, position.getY() + relY, position.getZ() + relZ);
+            this.lerpPosition = steps == 0
+                    ? position.down(definition.offset()).add(relX, relY, relZ)
+                    : lerpPosition.add(relX, relY, relZ);
             this.steps = 3;
         } else {
             super.moveRelative(relX, relY, relZ, yaw, pitch, headYaw, isOnGround);

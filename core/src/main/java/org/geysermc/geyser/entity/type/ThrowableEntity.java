@@ -61,7 +61,7 @@ public class ThrowableEntity extends Entity implements Tickable {
         moveAbsoluteImmediate(position.add(motion), getYaw(), getPitch(), getHeadYaw(), isOnGround(), false);
         float drag = getDrag();
         float gravity = getGravity();
-        setMotion(motion.mul(drag).down(gravity));
+        motion = motion.mul(drag).down(gravity);
     }
 
     protected void moveAbsoluteImmediate(Vector3f position, float yaw, float pitch, float headYaw, boolean isOnGround, boolean teleported) {
