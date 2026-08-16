@@ -33,7 +33,7 @@ import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.event.bedrock.SessionJoinEvent;
 import org.geysermc.geyser.api.network.AuthType;
-import org.geysermc.geyser.network.netease.SetEntityGravityPacket;
+import org.geysermc.geyser.network.netease.NeteaseJsonPacket;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
@@ -77,7 +77,7 @@ public class BedrockSetLocalPlayerAsInitializedTranslator extends PacketTranslat
                     // else we were able to log the user in
                 }
                 if (session.isLoggedIn()) {
-                    session.sendUpstreamPacket(new SetEntityGravityPacket(
+                    session.sendUpstreamPacket(new NeteaseJsonPacket(
                             session.getPlayerEntity().getGeyserId(), -0.08));
 
                     // Sigh - as of Bedrock 1.18

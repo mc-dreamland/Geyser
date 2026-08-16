@@ -30,29 +30,27 @@ import io.netty.buffer.ByteBuf;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketSerializer;
 
-final class SetEntityGravitySerializer implements BedrockPacketSerializer<SetEntityGravityPacket> {
+final class NeteaseJsonSerializer implements BedrockPacketSerializer<NeteaseJsonPacket> {
 
-    static final SetEntityGravitySerializer INSTANCE = new SetEntityGravitySerializer();
-
-    private static final String EVENT_NAME = "SET_ENTITY_GRAVITY";
+    static final NeteaseJsonSerializer INSTANCE = new NeteaseJsonSerializer();
 
     @Override
-    public void serialize(ByteBuf buffer, BedrockCodecHelper helper, SetEntityGravityPacket packet) {
+    public void serialize(ByteBuf buffer, BedrockCodecHelper helper, NeteaseJsonPacket packet) {
         JsonObject payload = new JsonObject();
         payload.addProperty("entityId", packet.getEntityId());
-        payload.addProperty("eventName", EVENT_NAME);
-        payload.addProperty("gravity", packet.getGravity());
+        payload.addProperty("eventName", packet.getEvent().eventName());
+        payload.addProperty(packet.getEvent().valueName(), packet.getGravity());
         helper.writeString(buffer, payload.toString());
     }
 
     @Override
-    public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, SetEntityGravityPacket packet) {
+    public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, NeteaseJsonPacket packet) {
         // 0xCB is a bidirectional NetEase event channel. Geyser does not currently consume its
         // serverbound events, and decoding them as SET_ENTITY_GRAVITY would reject unrelated
         // client events. Consume the opaque payload so it can be safely ignored by the handler.
         buffer.skipBytes(buffer.readableBytes());
     }
 
-    private SetEntityGravitySerializer() {
+    private NeteaseJsonSerializer() {
     }
 }

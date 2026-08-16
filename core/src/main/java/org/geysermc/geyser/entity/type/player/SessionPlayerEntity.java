@@ -50,6 +50,7 @@ import org.geysermc.geyser.level.block.Blocks;
 import org.geysermc.geyser.level.block.property.Properties;
 import org.geysermc.geyser.level.block.type.BlockState;
 import org.geysermc.geyser.level.block.type.TrapDoorBlock;
+import org.geysermc.geyser.network.netease.NeteaseJsonPacket;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.tags.BlockTag;
 import org.geysermc.geyser.util.AttributeUtils;
@@ -400,6 +401,20 @@ public class SessionPlayerEntity extends PlayerEntity {
                 }
                 case SUBMERGED_MINING_SPEED -> {
                     this.submergedMiningSpeed = AttributeUtils.calculateValue(javaAttribute);
+                }
+                case GRAVITY -> {
+                    // Java 1.21.2+ exposes gravity as an entity attribute. NetEase clients
+                    // receive the equivalent through their custom SET_ENTITY_GRAVITY event.
+                    session.sendUpstreamPacket(new NeteaseJsonPacket(
+                            getGeyserId(), AttributeUtils.calculateValue(javaAttribute) * -1));
+                }
+                case JUMP_STRENGTH -> {
+                    session.sendUpstreamPacket(NeteaseJsonPacket.setJumpPower(
+                            getGeyserId(), AttributeUtils.calculateValue(javaAttribute)));
+                }
+                case STEP_HEIGHT -> {
+                    session.sendUpstreamPacket(NeteaseJsonPacket.setMaxAutoStep(
+                            getGeyserId(), AttributeUtils.calculateValue(javaAttribute)));
                 }
                 default -> {
                     super.updateAttribute(javaAttribute, newAttributes);
