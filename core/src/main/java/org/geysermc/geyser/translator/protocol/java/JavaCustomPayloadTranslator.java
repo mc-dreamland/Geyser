@@ -41,6 +41,8 @@ import org.geysermc.erosion.packet.geyserbound.GeyserboundPacket;
 import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.GeyserLogger;
+import org.geysermc.geyser.entity.type.Entity;
+import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
@@ -65,8 +67,8 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
             return;
         }
 
-        if (channel.equals(PluginMessageChannels.FORM)) {
-            session.ensureInEventLoop(() -> {
+        switch (channel) {
+            case PluginMessageChannels.FORM -> session.ensureInEventLoop(() -> {
                 byte[] data = packet.getData();
 
                 // If the data is empty, we just need to close the form
@@ -104,8 +106,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
                 });
                 session.sendForm(form);
             });
-        } else if (channel.equals(PluginMessageChannels.TRANSFER)) {
-            session.ensureInEventLoop(() -> {
+            case PluginMessageChannels.TRANSFER -> session.ensureInEventLoop(() -> {
                 byte[] data = packet.getData();
 
                 // port (4 bytes), address (remaining data)
@@ -125,9 +126,7 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
                 transferPacket.setPort(port);
                 session.sendUpstreamPacket(transferPacket);
             });
-
-        } else if (channel.equals(PluginMessageChannels.PACKET)) {
-            session.ensureInEventLoop(() -> {
+            case PluginMessageChannels.PACKET -> session.ensureInEventLoop(() -> {
                 logger.debug("A packet has been sent using the Floodgate api");
                 byte[] data = packet.getData();
 
@@ -145,27 +144,70 @@ public class JavaCustomPayloadTranslator extends PacketTranslator<ClientboundCus
 
                 session.sendUpstreamPacket(toSend);
             });
-        } else if (channel.equals(PluginMessageChannels.MOD_SDK)) {
-            byte[] data = packet.getData();
-            byte[] msgPackData = Gzip.unGZipBytes(data);
-            NeteasePythonRpcPacket neteaseCustomPacket = new NeteasePythonRpcPacket(msgPackData);
+            case PluginMessageChannels.MOD_SDK -> {
+                byte[] data = packet.getData();
+                byte[] msgPackData = Gzip.unGZipBytes(data);
+                NeteasePythonRpcPacket neteaseCustomPacket = new NeteasePythonRpcPacket(msgPackData);
 
-            session.sendUpstreamPacket(neteaseCustomPacket);
-        } else if (channel.equals(PluginMessageChannels.CUSTOM)) {
-            byte[] data = packet.getData();
+                session.sendUpstreamPacket(neteaseCustomPacket);
+            }
+            case PluginMessageChannels.CUSTOM -> session.ensureInEventLoop(() -> {
+                byte[] data = packet.getData();
+                // packet id, packet data
+                if (data.length < 2) {
+                    throw new IllegalStateException("包异常，请检查");
+                }
+                ByteBuf buf = Unpooled.wrappedBuffer(packet.getData());
+                int customId = buf.readInt();
+                if (customId == 0) {
+                    boolean b1 = buf.readBoolean();
+                    boolean b2 = buf.readBoolean();
+                    session.setQuickSwitchDimension(b1);
+                    session.setNoUnloadChunk(b2);
+                } else if (customId == -1) {
+                    int entityId = buf.readInt();
+                    String identifier = buf.readString(buf.readableBytes(), StandardCharsets.UTF_8);
 
-            // packet id, packet data
-            if (data.length < 2) {
-                throw new IllegalStateException("包异常，请检查");
-            }
-            ByteBuf buf = Unpooled.wrappedBuffer(packet.getData());
-            int customId = buf.readInt();
-            if (customId == 0) {
-                boolean b1 = buf.readBoolean();
-                boolean b2 = buf.readBoolean();
-                session.setQuickSwitchDimension(b1);
-                session.setNoUnloadChunk(b2);
-            }
+                    // An empty identifier clears a previously applied custom appearance.
+                    if (identifier.isEmpty()) {
+                        session.getPendingCustomEntityMappings().remove(entityId);
+
+                        Entity entity = session.getEntityCache().getEntityByJavaId(entityId);
+                        if (entity == null || entity.getAppliedCustomEntityIdentifier() == null) {
+                            return;
+                        }
+
+                        entity.setAppliedCustomEntityIdentifier(null);
+                        if (!entity.isValid()) {
+                            return;
+                        }
+
+                        entity.despawnEntity();
+                        entity.spawnEntity();
+                        return;
+                    }
+
+                    int colonIdx = identifier.indexOf(":");
+                    String shortId = colonIdx >= 0 ? identifier.substring(colonIdx + 1) : identifier;
+                    if (!Registries.CUSTOM_ENTITY_DEFINITIONS.containsKey(shortId)) {
+                        return;
+                    }
+
+                    Entity entity = session.getEntityCache().getEntityByJavaId(entityId);
+                    if (entity == null || !entity.isValid()) {
+                        session.getPendingCustomEntityMappings().put(entityId, identifier);
+                        return;
+                    }
+
+                    session.getPendingCustomEntityMappings().remove(entityId);
+                    if (identifier.equals(entity.getAppliedCustomEntityIdentifier())) {
+                        return;
+                    }
+
+                    entity.despawnEntity();
+                    entity.spawnEntity(identifier);
+                }
+            });
         }
     }
 }
