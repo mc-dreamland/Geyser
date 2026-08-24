@@ -43,8 +43,10 @@ import org.geysermc.geyser.api.skin.SkinData;
 import org.geysermc.geyser.api.skin.SkinGeometry;
 import org.geysermc.geyser.entity.type.player.AvatarEntity;
 import org.geysermc.geyser.entity.type.player.SkullPlayerEntity;
+import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.auth.BedrockClientData;
+import org.geysermc.geyser.session.cache.EntityCache;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.util.FileUtils;
 import org.geysermc.geyser.util.JsonUtils;
@@ -191,15 +193,42 @@ public class SkinManager {
                 color
             );
 
-            PlayerListUtils.sendPlayerListAddAndConfirmSkin(session, updatedEntry);
-        }else {
+            if (GameProtocol.isV860(session)) {
+                session.ensureInEventLoop(() -> PlayerListUtils.sendPlayerListAddAndConfirmSkinInEventLoop(session, updatedEntry));
+            } else {
+                PlayerListUtils.sendPlayerListAddAndConfirmSkin(session, updatedEntry);
+            }
+        } else {
+            SerializedSkin serializedSkin = getSkin(session, skin.textureUrl(), skin, cape, geometry);
             PlayerSkinPacket packet = new PlayerSkinPacket();
             packet.setUuid(entity.getUuid());
             packet.setOldSkinName("");
             packet.setNewSkinName(skin.textureUrl());
-            packet.setSkin(getSkin(session, skin.textureUrl(), skin, cape, geometry));
+            packet.setSkin(serializedSkin);
             packet.setTrustedSkin(true);
-            session.sendUpstreamPacket(packet);
+
+            if (!GameProtocol.isV860(session)) {
+                session.sendUpstreamPacket(packet);
+                return;
+            }
+
+            session.ensureInEventLoop(() -> {
+                EntityCache.V860PlayerSkinAction action = session.getEntityCache()
+                    .prepareV860PlayerSkin(entity.getUuid(), serializedSkin);
+                switch (action) {
+                    case SEND -> {
+                        session.sendUpstreamPacket(packet);
+                    }
+                    case REFRESH -> {
+                        PlayerListPacket.Entry updatedEntry = buildCachedEntry(session, entity);
+                        updatedEntry.setSkin(serializedSkin);
+                        updatedEntry.setTrustedSkin(true);
+                        entity.refreshSkin(updatedEntry);
+                    }
+                    case SUPPRESS -> {
+                    }
+                }
+            });
         }
     }
 

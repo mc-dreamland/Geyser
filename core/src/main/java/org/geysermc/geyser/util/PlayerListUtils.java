@@ -75,29 +75,35 @@ public class PlayerListUtils {
      * entry is added and confirmed again without first being removed.
      */
     public static void sendPlayerListAddAndConfirmSkin(GeyserSession session, PlayerListPacket.Entry entry) {
-        session.ensureInEventLoop(() -> {
-            if (GameProtocol.isV860(session)) {
-                EntityCache.V860PlayerListAddAction action = session.getEntityCache()
-                    .prepareV860PlayerListAdd(entry.getUuid(), entry.getSkin());
-                if (action == EntityCache.V860PlayerListAddAction.SUPPRESS) {
-                    return;
-                }
-                if (action == EntityCache.V860PlayerListAddAction.REPLACE) {
-                    PlayerListPacket removePacket = new PlayerListPacket();
-                    removePacket.setAction(PlayerListPacket.Action.REMOVE);
-                    removePacket.getEntries().add(new PlayerListPacket.Entry(entry.getUuid()));
-                    session.sendUpstreamPacket(removePacket);
-                }
+        session.ensureInEventLoop(() -> sendPlayerListAddAndConfirmSkinInEventLoop(session, entry));
+    }
+
+    /**
+     * Sends the handshake immediately. The caller must already be executing on the session event loop.
+     */
+    public static void sendPlayerListAddAndConfirmSkinInEventLoop(GeyserSession session, PlayerListPacket.Entry entry) {
+        if (GameProtocol.isV860(session)) {
+            EntityCache entityCache = session.getEntityCache();
+            EntityCache.V860PlayerListAddAction action = entityCache.prepareV860PlayerListAdd(entry.getUuid(), entry.getSkin());
+            if (action == EntityCache.V860PlayerListAddAction.SUPPRESS) {
+                return;
             }
+            entityCache.rememberV860PlayerSkin(entry.getUuid(), entry.getSkin());
+            if (action == EntityCache.V860PlayerListAddAction.REPLACE) {
+                PlayerListPacket removePacket = new PlayerListPacket();
+                removePacket.setAction(PlayerListPacket.Action.REMOVE);
+                removePacket.getEntries().add(new PlayerListPacket.Entry(entry.getUuid()));
+                session.sendUpstreamPacket(removePacket);
+            }
+        }
 
-            PlayerListPacket addPacket = new PlayerListPacket();
-            addPacket.setAction(PlayerListPacket.Action.ADD);
-            addPacket.getEntries().add(entry);
-            session.sendUpstreamPacket(addPacket);
+        PlayerListPacket addPacket = new PlayerListPacket();
+        addPacket.setAction(PlayerListPacket.Action.ADD);
+        addPacket.getEntries().add(entry);
+        session.sendUpstreamPacket(addPacket);
 
-            ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
-            confirmSkinPacket.setEntries(List.of(entry));
-            session.sendUpstreamPacket(confirmSkinPacket);
-        });
+        ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+        confirmSkinPacket.setEntries(List.of(entry));
+        session.sendUpstreamPacket(confirmSkinPacket);
     }
 }

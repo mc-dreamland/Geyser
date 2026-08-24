@@ -95,6 +95,7 @@ public class PlayerEntity extends AvatarEntity implements GeyserPlayerEntity {
         // Reset all metadata to their default values
         // This is used when a player respawns
         this.flags.clear();
+        this.dirtyMetadata.clear();
         this.initializeMetadata();
 
         // Explicitly reset all metadata not handled by initializeMetadata
@@ -107,6 +108,16 @@ public class PlayerEntity extends AvatarEntity implements GeyserPlayerEntity {
             return;
 
         session.getEntityCache().spawnEntity(this);
+    }
+
+    @Override
+    protected void restoreAdditionalLinksAfterSkinRefresh() {
+        if (leftParrot != null && leftParrot.isValid()) {
+            sendEntityLink(this, leftParrot, 0);
+        }
+        if (rightParrot != null && rightParrot.isValid()) {
+            sendEntityLink(this, rightParrot, 1);
+        }
     }
 
     @Override

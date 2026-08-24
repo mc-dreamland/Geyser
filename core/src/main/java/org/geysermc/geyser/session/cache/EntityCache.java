@@ -61,6 +61,7 @@ public class EntityCache {
     private final Map<UUID, PlayerEntity> playerEntities = new Object2ObjectOpenHashMap<>();
     private final Map<UUID, BossBar> bossBars = new Object2ObjectOpenHashMap<>();
     private final Map<UUID, SerializedSkin> v860ConfirmedPlayerListEntries = new Object2ObjectOpenHashMap<>();
+    private final Map<UUID, SerializedSkin> v860PlayerSkins = new Object2ObjectOpenHashMap<>();
 
     @Getter
     private final AtomicLong nextEntityId = new AtomicLong(114514L);
@@ -102,6 +103,9 @@ public class EntityCache {
 
         if (entity instanceof PlayerEntity player) {
             session.getPlayerWithCustomHeads().remove(player.getUuid());
+            synchronized (v860PlayerSkins) {
+                SerializedSkin removedSkin = v860PlayerSkins.remove(player.getUuid());
+            }
         }
 
         if (entity.isValid()) {
@@ -176,6 +180,9 @@ public class EntityCache {
         synchronized (playerEntities) {
             player = playerEntities.remove(uuid);
         }
+        synchronized (v860PlayerSkins) {
+            SerializedSkin retainedSkin = v860PlayerSkins.get(uuid);
+        }
 
         if (player != null) {
             // notify scoreboard
@@ -221,6 +228,42 @@ public class EntityCache {
     public enum V860PlayerListAddAction {
         ADD,
         REPLACE,
+        SUPPRESS
+    }
+
+    public V860PlayerSkinAction prepareV860PlayerSkin(UUID uuid, SerializedSkin skin) {
+        synchronized (v860PlayerSkins) {
+            SerializedSkin previousSkin = v860PlayerSkins.get(uuid);
+            boolean equal = previousSkin != null && previousSkin.equals(skin);
+            V860PlayerSkinAction action;
+            if (equal) {
+                action = V860PlayerSkinAction.SUPPRESS;
+            } else {
+                v860PlayerSkins.put(uuid, skin);
+                action = previousSkin == null ? V860PlayerSkinAction.SEND : V860PlayerSkinAction.REFRESH;
+            }
+            return action;
+        }
+    }
+
+    public void rememberV860PlayerSkinIfAbsent(UUID uuid, SerializedSkin skin) {
+        synchronized (v860PlayerSkins) {
+            v860PlayerSkins.putIfAbsent(uuid, skin);
+        }
+    }
+
+    /**
+     * Records the skin confirmed through a player-list handshake.
+     */
+    public void rememberV860PlayerSkin(UUID uuid, SerializedSkin skin) {
+        synchronized (v860PlayerSkins) {
+            v860PlayerSkins.put(uuid, skin);
+        }
+    }
+
+    public enum V860PlayerSkinAction {
+        SEND,
+        REFRESH,
         SUPPRESS
     }
 

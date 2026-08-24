@@ -83,7 +83,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Queue;
@@ -336,7 +335,9 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
                 session.sendUpstreamPacket(stackPacket);
             }
-            case REFUSED -> session.disconnect("disconnectionScreen.resourcePack");
+            case REFUSED -> {
+                session.disconnect("disconnectionScreen.resourcePack");
+            }
             default -> {
                 GeyserImpl.getInstance().getLogger().debug("received unknown status packet: " + packet);
                 session.disconnect("disconnectionScreen.resourcePack");
@@ -417,7 +418,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         // Resolve some console pack downloading issues.
         // See <https://github.com/PowerNukkitX/PowerNukkitX/pull/1997> for reference
         chunkRequestQueue.add(packet);
-        if (isConsole()) {
+        if (shouldPaceResourcePackChunks()) {
             if (!currentlySendingChunks) {
                 currentlySendingChunks = true;
                 processNextChunk();
@@ -489,11 +490,13 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         data.setData(Unpooled.wrappedBuffer(packData));
 
-        if (isConsole()) {
+        boolean pacedChunkSend = shouldPaceResourcePackChunks();
+        int chunkSendDelay = isConsole() ? PACKET_SEND_DELAY : neteaseResourcePackChunkSendDelay();
+        if (pacedChunkSend) {
             // Also flushes packets
             // Avoids bursting slower / delayed clients
             session.sendUpstreamPacketImmediately(data);
-            session.scheduleInEventLoop(this::processNextChunk, PACKET_SEND_DELAY, TimeUnit.MILLISECONDS);
+            session.scheduleInEventLoop(this::processNextChunk, chunkSendDelay, TimeUnit.MILLISECONDS);
         } else {
             session.sendUpstreamPacket(data);
         }
@@ -574,8 +577,17 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     }
 
     private static long totalSentPackBytes = 0L;
+
     private boolean isConsole() {
         BedrockPlatform platform = session.platform();
         return platform == BedrockPlatform.PS4 || platform == BedrockPlatform.XBOX || platform == BedrockPlatform.NX;
+    }
+
+    private boolean shouldPaceResourcePackChunks() {
+        return isConsole() || (GameProtocol.isV860(session) && neteaseResourcePackChunkSendDelay() > 0);
+    }
+
+    private int neteaseResourcePackChunkSendDelay() {
+        return geyser.config().netease().resourcePackChunkSendDelayMs();
     }
 }

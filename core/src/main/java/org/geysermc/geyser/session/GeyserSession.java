@@ -1792,8 +1792,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     }
 
     public void setServerRenderDistance(int renderDistance) {
-        // Ensure render distance is not above 96 as sending a larger value at any point crashes mobile clients and 96 is the max of any bedrock platform
-        renderDistance = Math.min(renderDistance, 16);
+        // Keep the Bedrock render distance within Geyser's supported maximum.
+        renderDistance = Math.min(renderDistance, 24);
         this.serverRenderDistance = renderDistance;
 
         recalculateBedrockRenderDistance();
@@ -1808,7 +1808,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         int renderDistance = ChunkUtils.squareToCircle(this.serverRenderDistance);
         ChunkRadiusUpdatedPacket chunkRadiusUpdatedPacket = new ChunkRadiusUpdatedPacket();
 
-        chunkRadiusUpdatedPacket.setRadius(Math.min(16, renderDistance));
+        chunkRadiusUpdatedPacket.setRadius(Math.min(24, renderDistance));
         upstream.sendPacket(chunkRadiusUpdatedPacket);
     }
 

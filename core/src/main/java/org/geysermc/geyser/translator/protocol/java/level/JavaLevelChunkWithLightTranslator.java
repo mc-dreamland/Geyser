@@ -96,8 +96,7 @@ import static org.geysermc.geyser.util.ChunkUtils.*;
 public class JavaLevelChunkWithLightTranslator extends PacketTranslator<ClientboundLevelChunkWithLightPacket> {
     private static final boolean USE_EXPERIMENTAL_CHUNK_TRANSLATION =
             Boolean.parseBoolean(System.getProperty("Geyser.ExperimentalChunkTranslation", "true"));
-    private static volatile boolean globalChunkTranslationCacheEnabled =
-            Boolean.parseBoolean(System.getProperty("Geyser.GlobalChunkTranslationCache", "true"));
+    private static volatile boolean globalChunkTranslationCacheEnabled = true;
     private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_MAX_BYTES =
             Long.getLong("Geyser.GlobalChunkTranslationCacheMaxBytes", 512L * 1024L * 1024L);
     private static final int GLOBAL_CHUNK_TRANSLATION_CACHE_HOT_THRESHOLD =

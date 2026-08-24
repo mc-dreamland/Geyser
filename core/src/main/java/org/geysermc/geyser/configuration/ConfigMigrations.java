@@ -45,6 +45,8 @@ public class ConfigMigrations {
     public static final BiFunction<Class<? extends GeyserConfig>, GeyserBootstrap, ConfigurationTransformation.Versioned> TRANSFORMER = (configClass, bootstrap) ->
         ConfigurationTransformation.versionedBuilder()
         .versionKey("config-version")
+        .addVersion(7, ConfigurationTransformation.builder().build())
+        .addVersion(6, ConfigurationTransformation.builder().build())
         .addVersion(5, ConfigurationTransformation.builder()
             // Java section
             .addAction(path("remote"), rename("java"))

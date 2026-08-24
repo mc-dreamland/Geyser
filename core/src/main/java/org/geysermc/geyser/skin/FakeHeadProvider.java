@@ -47,9 +47,14 @@ import org.geysermc.mcprotocollib.auth.GameProfile.Texture;
 import org.geysermc.mcprotocollib.auth.GameProfile.TextureType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.ResolvableProfile;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -57,6 +62,9 @@ import java.util.concurrent.TimeUnit;
  * Responsible for modifying a player's skin when wearing a player head
  */
 public class FakeHeadProvider {
+    // Temporarily disabled until the NetEase V860 skin refresh flow is finalized.
+    private static final boolean FAKE_HEAD_SKINS_ENABLED = false;
+
     private static final LoadingCache<FakeHeadEntry, SkinData> MERGED_SKINS_LOADING_CACHE = CacheBuilder.newBuilder()
             .expireAfterAccess(1, TimeUnit.HOURS)
             .maximumSize(10000)
@@ -71,7 +79,7 @@ public class FakeHeadProvider {
 
                     Skin skin = skinData.skin();
                     Cape cape = skinData.cape();
-                    SkinGeometry geometry = skinData.geometry().geometryName().equals("{\"geometry\" :{\"default\" :\"geometry.humanoid.customSlim\"}}")
+                    SkinGeometry geometry = skinData.geometry().geometryName().contains("customSlim")
                             ? SkinProvider.WEARING_CUSTOM_SKULL_SLIM : SkinProvider.WEARING_CUSTOM_SKULL;
 
                     Skin headSkin = SkinProvider.getOrDefault(
@@ -91,6 +99,9 @@ public class FakeHeadProvider {
                     String skinKey = "customPlayerHead_" + fakeHeadEntry.getFakeHeadSkinUrl() + "_" + skin.textureUrl();
                     byte[] targetSkinData = SkinProvider.bufferedImageToImageData(originalSkinImage);
                     Skin mergedSkin = new Skin(skinKey, targetSkinData);
+                    writeMergedSkinDebugImage(fakeHeadEntry.getEntity().getUuid(), skinKey, originalSkinImage);
+                    originalSkinImage.flush();
+                    headSkinImage.flush();
 
                     // Avoiding memory leak
                     fakeHeadEntry.setEntity(null);
@@ -98,9 +109,28 @@ public class FakeHeadProvider {
 
                     return new SkinData(mergedSkin, cape, geometry);
                 }
-            });
+        });
+
+    /**
+     * Temporary visual debugging aid for validating player-head skin composition.
+     */
+    private static void writeMergedSkinDebugImage(java.util.UUID playerUuid, String skinKey, BufferedImage mergedSkinImage) {
+        Path outputDirectory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("fake-head-images");
+        String fileName = playerUuid + "-" + Integer.toUnsignedString(skinKey.hashCode(), 16) + ".png";
+        try {
+            Files.createDirectories(outputDirectory);
+            Path outputFile = outputDirectory.resolve(fileName);
+            ImageIO.write(mergedSkinImage, "png", outputFile.toFile());
+        } catch (IOException exception) {
+            GeyserImpl.getInstance().getLogger().warning("Failed to write merged fake-head skin " + fileName);
+        }
+    }
 
     public static void setHead(GeyserSession session, AvatarEntity entity, @Nullable ResolvableProfile profile) {
+        if (!FAKE_HEAD_SKINS_ENABLED) {
+            return;
+        }
+
         if (profile == null) {
             return;
         }
@@ -127,7 +157,7 @@ public class FakeHeadProvider {
             session.getPlayerWithCustomHeads().put(entity.getUuid(), original);
             SkinProvider.getExecutorService().execute(() -> {
                 try {
-                    SkinData mergedSkinData = MERGED_SKINS_LOADING_CACHE.get(new FakeHeadEntry(originalTextures, skinTexture.getURL(), entity, session));
+                    SkinData mergedSkinData = MERGED_SKINS_LOADING_CACHE.get(new FakeHeadEntry(originalTextures, skinTexture.getURL(), entity.getUuid(), entity, session));
                     SkinManager.sendSkinPacket(session, entity, mergedSkinData);
                 } catch (ExecutionException e) {
                     GeyserImpl.getInstance().getLogger().error("Couldn't merge skin of " + entity.getUsername() + " with head skin " + resolved, e);
@@ -137,6 +167,11 @@ public class FakeHeadProvider {
     }
 
     public static void restoreOriginalSkin(GeyserSession session, LivingEntity livingEntity) {
+        if (!FAKE_HEAD_SKINS_ENABLED) {
+            session.getPlayerWithCustomHeads().remove(livingEntity.getUuid());
+            return;
+        }
+
         if (!(livingEntity instanceof AvatarEntity entity)) {
             return;
         }
@@ -155,12 +190,17 @@ public class FakeHeadProvider {
         });
     }
 
+    public static void clearMergedSkinCache() {
+        MERGED_SKINS_LOADING_CACHE.invalidateAll();
+    }
+
     @AllArgsConstructor
     @Getter
     @Setter
     private static class FakeHeadEntry {
         private final String texturesProperty;
         private final String fakeHeadSkinUrl;
+        private final UUID playerUuid;
         private AvatarEntity entity;
         private GeyserSession session;
 
@@ -170,12 +210,14 @@ public class FakeHeadProvider {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             FakeHeadEntry that = (FakeHeadEntry) o;
-            return Objects.equals(texturesProperty, that.texturesProperty) && Objects.equals(fakeHeadSkinUrl, that.fakeHeadSkinUrl);
+            return Objects.equals(texturesProperty, that.texturesProperty)
+                    && Objects.equals(fakeHeadSkinUrl, that.fakeHeadSkinUrl)
+                    && Objects.equals(playerUuid, that.playerUuid);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(texturesProperty, fakeHeadSkinUrl);
+            return Objects.hash(texturesProperty, fakeHeadSkinUrl, playerUuid);
         }
     }
 

@@ -510,6 +510,23 @@ public interface GeyserConfig {
     }
 
     @ConfigSerializable
+    interface ChunkCacheConfig {
+        @Comment("""
+                是否启用全局区块转译缓存。
+                缓存相同 Java 区块转译后的 Bedrock 数据，可降低重复转译的 CPU 开销；关闭后仅禁用服务端转译缓存，
+                不会关闭下方的客户端 Blob Cache。""")
+        @DefaultBoolean(true)
+        boolean enableTranslationCache();
+
+        @Comment("""
+                是否启用 Bedrock 客户端 Blob Cache。
+                启用后，热点区块会以 Blob 引用方式发送以节省带宽。若出现传送后部分区块不渲染、区块空白或客户端
+                缓存兼容性问题，请先将此项设为 false 进行排查。""")
+        @DefaultBoolean(true)
+        boolean enableBlobCache();
+    }
+
+    @ConfigSerializable
     interface NeteaseConfig {
         @Comment("Whether to require Netease online mode authentication.")
         @DefaultBoolean(false)
@@ -522,6 +539,22 @@ public interface GeyserConfig {
         @Comment("Whether custom Bedrock geometry should be accepted.")
         @DefaultBoolean(false)
         boolean allowCustomGeometry();
+
+        @Comment("Whether local skins should be used when the skin service has no skin for a player.")
+        @DefaultBoolean(false)
+        boolean enableLocalSkins();
+
+        @Comment("""
+                网易客户端资源包分片发送间隔，单位为毫秒。
+                设置为 0 或负数时不启用。若有玩家下载资源包时出现长时间卡住，建议将该值调整为 20 左右。""")
+        @DefaultNumeric(0)
+        int resourcePackChunkSendDelayMs();
+
+        @Comment("""
+                区块缓存设置。实验性功能
+                这两项在启动或重载时读取；/geyser chunkcache 命令只能临时切换，重启或重载后会恢复为这里的值。
+                如果出现区块加载但是不渲染的情况请关闭该功能""")
+        ChunkCacheConfig chunkCache();
 
         @Comment("Skin synchronization service settings")
         ServiceConfig service();

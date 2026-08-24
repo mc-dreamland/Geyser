@@ -49,8 +49,7 @@ import java.util.concurrent.atomic.LongAdder;
  * state remains session-local.
  */
 public final class ClientBlobCache {
-    private static volatile boolean globallyEnabled =
-            Boolean.parseBoolean(System.getProperty("Geyser.NeteaseClientBlobCache", "true"));
+    private static volatile boolean globallyEnabled = true;
     private static final long GLOBAL_CACHE_MAX_BYTES =
             Math.max(1L, Long.getLong("Geyser.NeteaseClientBlobCacheMaxBytes", 256L * 1024L * 1024L));
     private static final long GLOBAL_CACHE_EXPIRE_AFTER_ACCESS_MINUTES =

@@ -60,10 +60,15 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -82,6 +87,14 @@ public class SkinProvider {
 
     public static final Cache<String, Skin> CUSTOM_SKINS = CacheBuilder.newBuilder()
         .build();
+
+    /**
+     * A {@code DEFAULT} preference keeps the original Geyser skin. A missing preference and
+     * custom skin means the player receives a deterministic local skin instead.
+     */
+    private static final Map<UUID, FixedSkinPreference> DATABASE_SKIN_PREFERENCES = new ConcurrentHashMap<>();
+    private static volatile List<FixedSkin> FIXED_WIDE_SKINS = List.of();
+    private static volatile List<FixedSkin> FIXED_SLIM_SKINS = List.of();
 
     private static final Cache<String, Cape> CACHED_JAVA_CAPES = CacheBuilder.newBuilder()
         .expireAfterAccess(1, TimeUnit.HOURS)
@@ -233,10 +246,16 @@ public class SkinProvider {
         }
 
         if (skin == null) {
-            // We don't have a skin for the player right now. Fall back to a default.
-            ProvidedSkins.ProvidedSkin providedSkin = ProvidedSkins.getDefaultPlayerSkin(uuid);
-            skin = providedSkin.getData();
-            geometry = providedSkin.isSlim() ? SkinGeometry.SLIM : SkinGeometry.WIDE;
+            // No Bedrock skin or skin-service result is available. Only now choose a local fixed skin.
+            FixedSkin fixedSkin = getFixedSkin(uuid);
+            if (fixedSkin != null) {
+                skin = fixedSkin.skin();
+                geometry = fixedSkin.geometry();
+            } else {
+                ProvidedSkins.ProvidedSkin providedSkin = ProvidedSkins.getDefaultPlayerSkin(uuid);
+                skin = providedSkin.getData();
+                geometry = providedSkin.isSlim() ? SkinGeometry.SLIM : SkinGeometry.WIDE;
+            }
         }
 
         if (cape == null) {
@@ -285,7 +304,7 @@ public class SkinProvider {
                     SkinGeometry geometry = data.isAlex() ? SkinGeometry.SLIM : SkinGeometry.WIDE;
                     // only PE
                     Pair<String, SkinGeometry> stringSkinGeometryPair = CACHED_GEOMETRY.getIfPresent(uuid);
-                    if (uuid.toString().startsWith("00000000") && stringSkinGeometryPair != null) {
+                    if (data.skinUrl().endsWith("?pe") && stringSkinGeometryPair != null) {
                         geometry = stringSkinGeometryPair.right();
                     }
 
@@ -421,6 +440,11 @@ public class SkinProvider {
             return skinCompletableFuture.get();
         } catch (Exception ignored) {
         }
+        FixedSkin fixedSkin = getFixedSkin(uuid);
+        if (fixedSkin != null) {
+            CACHED_GEOMETRY.put(uuid, Pair.of(fixedSkin.geometry().geometryName(), fixedSkin.geometry()));
+            return fixedSkin.skin();
+        }
         return new Skin(textureUrl, ProvidedSkins.getAlexOrSteve(uuid).getData().skinData(), false, uuid.toString().replace("-", "").hashCode() <= 0 ? -uuid.toString().replace("-", "").hashCode() : uuid.toString().replace("-", "").hashCode());
     }
 
@@ -500,6 +524,13 @@ public class SkinProvider {
             CACHED_BEDROCK_SKINS.put(skinId, customSkin);
             return;
         }
+
+        FixedSkin fixedSkin = getExplicitFixedSkin(playerID);
+        if (fixedSkin != null) {
+            CACHED_BEDROCK_SKINS.put(skinId, fixedSkin.skin());
+            return;
+        }
+
         Skin skin = new Skin(skinId, skinData);
         CACHED_BEDROCK_SKINS.put(skin.textureUrl(), skin);
     }
@@ -511,6 +542,7 @@ public class SkinProvider {
     static void storeCustomSkin(UUID playerID, String skinId, byte[] skinData) {
         Skin skin = new Skin(skinId, skinData);
         CUSTOM_SKINS.put(skin.textureUrl(), skin);
+        DATABASE_SKIN_PREFERENCES.remove(playerID);
     }
 
     static void storeBedrockCape(String capeId, byte[] capeData) {
@@ -524,6 +556,12 @@ public class SkinProvider {
     }
 
     static void storeBedrockGeometry(UUID playerID, String geoName, byte[] geometryData) {
+        FixedSkin fixedSkin = getExplicitFixedSkin(playerID);
+        if (fixedSkin != null) {
+            CACHED_GEOMETRY.put(playerID, Pair.of(fixedSkin.geometry().geometryName(), fixedSkin.geometry()));
+            return;
+        }
+
         boolean allowCustomGeometry = GeyserImpl.getInstance().config().netease().allowCustomGeometry();
         SkinGeometry skinGeometry;
         if (allowCustomGeometry) {
@@ -850,15 +888,19 @@ public class SkinProvider {
     public static void loadCustomSkins() {
         CompletableFuture.runAsync(() -> {
             HikariDataSource dataSource = GeyserImpl.getInstance().getDataSource();
+            CUSTOM_SKINS.invalidateAll();
+            DATABASE_SKIN_PREFERENCES.clear();
+            FakeHeadProvider.clearMergedSkinCache();
             try (Connection connection = dataSource.getConnection()) {
                 try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM custom_skins")) {
                     try (ResultSet resultSet = statement.executeQuery()) {
                         while (resultSet.next()) {
                             UUID uuid = UUID.fromString(resultSet.getString("uuid"));
                             String textures = resultSet.getString("textures");
-                            storeCustomSkin(uuid, uuid.toString(), Gzip.unGZipBytes(Base64.getDecoder().decode(textures)));
+                            loadDatabaseSkin(uuid, textures);
                         }
-                        GeyserImpl.getInstance().getLogger().info("Successfully load " + CUSTOM_SKINS.size() + " custom skin！");
+                        GeyserImpl.getInstance().getLogger().info("Successfully load " + CUSTOM_SKINS.size()
+                            + " custom skin and " + DATABASE_SKIN_PREFERENCES.size() + " skin preferences！");
                     }
                 }
             } catch (Exception e) {
@@ -866,6 +908,151 @@ public class SkinProvider {
                 e.printStackTrace();
             }
         });
+    }
+
+    /**
+     * Loads one {@code custom_skins.textures} value. The supported sentinel values are
+     * {@code defaultskin}, {@code customskin:wide}, and {@code customskin:slim}.
+     */
+    private static void loadDatabaseSkin(UUID uuid, String textures) {
+        if (textures == null) {
+            GeyserImpl.getInstance().getLogger().warning("Skipping empty skin setting for " + uuid);
+            DATABASE_SKIN_PREFERENCES.put(uuid, FixedSkinPreference.DEFAULT);
+            return;
+        }
+
+        switch (textures.trim().toLowerCase(java.util.Locale.ROOT)) {
+            case "defaultskin" -> DATABASE_SKIN_PREFERENCES.put(uuid, FixedSkinPreference.DEFAULT);
+            case "customskin:wide" -> DATABASE_SKIN_PREFERENCES.put(uuid, FixedSkinPreference.WIDE);
+            case "customskin:slim" -> DATABASE_SKIN_PREFERENCES.put(uuid, FixedSkinPreference.SLIM);
+            default -> {
+                try {
+                    storeCustomSkin(uuid, uuid.toString(), Gzip.unGZipBytes(Base64.getDecoder().decode(textures)));
+                } catch (Exception exception) {
+                    // An invalid value must not unexpectedly replace a player's own skin.
+                    DATABASE_SKIN_PREFERENCES.put(uuid, FixedSkinPreference.DEFAULT);
+                    GeyserImpl.getInstance().getLogger().warning("Skipping invalid custom skin data for " + uuid);
+                }
+            }
+        }
+    }
+
+    @Nullable
+    private static FixedSkin getFixedSkin(UUID uuid) {
+        if (CUSTOM_SKINS.getIfPresent(uuid.toString()) != null) {
+            return null;
+        }
+
+        FixedSkinPreference preference = DATABASE_SKIN_PREFERENCES.get(uuid);
+        if (preference == FixedSkinPreference.DEFAULT) {
+            return null;
+        }
+
+        if (preference == FixedSkinPreference.WIDE) {
+            return selectFixedSkin(uuid, FIXED_WIDE_SKINS);
+        }
+        if (preference == FixedSkinPreference.SLIM) {
+            return selectFixedSkin(uuid, FIXED_SLIM_SKINS);
+        }
+
+        // No database row: select deterministically from all local skins.
+        int total = FIXED_WIDE_SKINS.size() + FIXED_SLIM_SKINS.size();
+        if (total == 0) {
+            return null;
+        }
+        int index = Math.floorMod(uuid.hashCode(), total);
+        return index < FIXED_WIDE_SKINS.size() ? FIXED_WIDE_SKINS.get(index)
+            : FIXED_SLIM_SKINS.get(index - FIXED_WIDE_SKINS.size());
+    }
+
+    /**
+     * Returns only an explicit database selection. A missing row must never overwrite a real player skin.
+     */
+    @Nullable
+    private static FixedSkin getExplicitFixedSkin(UUID uuid) {
+        FixedSkinPreference preference = DATABASE_SKIN_PREFERENCES.get(uuid);
+        if (preference == FixedSkinPreference.WIDE) {
+            return selectFixedSkin(uuid, FIXED_WIDE_SKINS);
+        }
+        if (preference == FixedSkinPreference.SLIM) {
+            return selectFixedSkin(uuid, FIXED_SLIM_SKINS);
+        }
+        return null;
+    }
+
+    @Nullable
+    private static FixedSkin selectFixedSkin(UUID uuid, List<FixedSkin> skins) {
+        return skins.isEmpty() ? null : skins.get(Math.floorMod(uuid.hashCode(), skins.size()));
+    }
+
+    /**
+     * Creates the local skin folders and, when enabled, reloads their PNG files.
+     */
+    public static void initializeLocalSkins() {
+        Path skinsDirectory = GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("skins");
+        Path slimDirectory = skinsDirectory.resolve("slim");
+        Path wideDirectory = skinsDirectory.resolve("wide");
+
+        try {
+            Files.createDirectories(slimDirectory);
+            Files.createDirectories(wideDirectory);
+        } catch (IOException exception) {
+            FIXED_SLIM_SKINS = List.of();
+            FIXED_WIDE_SKINS = List.of();
+            GeyserImpl.getInstance().getLogger().warning("Failed to create local skin directories: " + exception.getMessage());
+            return;
+        }
+
+        if (!GeyserImpl.getInstance().config().netease().enableLocalSkins()) {
+            FIXED_SLIM_SKINS = List.of();
+            FIXED_WIDE_SKINS = List.of();
+            GeyserImpl.getInstance().getLogger().debug("Local fallback skins are disabled");
+            return;
+        }
+
+        List<FixedSkin> slimSkins = loadFixedSkins(slimDirectory, "slim", SkinGeometry.SLIM);
+        List<FixedSkin> wideSkins = loadFixedSkins(wideDirectory, "wide", SkinGeometry.WIDE);
+        FIXED_SLIM_SKINS = slimSkins;
+        FIXED_WIDE_SKINS = wideSkins;
+        GeyserImpl.getInstance().getLogger().info("Loaded " + slimSkins.size() + " slim and "
+            + wideSkins.size() + " wide local fallback skins");
+    }
+
+    private static List<FixedSkin> loadFixedSkins(Path directory, String armSize, SkinGeometry geometry) {
+        List<FixedSkin> skins = new ArrayList<>();
+        try (var paths = Files.list(directory)) {
+            paths
+                .filter(Files::isRegularFile)
+                .filter(path -> path.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".png"))
+                .sorted(Comparator
+                    .comparing((Path path) -> path.getFileName().toString().toLowerCase(java.util.Locale.ROOT))
+                    .thenComparing(path -> path.getFileName().toString()))
+                .forEach(path -> {
+                    try {
+                        BufferedImage image = ImageIO.read(path.toFile());
+                        if (image == null) {
+                            throw new IOException("Unsupported image format");
+                        }
+                        String skinId = "geysermc:localskin/" + armSize + "/" + path.getFileName();
+                        skins.add(new FixedSkin(new Skin(skinId, bufferedImageToImageData(image)), geometry));
+                        image.flush();
+                    } catch (IOException exception) {
+                        GeyserImpl.getInstance().getLogger().warning("Failed to load local skin " + path + ": " + exception.getMessage());
+                    }
+                });
+        } catch (IOException exception) {
+            GeyserImpl.getInstance().getLogger().warning("Failed to scan local skin directory " + directory + ": " + exception.getMessage());
+        }
+        return List.copyOf(skins);
+    }
+
+    private enum FixedSkinPreference {
+        DEFAULT,
+        WIDE,
+        SLIM
+    }
+
+    private record FixedSkin(Skin skin, SkinGeometry geometry) {
     }
 
     public static void saveCustomSkin(UUID uuid, String texutres) {

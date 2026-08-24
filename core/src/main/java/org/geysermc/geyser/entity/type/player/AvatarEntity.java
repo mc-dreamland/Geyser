@@ -38,16 +38,22 @@ import org.cloudburstmc.protocol.bedrock.data.PlayerPermission;
 import org.cloudburstmc.protocol.bedrock.data.command.CommandPermission;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
+import org.cloudburstmc.protocol.bedrock.data.entity.EntityLinkData;
 import org.cloudburstmc.protocol.bedrock.packet.AddPlayerPacket;
 import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
+import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
+import org.cloudburstmc.protocol.bedrock.packet.RemoveEntityPacket;
+import org.cloudburstmc.protocol.bedrock.packet.SetEntityLinkPacket;
 import org.geysermc.geyser.entity.EntityDefinition;
 import org.geysermc.geyser.entity.EntityDefinitions;
+import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.LivingEntity;
 import org.geysermc.geyser.level.block.Blocks;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.skin.SkinManager;
 import org.geysermc.geyser.skin.SkullSkinManager;
 import org.geysermc.geyser.translator.item.ItemTranslator;
+import org.geysermc.geyser.util.PlayerListUtils;
 import org.geysermc.geyser.util.ChunkUtils;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
@@ -131,6 +137,63 @@ public class AvatarEntity extends LivingEntity {
 
         valid = true;
         session.sendUpstreamPacket(addPlayerPacket);
+    }
+
+    /**
+     * Refreshes this player on the Bedrock client without changing Geyser's entity cache.
+     * NetEase V860 requires the player-list skin handshake to be replaced before the actor
+     * is recreated; sending PlayerSkin while the actor is absent leaves the new actor on the old skin.
+     */
+    public void refreshSkin(PlayerListPacket.Entry skinEntry) {
+        if (!valid) {
+            PlayerListUtils.sendPlayerListAddAndConfirmSkinInEventLoop(session, skinEntry);
+            return;
+        }
+
+        RemoveEntityPacket removeEntityPacket = new RemoveEntityPacket();
+        removeEntityPacket.setUniqueEntityId(geyserId);
+        session.sendUpstreamPacket(removeEntityPacket);
+
+        // The helper emits REMOVE before ADD+Confirm when this UUID already has a different skin.
+        PlayerListUtils.sendPlayerListAddAndConfirmSkinInEventLoop(session, skinEntry);
+
+        // Recreate only the client-side actor. The replacement actor has no metadata state,
+        // so include the complete retained snapshot.
+        dirtyMetadata.markAllDirty();
+        spawnEntity();
+        updateArmor();
+        updateMainHand();
+        updateOffHand();
+        restoreEntityLinksAfterSkinRefresh();
+    }
+
+    private void restoreEntityLinksAfterSkinRefresh() {
+        if (vehicle != null) {
+            int passengerIndex = vehicle.getPassengers().indexOf(this);
+            if (passengerIndex >= 0) {
+                sendEntityLink(vehicle, this, passengerIndex);
+                updateMountOffset();
+            }
+        }
+
+        for (int i = 0; i < passengers.size(); i++) {
+            Entity passenger = passengers.get(i);
+            if (passenger != null) {
+                sendEntityLink(this, passenger, i);
+            }
+        }
+        updatePassengerOffsets();
+        restoreAdditionalLinksAfterSkinRefresh();
+    }
+
+    protected void restoreAdditionalLinksAfterSkinRefresh() {
+    }
+
+    protected final void sendEntityLink(Entity vehicle, Entity passenger, int passengerIndex) {
+        EntityLinkData.Type type = passengerIndex == 0 ? EntityLinkData.Type.RIDER : EntityLinkData.Type.PASSENGER;
+        SetEntityLinkPacket linkPacket = new SetEntityLinkPacket();
+        linkPacket.setEntityLink(new EntityLinkData(vehicle.getGeyserId(), passenger.getGeyserId(), type, false, false, 0f));
+        session.sendUpstreamPacket(linkPacket);
     }
 
     // The player entity already lerps client-side on Bedrock.

@@ -35,22 +35,40 @@ import java.util.Map;
  * A wrapper for temporarily storing entity metadata that will be sent to Bedrock.
  */
 public final class GeyserDirtyMetadata {
-    private final Map<EntityDataType<?>, Object> metadata = new Object2ObjectLinkedOpenHashMap<>();
+    private final Map<EntityDataType<?>, Object> dirtyMetadata = new Object2ObjectLinkedOpenHashMap<>();
+    private final Map<EntityDataType<?>, Object> currentMetadata = new Object2ObjectLinkedOpenHashMap<>();
 
     public <T> void put(EntityDataType<T> entityData, T value) {
-        metadata.put(entityData, value);
+        dirtyMetadata.put(entityData, value);
+        currentMetadata.put(entityData, value);
     }
 
     /**
      * Applies the contents of the dirty metadata into the input and clears the contents of our map.
      */
     public void apply(EntityDataMap map) {
-        map.putAll(metadata);
-        metadata.clear();
+        map.putAll(dirtyMetadata);
+        dirtyMetadata.clear();
+    }
+
+    /**
+     * Marks the complete current metadata state for the next packet. This is used when a
+     * client-side actor is recreated and therefore no longer has any previously sent state.
+     */
+    public void markAllDirty() {
+        dirtyMetadata.putAll(currentMetadata);
+    }
+
+    /**
+     * Clears both pending changes and the retained current state before an entity is reset.
+     */
+    public void clear() {
+        dirtyMetadata.clear();
+        currentMetadata.clear();
     }
 
     public boolean hasEntries() {
-        return !metadata.isEmpty();
+        return !dirtyMetadata.isEmpty();
     }
 
     /**
@@ -58,11 +76,11 @@ public final class GeyserDirtyMetadata {
      */
     public <T> T get(EntityDataType<T> entityData) {
         //noinspection unchecked
-        return (T) metadata.get(entityData);
+        return (T) dirtyMetadata.get(entityData);
     }
 
     @Override
     public String toString() {
-        return metadata.toString();
+        return dirtyMetadata.toString();
     }
 }

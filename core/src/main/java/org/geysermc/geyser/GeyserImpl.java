@@ -98,6 +98,7 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.PendingMicrosoftAuthentication;
 import org.geysermc.geyser.session.SessionDisconnectListener;
 import org.geysermc.geyser.session.SessionManager;
+import org.geysermc.geyser.session.cache.ClientBlobCache;
 import org.geysermc.geyser.session.cache.RegistryCache;
 import org.geysermc.geyser.skin.FloodgateSkinUploader;
 import org.geysermc.geyser.skin.ProvidedSkins;
@@ -105,6 +106,7 @@ import org.geysermc.geyser.skin.SkinProvider;
 import org.geysermc.geyser.text.GeyserLocale;
 import org.geysermc.geyser.text.MinecraftLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
+import org.geysermc.geyser.translator.protocol.java.level.JavaLevelChunkWithLightTranslator;
 import org.geysermc.geyser.util.AssetUtils;
 import org.geysermc.geyser.util.CodeOfConductManager;
 import org.geysermc.geyser.util.JsonUtils;
@@ -372,6 +374,8 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
     private void startInstance() {
         this.scheduledThread = Executors.newSingleThreadScheduledExecutor(new DefaultThreadFactory("Geyser Scheduled Thread"));
 
+        SkinProvider.initializeLocalSkins();
+
         if (isReloading) {
             // If we're reloading, the default locale in the config might have changed.
             GeyserLocale.finalizeDefaultLocale(this);
@@ -381,6 +385,10 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
 
         GeyserLogger logger = bootstrap.getGeyserLogger();
         GeyserConfig config = bootstrap.config();
+
+        JavaLevelChunkWithLightTranslator.setGlobalChunkTranslationCacheEnabled(
+            config.netease().chunkCache().enableTranslationCache());
+        ClientBlobCache.setGloballyEnabled(config.netease().chunkCache().enableBlobCache());
 
         ScoreboardUpdater.init();
 
