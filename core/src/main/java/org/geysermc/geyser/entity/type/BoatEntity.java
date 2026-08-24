@@ -26,12 +26,14 @@
 package org.geysermc.geyser.entity.type;
 
 import lombok.Getter;
+import org.cloudburstmc.math.GenericMath;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.packet.AnimatePacket;
 import org.cloudburstmc.protocol.bedrock.packet.MoveEntityAbsolutePacket;
+import org.cloudburstmc.protocol.bedrock.packet.MoveEntityDeltaPacket;
 import org.geysermc.geyser.entity.EntityDefinition;
 import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.entity.vehicle.BoatVehicleComponent;
@@ -41,6 +43,7 @@ import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.util.InteractionResult;
 import org.geysermc.geyser.util.InteractiveTag;
+import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.BooleanEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPaddleBoatPacket;
@@ -58,6 +61,10 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
     private static final String BUOYANCY_DATA = "{\"apply_gravity\":true,\"base_buoyancy\":1.0,\"big_wave_probability\":0.02999999932944775," +
             "\"big_wave_speed\":10.0,\"drag_down_on_buoyancy_removed\":0.0,\"liquid_blocks\":[\"minecraft:water\"," +
             "\"minecraft:flowing_water\"],\"simulate_waves\":false}";
+    private static final int LERP_STEPS = 3;
+    private static final float MAX_LERP_DISTANCE_SQUARED = 64.0f * 64.0f;
+    // This is the best value, I can't really found any value that doesn't look choppy and laggy or that is not too slow, blame bedrock.
+    private static final float ROWING_SPEED = 0.04f;
 
     private final BoatVehicleComponent vehicleComponent = new BoatVehicleComponent(this, 0);
 
@@ -75,13 +82,18 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
 
     private long leashHolderBedrockId = -1;
 
-    // This is the best value, I can't really found any value that doesn't look choppy and laggy or that is not too slow, blame bedrock.
-    private final float ROWING_SPEED = 0.04f;
+    private Vector3f lerpPosition;
+    private float lerpYaw, lerpHeadYaw;
+    private int lerpSteps;
 
     public BoatEntity(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, BoatVariant variant) {
         // Initial rotation is incorrect
         super(session, entityId, geyserId, uuid, definition, position.add(0d, definition.offset(), 0d), motion, yaw + 90, 0, yaw + 90);
         this.variant = variant;
+        this.lerpPosition = position;
+        this.lerpYaw = yaw + 90;
+        this.lerpHeadYaw = this.lerpYaw;
+        this.vehicleComponent.moveAbsolute(position.getX(), position.getY(), position.getZ());
 
         dirtyMetadata.put(EntityDataTypes.VARIANT, variant.ordinal());
 
@@ -101,6 +113,9 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
 
     @Override
     public void moveAbsoluteRaw(Vector3f position, float yaw, float pitch, float headYaw, boolean isOnGround, boolean teleported) {
+        this.lerpSteps = 0;
+        this.vehicleComponent.moveAbsolute(position.getX(), position.getY(), position.getZ());
+
         // We don't include the rotation (y) as it causes the boat to appear sideways
         setPosition(position.add(0d, this.definition.offset(), 0d));
         setYaw(yaw + 90);
@@ -130,18 +145,86 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
     }
 
     @Override
+    public void moveRelative(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
+        if (shouldSimulateMovement()) {
+            this.lerpSteps = 0;
+            return;
+        }
+
+        float bedrockYaw = yaw + 90;
+        boolean hasMovement = relX != 0 || relY != 0 || relZ != 0;
+        if (shouldLerp() && hasMovement
+                && position.distanceSquared(session.getPlayerEntity().position()) < MAX_LERP_DISTANCE_SQUARED) {
+            this.lerpPosition = lerpSteps == 0
+                    ? Vector3f.from(
+                            this.position.getX() + relX,
+                            this.position.getY() - definition.offset() + relY,
+                            this.position.getZ() + relZ)
+                    : this.lerpPosition.add(relX, relY, relZ);
+            this.lerpYaw = bedrockYaw;
+            this.lerpHeadYaw = bedrockYaw;
+            this.lerpSteps = LERP_STEPS;
+            setPitch(0);
+            setOnGround(isOnGround);
+            return;
+        }
+
+        if (hasMovement && this.lerpSteps > 0) {
+            Vector3f target = this.lerpPosition.add(relX, relY, relZ);
+            this.lerpSteps = 0;
+            moveAbsoluteRaw(target, yaw, 0, yaw, isOnGround, false);
+            return;
+        }
+
+        this.lerpSteps = 0;
+        super.moveRelative(relX, relY, relZ, bedrockYaw, 0, bedrockYaw, isOnGround);
+    }
+
+    @Override
+    public void moveAbsolute(Vector3f position, float yaw, float pitch, float headYaw, boolean isOnGround, boolean teleported) {
+        if (shouldLerp()) {
+            float deltaX = position.getX() - this.position.getX();
+            float deltaY = position.getY() - (this.position.getY() - definition.offset());
+            float deltaZ = position.getZ() - this.position.getZ();
+            float distanceSquared = deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ;
+
+            // Java clients interpolate nearby updates, but locally predicted vehicles must remain client authoritative.
+            if (distanceSquared < MAX_LERP_DISTANCE_SQUARED
+                    && position.distanceSquared(session.getPlayerEntity().position()) < MAX_LERP_DISTANCE_SQUARED) {
+                this.lerpPosition = position;
+                this.lerpYaw = yaw + 90;
+                this.lerpHeadYaw = this.lerpYaw;
+                this.lerpSteps = LERP_STEPS;
+                setPitch(0);
+                setOnGround(isOnGround);
+                return;
+            }
+        }
+
+        this.lerpSteps = 0;
+        super.moveAbsolute(position, yaw, pitch, headYaw, isOnGround, teleported);
+    }
+
+    @Override
     public void moveRelativeRaw(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
         super.moveRelativeRaw(relX, relY, relZ, yaw, 0, yaw, isOnGround);
     }
 
     @Override
     public void updatePositionAndRotation(double moveX, double moveY, double moveZ, float yaw, float pitch, boolean isOnGround) {
-        moveRelative(moveX, moveY, moveZ, yaw + 90, 0, 0, isOnGround);
+        moveRelative(moveX, moveY, moveZ, yaw, 0, yaw, isOnGround);
     }
 
     @Override
     public void updateRotation(float yaw, float pitch, boolean isOnGround) {
-        moveRelativeRaw(0, 0, 0, yaw + 90, 0, 0, isOnGround);
+        float bedrockYaw = yaw + 90;
+        if (this.lerpSteps > 0 && shouldLerp()) {
+            this.lerpYaw = bedrockYaw;
+            this.lerpHeadYaw = bedrockYaw;
+            setOnGround(isOnGround);
+            return;
+        }
+        moveRelativeRaw(0, 0, 0, bedrockYaw, 0, bedrockYaw, isOnGround);
     }
 
     public void setPaddlingLeft(BooleanEntityMetadata entityMetadata) {
@@ -197,6 +280,52 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
 
     @Override
     public void tick() {
+        if (this.lerpSteps > 0) {
+            float time = 1.0f / this.lerpSteps;
+            float lerpXTotal = GenericMath.lerp(this.position.getX(), this.lerpPosition.getX(), time);
+            float lerpYTotal = GenericMath.lerp(this.position.getY() - this.definition.offset(), this.lerpPosition.getY(), time) + this.definition.offset();
+            float lerpZTotal = GenericMath.lerp(this.position.getZ(), this.lerpPosition.getZ(), time);
+            float lerpYaw = this.yaw + MathUtils.wrapDegrees(this.lerpYaw - this.yaw) * time;
+            float lerpHeadYaw = this.headYaw + MathUtils.wrapDegrees(this.lerpHeadYaw - this.headYaw) * time;
+
+            MoveEntityDeltaPacket moveEntityPacket = new MoveEntityDeltaPacket();
+            moveEntityPacket.setRuntimeEntityId(geyserId);
+            moveEntityPacket.setX(lerpXTotal);
+            moveEntityPacket.setY(lerpYTotal);
+            moveEntityPacket.setZ(lerpZTotal);
+            moveEntityPacket.setYaw(lerpYaw);
+            moveEntityPacket.setPitch(this.pitch);
+            moveEntityPacket.setHeadYaw(lerpHeadYaw);
+            if (onGround) {
+                moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.ON_GROUND);
+            }
+            if (lerpXTotal != this.position.getX()) {
+                moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.HAS_X);
+            }
+            if (lerpYTotal != this.position.getY()) {
+                moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.HAS_Y);
+            }
+            if (lerpZTotal != this.position.getZ()) {
+                moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.HAS_Z);
+            }
+            if (lerpYaw != this.yaw) {
+                moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.HAS_YAW);
+            }
+            if (lerpHeadYaw != this.headYaw) {
+                moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.HAS_HEAD_YAW);
+            }
+            moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.TELEPORTING);
+
+            // Queue this and send it immediately later with the rest.
+            session.getQueuedImmediatelyPackets().add(moveEntityPacket);
+
+            this.position = Vector3f.from(lerpXTotal, lerpYTotal, lerpZTotal);
+            this.yaw = lerpYaw;
+            this.headYaw = lerpHeadYaw;
+            this.lerpSteps--;
+
+            vehicleComponent.moveAbsolute(lerpXTotal, lerpYTotal - definition.offset(), lerpZTotal);
+        }
         // Java sends simply "true" and "false" (is_paddling_left), Bedrock keeps sending packets as you're rowing
         if (session.getPlayerEntity().getVehicle() == this) {
             // For packet timing accuracy, we'll send the packets here, as that's what Java Edition 1.21.3 does.

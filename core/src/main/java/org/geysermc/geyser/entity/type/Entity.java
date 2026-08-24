@@ -374,6 +374,17 @@ public class Entity implements GeyserEntity {
         moveRelativeRaw(relX, relY, relZ, yaw, pitch, headYaw, isOnGround);
     }
 
+    /**
+     * Whether server movement for this entity should be interpolated.
+     */
+    public boolean shouldLerp() {
+        // Do not interpolate vehicles whose movement is already predicted locally or by the client.
+        if (this instanceof ClientVehicle clientVehicle) {
+            return !clientVehicle.shouldSimulateMovement() && !session.isInClientPredictedVehicle();
+        }
+        return true;
+    }
+
     public void moveRelativeRaw(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
         if (this instanceof ClientVehicle clientVehicle) {
             if (clientVehicle.shouldSimulateMovement()) {
@@ -429,6 +440,10 @@ public class Entity implements GeyserEntity {
     }
 
     public void moveAbsoluteRaw(Vector3f position, float yaw, float pitch, float headYaw, boolean isOnGround, boolean teleported) {
+        if (this instanceof ClientVehicle clientVehicle) {
+            clientVehicle.getVehicleComponent().moveAbsolute(position.getX(), position.getY(), position.getZ());
+        }
+
         setPosition(position);
         // Setters are intentional so it can be overridden in places like AbstractArrowEntity
         setYaw(yaw);
