@@ -386,8 +386,7 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         GeyserLogger logger = bootstrap.getGeyserLogger();
         GeyserConfig config = bootstrap.config();
 
-        JavaLevelChunkWithLightTranslator.setGlobalChunkTranslationCacheEnabled(
-            config.netease().chunkCache().enableTranslationCache());
+        JavaLevelChunkWithLightTranslator.configure(config.netease().chunkCache());
         ClientBlobCache.setGloballyEnabled(config.netease().chunkCache().enableBlobCache());
 
         ScoreboardUpdater.init();

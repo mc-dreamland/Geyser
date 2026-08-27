@@ -33,7 +33,7 @@ import org.geysermc.floodgate.pluginmessage.PluginMessageChannels;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.event.bedrock.SessionJoinEvent;
 import org.geysermc.geyser.api.network.AuthType;
-import org.geysermc.geyser.network.netease.NeteaseJsonPacket;
+import org.geysermc.geyser.network.netease.packets.NeteaseJsonPacket;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;

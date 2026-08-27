@@ -50,7 +50,7 @@ import org.geysermc.geyser.level.block.Blocks;
 import org.geysermc.geyser.level.block.property.Properties;
 import org.geysermc.geyser.level.block.type.BlockState;
 import org.geysermc.geyser.level.block.type.TrapDoorBlock;
-import org.geysermc.geyser.network.netease.NeteaseJsonPacket;
+import org.geysermc.geyser.network.netease.packets.NeteaseJsonPacket;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.tags.BlockTag;
 import org.geysermc.geyser.util.AttributeUtils;

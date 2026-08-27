@@ -49,6 +49,7 @@ import org.cloudburstmc.nbt.NbtUtils;
 import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 import org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateBlockPacket;
+import org.geysermc.geyser.configuration.GeyserConfig;
 import org.geysermc.geyser.entity.type.ItemFrameEntity;
 import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.level.block.type.Block;
@@ -94,34 +95,15 @@ import static org.geysermc.geyser.util.ChunkUtils.*;
 
 @Translator(packet = ClientboundLevelChunkWithLightPacket.class)
 public class JavaLevelChunkWithLightTranslator extends PacketTranslator<ClientboundLevelChunkWithLightPacket> {
-    private static final boolean USE_EXPERIMENTAL_CHUNK_TRANSLATION =
-            Boolean.parseBoolean(System.getProperty("Geyser.ExperimentalChunkTranslation", "true"));
+    private static volatile boolean useExperimentalChunkTranslation = true;
     private static volatile boolean globalChunkTranslationCacheEnabled = true;
-    private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_MAX_BYTES =
-            Long.getLong("Geyser.GlobalChunkTranslationCacheMaxBytes", 512L * 1024L * 1024L);
-    private static final int GLOBAL_CHUNK_TRANSLATION_CACHE_HOT_THRESHOLD =
-            Math.max(1, Integer.getInteger("Geyser.GlobalChunkTranslationCacheHotThreshold", 3));
-    private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_WINDOW_SECONDS =
-            Math.max(1L, Long.getLong("Geyser.GlobalChunkTranslationCacheFrequencyWindowSeconds", 60L));
-    private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_MAX_ENTRIES =
-            Math.max(1L, Long.getLong("Geyser.GlobalChunkTranslationCacheFrequencyMaxEntries", 100_000L));
-    private static final long GLOBAL_CHUNK_TRANSLATION_CACHE_EXPIRE_AFTER_ACCESS_MINUTES =
-            Math.max(1L, Long.getLong("Geyser.GlobalChunkTranslationCacheExpireAfterAccessMinutes", 10L));
-    private static final long CHUNK_TRANSLATION_SUMMARY_INTERVAL_SECONDS =
-            Math.max(1L, Long.getLong("Geyser.ChunkTranslationSummaryIntervalSeconds", 60L));
-    private static final long CHUNK_TRANSLATION_SUMMARY_INTERVAL_NANOS =
-            TimeUnit.SECONDS.toNanos(CHUNK_TRANSLATION_SUMMARY_INTERVAL_SECONDS);
-    private static final Cache<HashCode, CachedChunkPayload> GLOBAL_CHUNK_TRANSLATION_CACHE =
-            CacheBuilder.<HashCode, CachedChunkPayload>newBuilder()
-                    .maximumWeight(GLOBAL_CHUNK_TRANSLATION_CACHE_MAX_BYTES)
-                    .weigher((HashCode key, CachedChunkPayload value) -> value.weight())
-                    .expireAfterAccess(GLOBAL_CHUNK_TRANSLATION_CACHE_EXPIRE_AFTER_ACCESS_MINUTES, TimeUnit.MINUTES)
-                    .build();
-    private static final Cache<HashCode, AtomicLong> GLOBAL_CHUNK_TRANSLATION_FREQUENCY =
-            CacheBuilder.<HashCode, AtomicLong>newBuilder()
-                    .maximumSize(GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_MAX_ENTRIES)
-                    .expireAfterWrite(GLOBAL_CHUNK_TRANSLATION_CACHE_FREQUENCY_WINDOW_SECONDS, TimeUnit.SECONDS)
-                    .build();
+    private static volatile int globalChunkTranslationCacheMinPayloadBytes = 4 * 1024;
+    private static volatile int globalChunkTranslationCacheHotThreshold = 3;
+    private static volatile long chunkTranslationSummaryIntervalNanos = TimeUnit.SECONDS.toNanos(60L);
+    private static volatile Cache<HashCode, CachedChunkPayload> globalChunkTranslationCache =
+            createTranslationCache(512L * 1024L * 1024L, 10L);
+    private static volatile Cache<HashCode, AtomicLong> globalChunkTranslationFrequency =
+            createFrequencyCache(100_000L, 60L);
     private static final LongAdder GLOBAL_CHUNK_TRANSLATION_CACHE_HITS = new LongAdder();
     private static final LongAdder GLOBAL_CHUNK_TRANSLATION_CACHE_MISSES = new LongAdder();
     private static final LongAdder GLOBAL_CHUNK_TRANSLATION_CACHE_FAILURES = new LongAdder();
@@ -174,6 +156,45 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         return indexes;
     }
 
+    private static Cache<HashCode, CachedChunkPayload> createTranslationCache(long maximumBytes,
+                                                                               long expireAfterAccessMinutes) {
+        return CacheBuilder.<HashCode, CachedChunkPayload>newBuilder()
+                .maximumWeight(maximumBytes)
+                .weigher((HashCode key, CachedChunkPayload value) -> value.weight())
+                .expireAfterAccess(expireAfterAccessMinutes, TimeUnit.MINUTES)
+                .build();
+    }
+
+    private static Cache<HashCode, AtomicLong> createFrequencyCache(long maximumEntries, long windowSeconds) {
+        return CacheBuilder.<HashCode, AtomicLong>newBuilder()
+                .maximumSize(maximumEntries)
+                .expireAfterWrite(windowSeconds, TimeUnit.SECONDS)
+                .build();
+    }
+
+    public static synchronized void configure(GeyserConfig.ChunkCacheConfig config) {
+        useExperimentalChunkTranslation = config.useExperimentalChunkTranslation();
+        globalChunkTranslationCacheEnabled = config.enableTranslationCache();
+        globalChunkTranslationCacheMinPayloadBytes = Math.max(0, config.translationCacheMinPayloadBytes());
+        globalChunkTranslationCacheHotThreshold = Math.max(1, config.hotThreshold());
+        chunkTranslationSummaryIntervalNanos = TimeUnit.SECONDS.toNanos(
+                Math.max(1L, config.summaryIntervalSeconds()));
+
+        Cache<HashCode, CachedChunkPayload> oldTranslationCache = globalChunkTranslationCache;
+        Cache<HashCode, AtomicLong> oldFrequencyCache = globalChunkTranslationFrequency;
+        globalChunkTranslationCache = createTranslationCache(
+                Math.max(1L, config.translationCacheMaxBytes()),
+                Math.max(1L, config.expireAfterAccessMinutes()));
+        globalChunkTranslationFrequency = createFrequencyCache(
+                Math.max(1L, config.frequencyMaxEntries()),
+                Math.max(1L, config.frequencyWindowSeconds()));
+        oldTranslationCache.invalidateAll();
+        oldTranslationCache.cleanUp();
+        oldFrequencyCache.invalidateAll();
+        oldFrequencyCache.cleanUp();
+        SUMMARY_LAST_LOG_NANOS.set(System.nanoTime());
+    }
+
     public static boolean isGlobalChunkTranslationCacheEnabled() {
         return globalChunkTranslationCacheEnabled;
     }
@@ -186,24 +207,25 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
     }
 
     public static void clearGlobalChunkTranslationCache() {
-        GLOBAL_CHUNK_TRANSLATION_CACHE.invalidateAll();
-        GLOBAL_CHUNK_TRANSLATION_CACHE.cleanUp();
+        Cache<HashCode, CachedChunkPayload> cache = globalChunkTranslationCache;
+        cache.invalidateAll();
+        cache.cleanUp();
     }
 
     public static long globalChunkTranslationCacheSize() {
-        return GLOBAL_CHUNK_TRANSLATION_CACHE.size();
+        return globalChunkTranslationCache.size();
     }
 
     @Override
     public void translate(GeyserSession session, ClientboundLevelChunkWithLightPacket packet) {
-        // Geyser.ExperimentalChunkTranslation controls the implementation used for chunk translation.
+        // The configuration's use-experimental-chunk-translation option controls the implementation used here.
         // true (default) uses the experimental path, which currently:
         // - reuses a precomputed YZX -> XZY index table instead of recalculating it for every block;
         // - emits Bedrock-only block entity tags during the main block conversion loop when possible;
         // - writes simple palette data directly into BitArray words to avoid per-entry BitArray#set overhead;
         // - uses the optimized biome translator that collapses uniform biome sections to singleton storage.
         // false uses the old baseline path so the optimization can be rolled back quickly.
-        if (USE_EXPERIMENTAL_CHUNK_TRANSLATION) {
+        if (useExperimentalChunkTranslation) {
             translateExperimental(session, packet);
         } else {
             translateOld(session, packet);
@@ -296,7 +318,13 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
 
                 cacheKey = hasher.hash();
                 if (translationCacheEnabled) {
-                    cachedPayload = GLOBAL_CHUNK_TRANSLATION_CACHE.getIfPresent(cacheKey);
+                    cachedPayload = globalChunkTranslationCache.getIfPresent(cacheKey);
+                    if (cachedPayload != null && (cachedPayload.sectionCount == 0
+                            || cachedPayload.payload.length < globalChunkTranslationCacheMinPayloadBytes)) {
+                        // Remove entries created before empty/small chunk filtering was introduced.
+                        globalChunkTranslationCache.invalidate(cacheKey);
+                        cachedPayload = null;
+                    }
                     if (cachedPayload == null) {
                         GLOBAL_CHUNK_TRANSLATION_CACHE_MISSES.increment();
                     } else {
@@ -309,14 +337,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             }
         }
         long cacheKeyElapsedNanos = System.nanoTime() - cacheKeyStartNanos;
-        long requestCount = 0L;
-        boolean hot = false;
-        if (cacheKey != null) {
-            AtomicLong frequency = GLOBAL_CHUNK_TRANSLATION_FREQUENCY.asMap()
-                    .computeIfAbsent(cacheKey, ignored -> new AtomicLong());
-            requestCount = frequency.incrementAndGet();
-            hot = cachedPayload != null || requestCount >= GLOBAL_CHUNK_TRANSLATION_CACHE_HOT_THRESHOLD;
-        }
+        boolean hot = cachedPayload != null;
 
         if (cachedPayload != null) {
             ByteBuf cachedInput = Unpooled.wrappedBuffer(packet.getChunkData());
@@ -818,8 +839,22 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
             }
         }
 
+        boolean cacheableChunk = sectionCount > 0;
+        boolean translationCacheableChunk = cacheableChunk
+                && payload.length >= globalChunkTranslationCacheMinPayloadBytes;
+        if (cacheableChunk && cacheKey != null) {
+            AtomicLong frequency = globalChunkTranslationFrequency.asMap()
+                    .computeIfAbsent(cacheKey, ignored -> new AtomicLong());
+            long requestCount = frequency.incrementAndGet();
+            hot = requestCount >= globalChunkTranslationCacheHotThreshold;
+        } else if (cacheKey != null) {
+            // Empty chunks still need their biome payload sent, but never enter the hot-chunk cache.
+            globalChunkTranslationFrequency.invalidate(cacheKey);
+            globalChunkTranslationCache.invalidate(cacheKey);
+        }
+
         byte[][] blobPayloads = null;
-        if (hot && ClientBlobCache.isGloballyEnabled()) {
+        if (cacheableChunk && hot && ClientBlobCache.isGloballyEnabled()) {
             try {
                 blobPayloads = createBlobPayloads(session, sections, sectionCount, payload,
                         biomePayloadOffset, cachePayloadOffset, bedrockDimension.minY() >> 4);
@@ -838,9 +873,9 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 cachePayloadOffset);
 
         boolean cacheStored = false;
-        if (globalChunkTranslationCacheEnabled && cacheKey != null && hot) {
+        if (translationCacheableChunk && globalChunkTranslationCacheEnabled && cacheKey != null && hot) {
             CachedChunkPayload newCachedPayload = new CachedChunkPayload(payload, sectionCount, blobPayloads, cachePayloadOffset);
-            CachedChunkPayload existingCachedPayload = GLOBAL_CHUNK_TRANSLATION_CACHE.asMap().putIfAbsent(cacheKey, newCachedPayload);
+            CachedChunkPayload existingCachedPayload = globalChunkTranslationCache.asMap().putIfAbsent(cacheKey, newCachedPayload);
             if (existingCachedPayload == null) {
                 cacheStored = true;
             }
@@ -889,7 +924,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
 
         long now = System.nanoTime();
         long previousLog = SUMMARY_LAST_LOG_NANOS.get();
-        if (now - previousLog < CHUNK_TRANSLATION_SUMMARY_INTERVAL_NANOS
+        if (now - previousLog < chunkTranslationSummaryIntervalNanos
                 || !SUMMARY_LAST_LOG_NANOS.compareAndSet(previousLog, now)) {
             return;
         }
@@ -924,8 +959,8 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 + " totalAvgMs=" + averageMillis(totalNanosSum, chunks)
                 + " totalMaxMs=" + (maxTotalNanos / 1_000_000.0D)
                 + " payloadBytes=" + payloadBytesSum
-                + " cacheEntries=" + GLOBAL_CHUNK_TRANSLATION_CACHE.size()
-                + " frequencyEntries=" + GLOBAL_CHUNK_TRANSLATION_FREQUENCY.size()
+                + " cacheEntries=" + globalChunkTranslationCache.size()
+                + " frequencyEntries=" + globalChunkTranslationFrequency.size()
                 + " totalLookupHits=" + GLOBAL_CHUNK_TRANSLATION_CACHE_HITS.sum()
                 + " totalLookupMisses=" + GLOBAL_CHUNK_TRANSLATION_CACHE_MISSES.sum()
                 + " totalCacheFailures=" + GLOBAL_CHUNK_TRANSLATION_CACHE_FAILURES.sum());
