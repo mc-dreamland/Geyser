@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2026 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.network.netease;
+package org.geysermc.geyser.network.netease.serializers;
 
 import io.netty.buffer.ByteBuf;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
@@ -31,15 +31,16 @@ import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketSerializer;
 import org.cloudburstmc.protocol.bedrock.codec.v291.serializer.ContainerOpenSerializer_v291;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerOpenPacket;
 
-final class NeteaseContainerOpenSerializer {
+public final class NeteaseContainerOpenSerializer {
 
-    static final BedrockPacketSerializer<ContainerOpenPacket> V860 = new ContainerOpenSerializer_v291() {
+    public static final BedrockPacketSerializer<ContainerOpenPacket> V860 = new ContainerOpenSerializer_v291() {
         @Override
         public void serialize(ByteBuf buffer, BedrockCodecHelper helper, ContainerOpenPacket packet) {
             super.serialize(buffer, helper, packet);
             // V860
             // Netease Only start
             buffer.writeBoolean(false);
+            // Netease 依旧还需要三个字段，Str、Str、Bool，但可以不填，暂时用不到
             // Netease Only end
         }
 

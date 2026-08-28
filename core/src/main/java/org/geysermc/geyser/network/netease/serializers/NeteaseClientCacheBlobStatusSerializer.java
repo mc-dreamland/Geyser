@@ -23,7 +23,7 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.network.netease;
+package org.geysermc.geyser.network.netease.serializers;
 
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.longs.LongList;
@@ -39,9 +39,9 @@ import static org.cloudburstmc.protocol.common.util.Preconditions.checkArgument;
  * That list can legitimately exceed the generic codec list limit, so this serializer
  * applies the protocol-specific blob status limit instead.
  */
-final class NeteaseClientCacheBlobStatusSerializer extends ClientCacheBlobStatusSerializer_v361 {
-    static final NeteaseClientCacheBlobStatusSerializer INSTANCE = new NeteaseClientCacheBlobStatusSerializer();
-    static final int MAX_STATUS_ENTRIES = 4095;
+public final class NeteaseClientCacheBlobStatusSerializer extends ClientCacheBlobStatusSerializer_v361 {
+    public static final NeteaseClientCacheBlobStatusSerializer INSTANCE = new NeteaseClientCacheBlobStatusSerializer();
+    public static final int MAX_STATUS_ENTRIES = 4095;
 
     @Override
     public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, ClientCacheBlobStatusPacket packet) {

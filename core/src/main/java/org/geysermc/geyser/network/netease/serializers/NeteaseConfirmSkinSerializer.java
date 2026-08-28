@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2026 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.network.netease;
+package org.geysermc.geyser.network.netease.serializers;
 
 import io.netty.buffer.ByteBuf;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
@@ -36,8 +36,8 @@ import org.cloudburstmc.protocol.common.util.VarInts;
 
 import java.util.List;
 
-final class NeteaseConfirmSkinSerializer {
-    static final BedrockPacketSerializer<ConfirmSkinPacket> INSTANCE = new BedrockPacketSerializer<ConfirmSkinPacket>() {
+public final class NeteaseConfirmSkinSerializer {
+    public static final BedrockPacketSerializer<ConfirmSkinPacket> INSTANCE = new BedrockPacketSerializer<ConfirmSkinPacket>() {
         @Override
         public void serialize(ByteBuf buffer, BedrockCodecHelper helper, ConfirmSkinPacket packet) {
             List<PlayerListPacket.Entry> entries = packet.getEntries();

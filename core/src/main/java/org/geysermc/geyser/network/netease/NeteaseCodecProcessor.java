@@ -32,8 +32,19 @@ import org.cloudburstmc.protocol.bedrock.packet.BiomeDefinitionListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ClientCacheBlobStatusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ClientCacheStatusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerOpenPacket;
+import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ResourcePackClientResponsePacket;
 import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
+import org.geysermc.geyser.network.netease.packets.NeteaseJsonPacket;
+import org.geysermc.geyser.network.netease.packets.SetDimensionLocalTimePacket;
+import org.geysermc.geyser.network.netease.serializers.NeteaseBiomeDefinitionListSerializer;
+import org.geysermc.geyser.network.netease.serializers.NeteaseClientCacheBlobStatusSerializer;
+import org.geysermc.geyser.network.netease.serializers.NeteaseContainerOpenSerializer;
+import org.geysermc.geyser.network.netease.serializers.NeteaseJsonSerializer;
+import org.geysermc.geyser.network.netease.serializers.NeteasePlayerAuthInputSerializer;
+import org.geysermc.geyser.network.netease.serializers.NeteaseTextSerializer;
+import org.geysermc.geyser.network.netease.serializers.SetDimensionLocalTimeSerializer;
 
 /**
  * Registers NetEase-specific Bedrock packet serializers.

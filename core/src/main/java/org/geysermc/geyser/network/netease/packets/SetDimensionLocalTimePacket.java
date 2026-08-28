@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2026 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.network.netease;
+package org.geysermc.geyser.network.netease.packets;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -34,65 +34,25 @@ import org.cloudburstmc.protocol.bedrock.packet.BedrockPacketType;
 import org.cloudburstmc.protocol.common.PacketSignal;
 
 /**
- * Sends an entity property event to a NetEase client.
- *
- * <p>Packet ID {@code 0xCB} is used by the client as a generic NetEase event channel. The class
- * keeps its original name for source compatibility with the gravity implementation while also
- * carrying the jump-power and max-auto-step events.</p>
- *
- * <p>The codec accepts this packet in both directions. Serverbound payloads are intentionally
- * ignored.</p>
+ * Sets or clears the local time override for the dimension occupied by the local player.
+ * The NetEase protocol identifies the dimension implicitly; no dimension ID is encoded.
  */
 @Data
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
-public final class NeteaseJsonPacket implements BedrockPacket {
+public final class SetDimensionLocalTimePacket implements BedrockPacket {
 
-    public enum Event {
-        SET_ENTITY_GRAVITY("SET_ENTITY_GRAVITY", "gravity"),
-        SET_JUMP_POWER("SET_JUMP_POWER", "value"),
-        SET_MAX_AUTO_STEP("SET_MAX_AUTO_STEP", "value");
+    private boolean localTimeEnabled;
+    private int time;
+    private boolean tickDayTime = true;
 
-        private final String eventName;
-        private final String valueName;
-
-        Event(String eventName, String valueName) {
-            this.eventName = eventName;
-            this.valueName = valueName;
-        }
-
-        public String eventName() {
-            return eventName;
-        }
-
-        public String valueName() {
-            return valueName;
-        }
+    public SetDimensionLocalTimePacket() {
     }
 
-    private long entityId;
-    private double gravity;
-    private Event event = Event.SET_ENTITY_GRAVITY;
-
-    public NeteaseJsonPacket() {
-    }
-
-    public NeteaseJsonPacket(long entityId, double gravity) {
-        this(entityId, Event.SET_ENTITY_GRAVITY, gravity);
-    }
-
-    private NeteaseJsonPacket(long entityId, Event event, double value) {
-        this.entityId = entityId;
-        this.event = event;
-        this.gravity = value;
-    }
-
-    public static NeteaseJsonPacket setJumpPower(long entityId, double jumpPower) {
-        return new NeteaseJsonPacket(entityId, Event.SET_JUMP_POWER, jumpPower);
-    }
-
-    public static NeteaseJsonPacket setMaxAutoStep(long entityId, double maxAutoStep) {
-        return new NeteaseJsonPacket(entityId, Event.SET_MAX_AUTO_STEP, maxAutoStep);
+    public SetDimensionLocalTimePacket(boolean localTimeEnabled, int time, boolean tickDayTime) {
+        this.localTimeEnabled = localTimeEnabled;
+        this.time = time;
+        this.tickDayTime = tickDayTime;
     }
 
     @Override
@@ -107,9 +67,9 @@ public final class NeteaseJsonPacket implements BedrockPacket {
     }
 
     @Override
-    public NeteaseJsonPacket clone() {
+    public SetDimensionLocalTimePacket clone() {
         try {
-            return (NeteaseJsonPacket) super.clone();
+            return (SetDimensionLocalTimePacket) super.clone();
         } catch (CloneNotSupportedException e) {
             throw new AssertionError(e);
         }

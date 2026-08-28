@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2026 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.network.netease;
+package org.geysermc.geyser.network.netease.serializers;
 
 import io.netty.buffer.ByteBuf;
 import org.cloudburstmc.math.vector.Vector2f;
@@ -37,10 +37,14 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.LegacySetIte
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.cloudburstmc.protocol.common.util.VarInts;
 
+import java.math.BigInteger;
 import java.util.Set;
 
-final class NeteasePlayerAuthInputSerializer {
-    static final BedrockPacketSerializer<PlayerAuthInputPacket> V819_860 = new PlayerAuthInputSerializer_v662() {
+public final class NeteasePlayerAuthInputSerializer {
+    private static final int NETEASE_INPUT_BITS = 67; // TODO 每次协议更新记得检查枚举数量是否变化
+    private static final PlayerAuthInputData[] NETEASE_WIRE_TO_INPUT = createWireToInputMapping();
+
+    public static final BedrockPacketSerializer<PlayerAuthInputPacket> V819_860 = new PlayerAuthInputSerializer_v662() {
         @Override
         public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
             //v388
@@ -51,27 +55,15 @@ final class NeteasePlayerAuthInputSerializer {
             packet.setMotion(Vector2f.from(buffer.readFloatLE(), buffer.readFloatLE()));
             float z = buffer.readFloatLE();
             packet.setRotation(Vector3f.from(x, y, z));
-            long flagValue = VarInts.readUnsignedLong(buffer);
+            BigInteger flagValue = VarInts.readUnsignedBigVarInt(buffer, NETEASE_INPUT_BITS);
 
             Set<PlayerAuthInputData> flags = packet.getInputData();
-//            for (PlayerAuthInputData flag : PlayerAuthInputData.values()) {
-//                if ((flagValue & (1L << flag.ordinal())) != 0) {
-//                    flags.add(flag);
-//                }
-//            }
-            // copy from nukkit-mot :>
-            int inClientPredictedInVehicleOrdinal = PlayerAuthInputData.IN_CLIENT_PREDICTED_IN_VEHICLE.ordinal();
-            for (int i = 0; i < PlayerAuthInputData.values().length; i++) {
-                int offset = 0;
-                if (i >= inClientPredictedInVehicleOrdinal) {
-                    offset = -2;
-                }
-                if ((flagValue & (1L << i)) != 0) {
-                    PlayerAuthInputData value = PlayerAuthInputData.values()[i + offset];
-//                    if (value != PlayerAuthInputData.VERTICAL_COLLISION) {
-//                        System.out.println("v819 offset-2 -> " + value + " | base -> " + PlayerAuthInputData.values()[i] + " | offset-1 -> " +  PlayerAuthInputData.values()[i - 1]);
-//                    }
-                    flags.add(value);
+            flags.clear();
+            int wireBitsToCheck = Math.min(flagValue.bitLength(), NETEASE_WIRE_TO_INPUT.length);
+            for (int wireBit = 0; wireBit < wireBitsToCheck; wireBit++) {
+                PlayerAuthInputData input = NETEASE_WIRE_TO_INPUT[wireBit];
+                if (input != null && flagValue.testBit(wireBit)) {
+                    flags.add(input);
                 }
             }
             packet.setInputMode(INPUT_MODES[VarInts.readUnsignedInt(buffer)]);
@@ -154,6 +146,22 @@ final class NeteasePlayerAuthInputSerializer {
             return itemTransaction;
         }
     };
+
+    private static PlayerAuthInputData[] createWireToInputMapping() {
+        PlayerAuthInputData[] mapping = new PlayerAuthInputData[NETEASE_INPUT_BITS];
+        int stopFlyingOrdinal = PlayerAuthInputData.STOP_FLYING.ordinal();
+
+        // NetEase reserves wire bits 44 and 45, shifting later vanilla flags by two bits.
+        for (PlayerAuthInputData input : PlayerAuthInputData.values()) {
+            int ordinal = input.ordinal();
+            int wireBit = ordinal <= stopFlyingOrdinal ? ordinal : ordinal + 2;
+            if (wireBit >= mapping.length) {
+                throw new IllegalStateException("Unsupported PlayerAuthInputData ordinal: " + ordinal);
+            }
+            mapping[wireBit] = input;
+        }
+        return mapping;
+    }
 
     private NeteasePlayerAuthInputSerializer() {
     }

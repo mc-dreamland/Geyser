@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2026 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,34 +23,42 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.network.netease;
+package org.geysermc.geyser.network.netease.serializers;
 
-import com.google.gson.JsonObject;
 import io.netty.buffer.ByteBuf;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketSerializer;
+import org.cloudburstmc.protocol.common.util.VarInts;
+import org.geysermc.geyser.network.netease.packets.SetDimensionLocalTimePacket;
 
-final class NeteaseJsonSerializer implements BedrockPacketSerializer<NeteaseJsonPacket> {
+public final class SetDimensionLocalTimeSerializer implements BedrockPacketSerializer<SetDimensionLocalTimePacket> {
 
-    static final NeteaseJsonSerializer INSTANCE = new NeteaseJsonSerializer();
+    public static final SetDimensionLocalTimeSerializer INSTANCE = new SetDimensionLocalTimeSerializer();
 
     @Override
-    public void serialize(ByteBuf buffer, BedrockCodecHelper helper, NeteaseJsonPacket packet) {
-        JsonObject payload = new JsonObject();
-        payload.addProperty("entityId", packet.getEntityId());
-        payload.addProperty("eventName", packet.getEvent().eventName());
-        payload.addProperty(packet.getEvent().valueName(), packet.getGravity());
-        helper.writeString(buffer, payload.toString());
+    public void serialize(ByteBuf buffer, BedrockCodecHelper helper, SetDimensionLocalTimePacket packet) {
+        if (!packet.isLocalTimeEnabled()) {
+            return;
+        }
+
+        VarInts.writeInt(buffer, packet.getTime());
+        buffer.writeBoolean(packet.isTickDayTime());
     }
 
     @Override
-    public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, NeteaseJsonPacket packet) {
-        // 0xCB is a bidirectional NetEase event channel. Geyser does not currently consume its
-        // serverbound events, and decoding them as SET_ENTITY_GRAVITY would reject unrelated
-        // client events. Consume the opaque payload so it can be safely ignored by the handler.
-        buffer.skipBytes(buffer.readableBytes());
+    public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, SetDimensionLocalTimePacket packet) {
+        if (!buffer.isReadable()) {
+            packet.setLocalTimeEnabled(false);
+            packet.setTime(0);
+            packet.setTickDayTime(true);
+            return;
+        }
+
+        packet.setLocalTimeEnabled(true);
+        packet.setTime(VarInts.readInt(buffer));
+        packet.setTickDayTime(buffer.readBoolean());
     }
 
-    private NeteaseJsonSerializer() {
+    private SetDimensionLocalTimeSerializer() {
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2026 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.geyser.network.netease;
+package org.geysermc.geyser.network.netease.serializers;
 
 import io.netty.buffer.ByteBuf;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
@@ -41,9 +41,9 @@ import org.cloudburstmc.protocol.common.util.index.IndexedList;
 import java.awt.Color;
 import java.util.List;
 
-final class NeteaseBiomeDefinitionListSerializer {
+public final class NeteaseBiomeDefinitionListSerializer {
 
-    static final BedrockPacketSerializer<BiomeDefinitionListPacket> V860 = new BiomeDefinitionListSerializer_v859() {
+    public static final BedrockPacketSerializer<BiomeDefinitionListPacket> V860 = new BiomeDefinitionListSerializer_v859() {
         @Override
         protected void writeDefinition(ByteBuf buffer, BedrockCodecHelper helper, BiomeDefinitionData definition, SequencedHashSet<String> strings) {
             this.writeDefinitionId(buffer, helper, definition, strings);
