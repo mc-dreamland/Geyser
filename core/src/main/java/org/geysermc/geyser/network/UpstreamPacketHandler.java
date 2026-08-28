@@ -52,7 +52,6 @@ import org.cloudburstmc.protocol.bedrock.packet.ResourcePacksInfoPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetTitlePacket;
 import org.cloudburstmc.protocol.common.PacketSignal;
 import org.cloudburstmc.protocol.common.util.Zlib;
-import org.geysermc.api.util.BedrockPlatform;
 import org.geysermc.geyser.Constants;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.event.bedrock.SessionInitializeEvent;
@@ -97,8 +96,6 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     private boolean finishedResourcePackSending = false;
     private final Deque<String> packsToSend = new ArrayDeque<>();
     private final CompressionStrategy compressionStrategy;
-    // Avoid overloading consoles when downloading larger resource packs
-    private static final int PACKET_SEND_DELAY = 4 * 50;
     private final Queue<ResourcePackChunkRequestPacket> chunkRequestQueue = new ConcurrentLinkedQueue<>();
     private boolean currentlySendingChunks = false;
     private SessionLoadResourcePacksEventImpl resourcePackLoadEvent;
@@ -418,12 +415,8 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         // Resolve some console pack downloading issues.
         // See <https://github.com/PowerNukkitX/PowerNukkitX/pull/1997> for reference
         chunkRequestQueue.add(packet);
-        if (shouldPaceResourcePackChunks()) {
-            if (!currentlySendingChunks) {
-                currentlySendingChunks = true;
-                processNextChunk();
-            }
-        } else {
+        if (!currentlySendingChunks) {
+            currentlySendingChunks = true;
             processNextChunk();
         }
         return PacketSignal.HANDLED;
@@ -490,16 +483,10 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         data.setData(Unpooled.wrappedBuffer(packData));
 
-        boolean pacedChunkSend = shouldPaceResourcePackChunks();
-        int chunkSendDelay = isConsole() ? PACKET_SEND_DELAY : neteaseResourcePackChunkSendDelay();
-        if (pacedChunkSend) {
-            // Also flushes packets
-            // Avoids bursting slower / delayed clients
-            session.sendUpstreamPacketImmediately(data);
-            session.scheduleInEventLoop(this::processNextChunk, chunkSendDelay, TimeUnit.MILLISECONDS);
-        } else {
-            session.sendUpstreamPacket(data);
-        }
+        // Also flushes packets
+        // Avoids bursting slower / delayed clients
+        session.sendUpstreamPacketImmediately(data);
+        session.scheduleInEventLoop(this::processNextChunk, neteaseResourcePackChunkSendDelay(), TimeUnit.MILLISECONDS);
 
         // Check if it is the last chunk and send next pack in queue when available.
         if (remainingSize <= GeyserResourcePack.CHUNK_SIZE && !packsToSend.isEmpty()) {
@@ -577,15 +564,6 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     }
 
     private static long totalSentPackBytes = 0L;
-
-    private boolean isConsole() {
-        BedrockPlatform platform = session.platform();
-        return platform == BedrockPlatform.PS4 || platform == BedrockPlatform.XBOX || platform == BedrockPlatform.NX;
-    }
-
-    private boolean shouldPaceResourcePackChunks() {
-        return isConsole() || (GameProtocol.isV860(session) && neteaseResourcePackChunkSendDelay() > 0);
-    }
 
     private int neteaseResourcePackChunkSendDelay() {
         return geyser.config().netease().resourcePackChunkSendDelayMs();

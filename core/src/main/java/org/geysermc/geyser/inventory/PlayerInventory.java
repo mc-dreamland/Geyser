@@ -116,13 +116,17 @@ public class PlayerInventory extends Inventory {
     public void setItem(int slot, @NonNull GeyserItemStack newItem, GeyserSession session) {
         PlayerEntity entity = session.getPlayerEntity();
         if (slot == getOffsetForHotbar(heldItemSlot)
-            && entity.getFlag(EntityFlag.USING_ITEM)
             && newItem.is(Items.CROSSBOW)) {
             List<ItemStack> chargedProjectiles = newItem.getComponent(DataComponentTypes.CHARGED_PROJECTILES);
-            if (chargedProjectiles != null && !chargedProjectiles.isEmpty()) {
+            boolean neteaseAutomaticCompletion = chargedProjectiles != null && !chargedProjectiles.isEmpty()
+                && session.completeNeteaseCrossbowUse(slot);
+            if ((entity.getFlag(EntityFlag.USING_ITEM) || neteaseAutomaticCompletion)
+                && chargedProjectiles != null && !chargedProjectiles.isEmpty()) {
                 entity.setFlag(EntityFlag.USING_ITEM, false);
                 entity.updateBedrockMetadata();
-                session.releaseItem();
+                if (!neteaseAutomaticCompletion) {
+                    session.releaseItem();
+                }
                 session.setLastChargedProjectilesTime(System.currentTimeMillis());
             }
         }

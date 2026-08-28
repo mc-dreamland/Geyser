@@ -81,6 +81,7 @@ import org.cloudburstmc.protocol.bedrock.data.command.SoftEnumUpdateType;
 import org.cloudburstmc.protocol.bedrock.data.definitions.DimensionDefinition;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemUseType;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.CraftingRecipeData;
 import org.cloudburstmc.protocol.bedrock.packet.AvailableEntityIdentifiersPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
@@ -88,6 +89,7 @@ import org.cloudburstmc.protocol.bedrock.packet.BedrockPacketType;
 import org.cloudburstmc.protocol.bedrock.packet.BiomeDefinitionListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.CameraPresetsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ChunkRadiusUpdatedPacket;
+import org.cloudburstmc.protocol.bedrock.packet.CompletedUsingItemPacket;
 import org.cloudburstmc.protocol.bedrock.packet.CreativeContentPacket;
 import org.cloudburstmc.protocol.bedrock.packet.DimensionDataPacket;
 import org.cloudburstmc.protocol.bedrock.packet.EmoteListPacket;
@@ -153,8 +155,8 @@ import org.geysermc.geyser.inventory.GeyserItemStack;
 import org.geysermc.geyser.inventory.Inventory;
 import org.geysermc.geyser.inventory.InventoryHolder;
 import org.geysermc.geyser.inventory.LecternContainer;
-import org.geysermc.geyser.inventory.GeyserItemStack;
 import org.geysermc.geyser.inventory.PlayerInventory;
+import org.geysermc.geyser.inventory.item.BedrockEnchantment;
 import org.geysermc.geyser.inventory.recipe.GeyserRecipe;
 import org.geysermc.geyser.inventory.recipe.GeyserSmithingRecipe;
 import org.geysermc.geyser.inventory.recipe.GeyserStonecutterData;
@@ -204,6 +206,7 @@ import org.geysermc.geyser.util.ChunkUtils;
 import org.geysermc.geyser.util.CooldownUtils;
 import org.geysermc.geyser.util.EntityUtils;
 import org.geysermc.geyser.util.InventoryUtils;
+import org.geysermc.geyser.util.ItemUtils;
 import org.geysermc.geyser.util.LoginEncryptionUtils;
 import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.mcprotocollib.auth.GameProfile;
@@ -223,6 +226,8 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.HandPreference;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerAction;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.ResolvableProfile;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.setting.ChatVisibility;
 import org.geysermc.mcprotocollib.protocol.data.game.setting.ParticleStatus;
 import org.geysermc.mcprotocollib.protocol.data.game.setting.SkinPart;
@@ -619,6 +624,16 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      */
     @Setter
     private long lastChargedProjectilesTime;
+
+    /**
+     * NetEase v860 does not send an item-release transaction when a held crossbow reaches full charge.
+     * Track the synthetic Java release separately so repeated Bedrock ITEM_USE packets cannot restart the charge.
+     */
+    private ScheduledFuture<?> neteaseCrossbowReleaseFuture;
+    private ScheduledFuture<?> neteaseCrossbowCompletionTimeoutFuture;
+    private boolean awaitingNeteaseCrossbowCompletion;
+    private int neteaseCrossbowSlot = -1;
+    private int neteaseCrossbowNetId;
 
     /**
      * Store the last time the player interacted. Used to fix a right-click spam bug.
@@ -1509,6 +1524,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
             return;
         }
 
+        cancelNeteaseCrossbowUse();
+
         bookEditCache.checkForSend();
 
         GeyserItemStack oldItem = playerInventoryHolder.inventory().getItemInHand();
@@ -1541,6 +1558,20 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * Convenience method to reduce amount of duplicate code. Sends ServerboundUseItemPacket.
      */
     public void useItem(Hand hand, boolean useTouchRotation) {
+        GeyserItemStack heldItem = hand == Hand.MAIN_HAND
+            ? playerInventoryHolder.inventory().getItemInHand()
+            : playerInventoryHolder.inventory().getOffhand();
+        boolean emulateNeteaseCrossbowCompletion = hand == Hand.MAIN_HAND
+            && GameProtocol.isV860(this)
+            && heldItem.is(Items.CROSSBOW)
+            && !hasChargedProjectiles(heldItem);
+
+        if (emulateNeteaseCrossbowCompletion && isSameNeteaseCrossbowUse(heldItem)) {
+            // The NetEase client repeats ITEM_USE while the button remains held. Forwarding it would restart
+            // Java's use timer, so keep only the first request until this charge attempt completes or is cancelled.
+            return;
+        }
+
         if (playerEntity.getFlag(EntityFlag.USING_ITEM)) {
             return;
         }
@@ -1565,13 +1596,112 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         }
 
         sendDownstreamGamePacket(new ServerboundUseItemPacket(hand, worldCache.nextPredictionSequence(), yaw, pitch));
+
+        if (emulateNeteaseCrossbowCompletion) {
+            beginNeteaseCrossbowUse(heldItem);
+        }
     }
 
     public void releaseItem() {
+        cancelNeteaseCrossbowUse();
+        sendReleaseItemPacket();
+    }
+
+    private void sendReleaseItemPacket() {
         // Followed to the Minecraft Protocol specification outlined at wiki.vg
         ServerboundPlayerActionPacket releaseItemPacket = new ServerboundPlayerActionPacket(PlayerAction.RELEASE_USE_ITEM, Vector3i.ZERO,
             Direction.DOWN, 0);
         sendDownstreamGamePacket(releaseItemPacket);
+    }
+
+    private void beginNeteaseCrossbowUse(GeyserItemStack crossbow) {
+        cancelNeteaseCrossbowUse();
+
+        neteaseCrossbowSlot = playerInventoryHolder.inventory().getHeldItemSlot();
+        neteaseCrossbowNetId = crossbow.getNetId();
+
+        int quickChargeLevel = Math.min(3, Math.max(0,
+            ItemUtils.getEnchantmentLevel(this, crossbow.getAllComponents(), BedrockEnchantment.QUICK_CHARGE)));
+        int chargeTicks = 25 - (5 * quickChargeLevel);
+
+        // Add one tick so Java has observed at least the full charge duration across a tick boundary.
+        long delay = (long) (chargeTicks + 1) * nanosecondsPerTick;
+        neteaseCrossbowReleaseFuture = scheduleInEventLoop(() -> {
+            neteaseCrossbowReleaseFuture = null;
+
+            GeyserItemStack currentItem = playerInventoryHolder.inventory().getItemInHand();
+            if (!matchesNeteaseCrossbowUse(currentItem) || hasChargedProjectiles(currentItem)) {
+                cancelNeteaseCrossbowUse();
+                return;
+            }
+
+            awaitingNeteaseCrossbowCompletion = true;
+            sendReleaseItemPacket();
+
+            // Do not keep suppressing ITEM_USE forever if the Java server rejects or never answers this release.
+            neteaseCrossbowCompletionTimeoutFuture = scheduleInEventLoop(() -> {
+                if (awaitingNeteaseCrossbowCompletion) {
+                    clearNeteaseCrossbowUseState();
+                }
+            }, 5, TimeUnit.SECONDS);
+        }, delay, TimeUnit.NANOSECONDS);
+    }
+
+    private boolean isSameNeteaseCrossbowUse(GeyserItemStack item) {
+        return (neteaseCrossbowReleaseFuture != null || awaitingNeteaseCrossbowCompletion)
+            && matchesNeteaseCrossbowUse(item);
+    }
+
+    private boolean matchesNeteaseCrossbowUse(GeyserItemStack item) {
+        return neteaseCrossbowSlot >= 0
+            && playerInventoryHolder.inventory().getHeldItemSlot() == neteaseCrossbowSlot
+            && item.is(Items.CROSSBOW)
+            && item.getNetId() == neteaseCrossbowNetId;
+    }
+
+    private static boolean hasChargedProjectiles(GeyserItemStack crossbow) {
+        List<ItemStack> projectiles = crossbow.getComponent(DataComponentTypes.CHARGED_PROJECTILES);
+        return projectiles != null && !projectiles.isEmpty();
+    }
+
+    /**
+     * Called when Java confirms that the crossbow used by the synthetic release is now charged.
+     */
+    public boolean completeNeteaseCrossbowUse(int slot) {
+        if (!awaitingNeteaseCrossbowCompletion || slot != playerInventoryHolder.inventory().getOffsetForHotbar(neteaseCrossbowSlot)) {
+            return false;
+        }
+
+        clearNeteaseCrossbowUseState();
+
+        // Queue this after the inventory updater so the client sees the charged item before the completion signal.
+        scheduleInEventLoop(() -> {
+            CompletedUsingItemPacket completedPacket = new CompletedUsingItemPacket();
+            completedPacket.setItemId(getItemMappings().getStoredItems().crossbow().getBedrockDefinition().getRuntimeId());
+            completedPacket.setType(ItemUseType.SHOOT);
+            sendUpstreamPacket(completedPacket);
+            getGeyser().getLogger().info("[CrossbowDebug] Sent NetEase CompletedUsingItemPacket for charged crossbow: player="
+                + bedrockUsername());
+        }, 0, TimeUnit.NANOSECONDS);
+        return true;
+    }
+
+    public void cancelNeteaseCrossbowUse() {
+        if (neteaseCrossbowReleaseFuture != null) {
+            neteaseCrossbowReleaseFuture.cancel(false);
+        }
+        clearNeteaseCrossbowUseState();
+    }
+
+    private void clearNeteaseCrossbowUseState() {
+        if (neteaseCrossbowCompletionTimeoutFuture != null) {
+            neteaseCrossbowCompletionTimeoutFuture.cancel(false);
+        }
+        neteaseCrossbowReleaseFuture = null;
+        neteaseCrossbowCompletionTimeoutFuture = null;
+        awaitingNeteaseCrossbowCompletion = false;
+        neteaseCrossbowSlot = -1;
+        neteaseCrossbowNetId = 0;
     }
 
     /**

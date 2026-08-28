@@ -605,8 +605,8 @@ public interface GeyserConfig {
 
         @Comment("""
                 网易客户端资源包分片发送间隔，单位为毫秒。
-                设置为 0 或负数时不启用。若有玩家下载资源包时出现长时间卡住，建议将该值调整为 20 左右。""")
-        @DefaultNumeric(0)
+                设置为 0 或负数时不启用。若有玩家下载资源包时出现长时间卡住，建议将该值调整为 200。""")
+        @DefaultNumeric(200)
         int resourcePackChunkSendDelayMs();
 
         @Comment("""
