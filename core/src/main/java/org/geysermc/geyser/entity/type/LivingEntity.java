@@ -409,11 +409,9 @@ public class LivingEntity extends Entity implements Tickable {
 
     @Override
     public void moveRelative(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
-        if (this instanceof ClientVehicle clientVehicle) {
-            if (clientVehicle.shouldSimulateMovement()) {
-                return;
-            }
-            clientVehicle.getVehicleComponent().moveRelative(relX, relY, relZ);
+        if (this instanceof ClientVehicle clientVehicle && clientVehicle.shouldSimulateMovement()) {
+            this.lerpSteps = 0;
+            return;
         }
 
         if (shouldLerp() && (relX != 0 || relY != 0 || relZ != 0) && position.distanceSquared(session.getPlayerEntity().position()) < 4096) {
@@ -431,14 +429,18 @@ public class LivingEntity extends Entity implements Tickable {
                     ? this.position.add(relX, relY, relZ)
                     : this.lerpPosition.add(relX, relY, relZ);
             this.lerpSteps = 3;
+        } else if (this.lerpSteps > 0 && (relX != 0 || relY != 0 || relZ != 0)) {
+            Vector3f target = this.lerpPosition.add(relX, relY, relZ);
+            this.lerpSteps = 0;
+            super.moveAbsolute(target, yaw, pitch, headYaw, isOnGround, false);
         } else {
+            this.lerpSteps = 0;
             super.moveRelative(relX, relY, relZ, yaw, pitch, headYaw, isOnGround);
         }
     }
 
     @Override
     public void moveAbsolute(Vector3f position, float yaw, float pitch, float headYaw, boolean isOnGround, boolean teleported) {
-
         // It's vanilla behaviour to lerp if the position is within 64 blocks, however we also check if the position is close enough to the player
         // position to see if it can actually affect anything to save network.
         if (shouldLerp() && position.distanceSquared(this.position) < 4096 && position.distanceSquared(session.getPlayerEntity().position()) < 4096) {
@@ -451,16 +453,9 @@ public class LivingEntity extends Entity implements Tickable {
             this.lerpPosition = position;
             this.lerpSteps = 3;
         } else {
+            this.lerpSteps = 0;
             super.moveAbsolute(position, yaw, pitch, headYaw, isOnGround, teleported);
         }
-    }
-
-    public boolean shouldLerp() {
-        // Do not interpolate vehicles whose movement is already predicted locally or by the client.
-        if (this instanceof ClientVehicle clientVehicle) {
-            return !clientVehicle.shouldSimulateMovement() && !session.isInClientPredictedVehicle();
-        }
-        return true;
     }
 
     @Override
@@ -509,6 +504,10 @@ public class LivingEntity extends Entity implements Tickable {
 
             this.position = Vector3f.from(lerpXTotal, lerpYTotal, lerpZTotal);
             this.lerpSteps--;
+
+            if (this instanceof ClientVehicle vehicle) {
+                vehicle.getVehicleComponent().moveAbsolute(lerpXTotal, lerpYTotal, lerpZTotal);
+            }
         }
     }
 

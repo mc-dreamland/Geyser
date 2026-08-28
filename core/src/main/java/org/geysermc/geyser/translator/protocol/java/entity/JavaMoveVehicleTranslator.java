@@ -26,7 +26,6 @@
 package org.geysermc.geyser.translator.protocol.java.entity;
 
 import org.geysermc.geyser.entity.type.Entity;
-import org.geysermc.geyser.entity.vehicle.ClientVehicle;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
@@ -39,10 +38,6 @@ public class JavaMoveVehicleTranslator extends PacketTranslator<ClientboundMoveV
     public void translate(GeyserSession session, ClientboundMoveVehiclePacket packet) {
         Entity entity = session.getPlayerEntity().getVehicle();
         if (entity == null) return;
-
-        if (entity instanceof ClientVehicle clientVehicle) {
-            clientVehicle.getVehicleComponent().moveAbsolute(packet.getPosition());
-        }
 
         entity.moveAbsolute(packet.getPosition().toFloat(), packet.getYRot(), packet.getXRot(), false, true);
         // TODO send serverbound move vehicle packet

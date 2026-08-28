@@ -48,12 +48,9 @@ public class JavaEntityPositionSyncTranslator extends PacketTranslator<Clientbou
         // interpolate a sync farther than 64 blocks; Bedrock needs teleport semantics there too
         boolean teleported = entity.getPosition().distanceSquared(target) > 4096;
 
-        if (entity instanceof ClientVehicle clientVehicle) {
+        if (entity instanceof ClientVehicle clientVehicle && clientVehicle.shouldSimulateMovement()) {
             // Ignore if player is controlling
-            if (clientVehicle.shouldSimulateMovement()) {
-                return;
-            }
-            clientVehicle.getVehicleComponent().moveAbsolute(pos.getX(), pos.getY(), pos.getZ());
+            return;
         }
 
         // As in Entity#teleport, the head yaw follows the yaw
