@@ -70,15 +70,19 @@ public class BlockCollision {
             boundingBox = boundingBox.clone();
             boundingBox.translate(x, y, z);
 
-            // The ULP should give an upper bound on the floating point error
+            // The horizontal expansion adds COLLISION_TOLERANCE to each player face. Include that
+            // artificial distance in the push limit so a real overlap up to the tolerance can
+            // still be separated.
             double xULP = Math.ulp((float) Math.max(Math.abs(playerCollision.getMiddleX()) + playerCollision.getSizeX() / 2.0, Math.abs(x) + 1));
             double zULP = Math.ulp((float) Math.max(Math.abs(playerCollision.getMiddleZ()) + playerCollision.getSizeZ() / 2.0, Math.abs(z) + 1));
-            double xPushAwayTolerance = Math.max(pushAwayTolerance, xULP), zPushAwayTolerance = Math.max(pushAwayTolerance, zULP);
+            double xPushAwayTolerance = Math.max(pushAwayTolerance, xULP);
+            double zPushAwayTolerance = Math.max(pushAwayTolerance, zULP);
+            double horizontalExpansion = collisionExpansion / 2.0;
 
-            boundingBox.pushOutOfBoundingBox(playerCollision, Direction.NORTH, zPushAwayTolerance);
-            boundingBox.pushOutOfBoundingBox(playerCollision, Direction.SOUTH, zPushAwayTolerance);
-            boundingBox.pushOutOfBoundingBox(playerCollision, Direction.EAST, xPushAwayTolerance);
-            boundingBox.pushOutOfBoundingBox(playerCollision, Direction.WEST, xPushAwayTolerance);
+            boundingBox.pushOutOfBoundingBox(playerCollision, Direction.NORTH, zPushAwayTolerance + horizontalExpansion);
+            boundingBox.pushOutOfBoundingBox(playerCollision, Direction.SOUTH, zPushAwayTolerance + horizontalExpansion);
+            boundingBox.pushOutOfBoundingBox(playerCollision, Direction.EAST, xPushAwayTolerance + horizontalExpansion);
+            boundingBox.pushOutOfBoundingBox(playerCollision, Direction.WEST, xPushAwayTolerance + horizontalExpansion);
             boundingBox.pushOutOfBoundingBox(playerCollision, Direction.UP, pushAwayTolerance);
             boundingBox.pushOutOfBoundingBox(playerCollision, Direction.DOWN, pushAwayTolerance);
 
