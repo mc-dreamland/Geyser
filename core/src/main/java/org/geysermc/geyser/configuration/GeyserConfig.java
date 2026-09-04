@@ -587,7 +587,15 @@ public interface GeyserConfig {
 
     @ConfigSerializable
     interface NeteaseConfig {
-        @Comment("Whether to require Netease online mode authentication.")
+        @Comment("""
+                是否仅使用网易证书链进行基岩登录验证。
+                开启后不会请求微软 discovery、OpenID 或 JWKS 服务，只接受通过网易 TokenChain 校验的三段证书链，
+                并在本地完成 ClientData 验签和连接加密。TokenPayload 登录在此模式下会被拒绝。
+                关闭后恢复 Cloudburst 的微软验证流程，并继续执行下方的网易在线模式检查。修改后需要重启。""")
+        @DefaultBoolean(true)
+        boolean neteaseOnlyAuthentication();
+
+        @Comment("是否要求网易登录证书的环境标识为 obt。关闭后仍会验证网易 TokenChain，但不限制 profile.env。")
         @DefaultBoolean(false)
         boolean onlineMode();
 
@@ -598,10 +606,6 @@ public interface GeyserConfig {
         @Comment("Whether custom Bedrock geometry should be accepted.")
         @DefaultBoolean(false)
         boolean allowCustomGeometry();
-
-        @Comment("Whether local skins should be used when the skin service has no skin for a player.")
-        @DefaultBoolean(false)
-        boolean enableLocalSkins();
 
         @Comment("""
                 网易客户端资源包分片发送间隔，单位为毫秒。

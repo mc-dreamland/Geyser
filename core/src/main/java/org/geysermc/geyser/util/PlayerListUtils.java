@@ -82,6 +82,10 @@ public class PlayerListUtils {
      * Sends the handshake immediately. The caller must already be executing on the session event loop.
      */
     public static void sendPlayerListAddAndConfirmSkinInEventLoop(GeyserSession session, PlayerListPacket.Entry entry) {
+        if (session.interceptTemporaryPlayerListEntry(entry)) {
+            return;
+        }
+
         if (GameProtocol.isV860(session)) {
             EntityCache entityCache = session.getEntityCache();
             EntityCache.V860PlayerListAddAction action = entityCache.prepareV860PlayerListAdd(entry.getUuid(), entry.getSkin());

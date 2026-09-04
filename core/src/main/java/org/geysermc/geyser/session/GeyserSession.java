@@ -90,6 +90,7 @@ import org.cloudburstmc.protocol.bedrock.packet.BiomeDefinitionListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.CameraPresetsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ChunkRadiusUpdatedPacket;
 import org.cloudburstmc.protocol.bedrock.packet.CompletedUsingItemPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ConfirmSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.CreativeContentPacket;
 import org.cloudburstmc.protocol.bedrock.packet.DimensionDataPacket;
 import org.cloudburstmc.protocol.bedrock.packet.EmoteListPacket;
@@ -99,6 +100,8 @@ import org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelSoundEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.NetworkStackLatencyPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayStatusPacket;
+import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
+import org.cloudburstmc.protocol.bedrock.packet.PlayerSkinPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RemoveEntityPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetCommandsEnabledPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket;
@@ -271,6 +274,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 public class GeyserSession implements GeyserConnection, GeyserCommandSource {
+
+    private final Map<UUID, PlayerListPacket.Entry> tempPlayerSkinTestEntries = new HashMap<>();
 
     private final GeyserImpl geyser;
     private final UpstreamSession upstream;
@@ -1680,8 +1685,6 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
             completedPacket.setItemId(getItemMappings().getStoredItems().crossbow().getBedrockDefinition().getRuntimeId());
             completedPacket.setType(ItemUseType.SHOOT);
             sendUpstreamPacket(completedPacket);
-            getGeyser().getLogger().info("[CrossbowDebug] Sent NetEase CompletedUsingItemPacket for charged crossbow: player="
-                + bedrockUsername());
         }, 0, TimeUnit.NANOSECONDS);
         return true;
     }
@@ -2188,7 +2191,153 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * @param packet the bedrock packet from the Cloudburst protocol lib
      */
     public void sendUpstreamPacket(BedrockPacket packet) {
+        if (packet instanceof PlayerListPacket playerListPacket) {
+            PlayerListPacket filteredPacket = new PlayerListPacket();
+            filteredPacket.setAction(playerListPacket.getAction());
+            boolean interceptedTarget = false;
+
+            for (PlayerListPacket.Entry entry : playerListPacket.getEntries()) {
+                if (isTemporaryPlayerSkinTestTarget(entry.getUuid())
+                    && playerListPacket.getAction() != PlayerListPacket.Action.REMOVE) {
+                    interceptedTarget = true;
+                    tempPlayerSkinTestEntries.put(entry.getUuid(), entry);
+                    geyser.getLogger().info("[TEMP-PLAYER-SKIN-REPRO][PLAYER_LIST_INTERCEPTED_AND_CACHED] action="
+                        + playerListPacket.getAction()
+                        + " uuid=" + entry.getUuid()
+                        + " entityId=" + entry.getEntityId()
+                        + " name=" + entry.getName()
+                        + " skinId=" + (entry.getSkin() == null ? "null" : entry.getSkin().getSkinId())
+                        + " thread=" + Thread.currentThread().getName());
+                } else {
+                    filteredPacket.getEntries().add(entry);
+                }
+            }
+
+            if (interceptedTarget) {
+                if (filteredPacket.getEntries().isEmpty()) {
+                    return;
+                }
+                packet = filteredPacket;
+            }
+        } else if (packet instanceof ConfirmSkinPacket confirmSkinPacket) {
+            List<PlayerListPacket.Entry> filteredEntries = new ArrayList<>();
+            boolean interceptedTarget = false;
+            for (PlayerListPacket.Entry entry : confirmSkinPacket.getEntries()) {
+                if (isTemporaryPlayerSkinTestTarget(entry.getUuid())) {
+                    interceptedTarget = true;
+                    geyser.getLogger().info("[TEMP-PLAYER-SKIN-REPRO][CONFIRM_SKIN_INTERCEPTED] uuid=" + entry.getUuid()
+                        + " entityId=" + entry.getEntityId()
+                        + " thread=" + Thread.currentThread().getName());
+                } else {
+                    filteredEntries.add(entry);
+                }
+            }
+
+            if (interceptedTarget) {
+                if (filteredEntries.isEmpty()) {
+                    return;
+                }
+                ConfirmSkinPacket filteredPacket = new ConfirmSkinPacket();
+                filteredPacket.setEntries(filteredEntries);
+                packet = filteredPacket;
+            }
+        } else if (packet instanceof PlayerSkinPacket playerSkinPacket) {
+            PlayerEntity playerEntity = entityCache.getPlayerEntity(playerSkinPacket.getUuid());
+            long entityId = playerEntity != null ? playerEntity.getGeyserId() : -1;
+
+            if (isTemporaryPlayerSkinTestTarget(playerSkinPacket.getUuid())) {
+                PlayerListPacket.Entry entry = tempPlayerSkinTestEntries.get(playerSkinPacket.getUuid());
+                if (entry == null && playerEntity != null) {
+                    entry = SkinManager.buildCachedEntry(this, playerEntity);
+                    tempPlayerSkinTestEntries.put(playerSkinPacket.getUuid(), entry);
+                    geyser.getLogger().info("[TEMP-PLAYER-SKIN-REPRO][PLAYER_LIST_REBUILT_FROM_ENTITY_CACHE] uuid="
+                        + playerSkinPacket.getUuid()
+                        + " entityId=" + entry.getEntityId()
+                        + " name=" + entry.getName()
+                        + " thread=" + Thread.currentThread().getName());
+                }
+                geyser.getLogger().info("[TEMP-PLAYER-SKIN-REPRO][PLAYER_SKIN_RECEIVED] uuid=" + playerSkinPacket.getUuid()
+                    + " entityId=" + (entry != null ? entry.getEntityId() : entityId)
+                    + " oldName=" + playerSkinPacket.getOldSkinName()
+                    + " newName=" + playerSkinPacket.getNewSkinName()
+                    + " trusted=" + playerSkinPacket.isTrustedSkin()
+                    + " skinId=" + (playerSkinPacket.getSkin() == null ? "null" : playerSkinPacket.getSkin().getSkinId())
+                    + " thread=" + Thread.currentThread().getName());
+                if (entry == null) {
+                    geyser.getLogger().info("[TEMP-PLAYER-SKIN-REPRO][CONVERT_SKIPPED] uuid=" + playerSkinPacket.getUuid()
+                        + " entityId=" + entityId
+                        + " reason=playerListEntryNotCached"
+                        + " thread=" + Thread.currentThread().getName());
+                } else {
+                    PlayerListPacket.Entry replayEntry = entry;
+                    replayEntry.setSkin(playerSkinPacket.getSkin());
+                    replayEntry.setTrustedSkin(playerSkinPacket.isTrustedSkin());
+                    sendTemporaryPlayerListAddAndConfirm(replayEntry, "FIRST", 0);
+                    geyser.getLogger().info("[TEMP-PLAYER-SKIN-REPRO][DELAYED_REPEAT_SCHEDULED] uuid=" + replayEntry.getUuid()
+                        + " entityId=" + replayEntry.getEntityId()
+                        + " delaySeconds=5"
+                        + " skinId=" + (replayEntry.getSkin() == null ? "null" : replayEntry.getSkin().getSkinId())
+                        + " thread=" + Thread.currentThread().getName());
+                    scheduleInEventLoop(() -> {
+                        if (!closed) {
+                            sendTemporaryPlayerListAddAndConfirm(replayEntry, "DELAYED_REPEAT", 5);
+                        }
+                    }, 5, TimeUnit.SECONDS);
+                    return;
+                }
+            }
+        }
         upstream.sendPacket(packet);
+    }
+
+    /**
+     * Captures the ADD/Update entry before the V860 duplicate-skin guard can suppress it.
+     *
+     * @return true when the temporary all-other-player test consumed the entry
+     */
+    public boolean interceptTemporaryPlayerListEntry(PlayerListPacket.Entry entry) {
+        if (!isTemporaryPlayerSkinTestTarget(entry.getUuid())) {
+            return false;
+        }
+
+        tempPlayerSkinTestEntries.put(entry.getUuid(), entry);
+        geyser.getLogger().info("[TEMP-PLAYER-SKIN-REPRO][PLAYER_LIST_INTERCEPTED_AND_CACHED_EARLY] action=ADD_OR_UPDATE"
+            + " uuid=" + entry.getUuid()
+            + " entityId=" + entry.getEntityId()
+            + " name=" + entry.getName()
+            + " skinId=" + (entry.getSkin() == null ? "null" : entry.getSkin().getSkinId())
+            + " thread=" + Thread.currentThread().getName());
+        return true;
+    }
+
+    private boolean isTemporaryPlayerSkinTestTarget(UUID uuid) {
+        if (uuid == null) {
+            return false;
+        }
+        if (playerEntity != null && uuid.equals(playerEntity.getUuid())) {
+            return false;
+        }
+        return authData == null || !uuid.equals(authData.uuid());
+    }
+
+    private void sendTemporaryPlayerListAddAndConfirm(PlayerListPacket.Entry entry, String phase,
+                                                      int delaySeconds) {
+        PlayerListPacket addPacket = new PlayerListPacket();
+        addPacket.setAction(PlayerListPacket.Action.ADD);
+        addPacket.getEntries().add(entry);
+
+        ConfirmSkinPacket confirmSkinPacket = new ConfirmSkinPacket();
+        confirmSkinPacket.setEntries(List.of(entry));
+
+        // Bypass sendUpstreamPacket so the forced reproduction packets are not intercepted again.
+        upstream.sendPacket(addPacket);
+        upstream.sendPacket(confirmSkinPacket);
+        geyser.getLogger().info("[TEMP-PLAYER-SKIN-REPRO][ADD_CONFIRM_SENT] phase=" + phase
+            + " uuid=" + entry.getUuid()
+            + " entityId=" + entry.getEntityId()
+            + " delaySeconds=" + delaySeconds
+            + " skinId=" + (entry.getSkin() == null ? "null" : entry.getSkin().getSkinId())
+            + " thread=" + Thread.currentThread().getName());
     }
 
     /**

@@ -46,7 +46,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -86,38 +85,24 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
                     // Entity is ourself
                     playerEntity = session.getPlayerEntity();
                 } else {
-                    playerEntity = session.getEntityCache().getPlayerEntity(id);
-                    if (playerEntity == null) {
-                        // It's a new player
-                        playerEntity = new PlayerEntity(
-                                session,
-                                -1,
-                                session.getEntityCache().getNextEntityId().incrementAndGet(),
-                                id,
-                                Vector3f.ZERO,
-                                Vector3f.ZERO,
-                                0, 0, 0,
-                                name,
-                                texturesProperty
-                        );
+                    // It's a new player
+                    playerEntity = new PlayerEntity(
+                            session,
+                            -1,
+                            session.getEntityCache().getNextEntityId().incrementAndGet(),
+                            id,
+                            Vector3f.ZERO,
+                            Vector3f.ZERO,
+                            0, 0, 0,
+                            name,
+                            texturesProperty
+                    );
 
-                        session.getEntityCache().addPlayerEntity(playerEntity);
-                    }
+                    session.getEntityCache().addPlayerEntity(playerEntity);
                 }
-
-                String oldUsername = playerEntity.getUsername();
-                if (name != null) {
-                    playerEntity.setUsername(name);
-                }
-                if (!Objects.equals(oldUsername, playerEntity.getUsername())) {
-                    playerEntity.updateNametag(session.getWorldCache().getScoreboard().getTeamFor(playerEntity.teamIdentifier()));
-                    playerEntity.updateBedrockMetadata();
-                }
-                if (texturesProperty == null) {
-                    // Players without a Java textures property first resolve through the configured skin service.
+                playerEntity.setUsername(name);
+                if (id.toString().startsWith("00000000")) {
                     playerEntity.setTexturesProperty(encodeSkinUrl(id));
-                } else if (profile != null) {
-                    playerEntity.setTexturesProperty(texturesProperty);
                 }
 
                 if (self) {

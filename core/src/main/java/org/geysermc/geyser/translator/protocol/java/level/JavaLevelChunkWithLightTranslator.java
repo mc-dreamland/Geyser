@@ -942,28 +942,6 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
         long maxKeyNanos = SUMMARY_MAX_KEY_NANOS.getAndSet(0L);
         long maxTranslationNanos = SUMMARY_MAX_TRANSLATION_NANOS.getAndSet(0L);
         long maxTotalNanos = SUMMARY_MAX_TOTAL_NANOS.getAndSet(0L);
-
-        session.getGeyser().getLogger().info("[ChunkTranslationSummary] windowSeconds="
-                + ((now - previousLog) / 1_000_000_000.0D)
-                + " chunks=" + chunks
-                + " cacheHits=" + cacheHits
-                + " cacheMisses=" + (chunks - cacheHits)
-                + " translated=" + translated
-                + " hot=" + hotChunks
-                + " cacheStored=" + cacheStores
-                + " blobSent=" + blobSends
-                + " keyAvgMs=" + averageMillis(keyTotalNanos, chunks)
-                + " keyMaxMs=" + (maxKeyNanos / 1_000_000.0D)
-                + " translationAvgMs=" + averageMillis(translationTotalNanos, translated)
-                + " translationMaxMs=" + (maxTranslationNanos / 1_000_000.0D)
-                + " totalAvgMs=" + averageMillis(totalNanosSum, chunks)
-                + " totalMaxMs=" + (maxTotalNanos / 1_000_000.0D)
-                + " payloadBytes=" + payloadBytesSum
-                + " cacheEntries=" + globalChunkTranslationCache.size()
-                + " frequencyEntries=" + globalChunkTranslationFrequency.size()
-                + " totalLookupHits=" + GLOBAL_CHUNK_TRANSLATION_CACHE_HITS.sum()
-                + " totalLookupMisses=" + GLOBAL_CHUNK_TRANSLATION_CACHE_MISSES.sum()
-                + " totalCacheFailures=" + GLOBAL_CHUNK_TRANSLATION_CACHE_FAILURES.sum());
     }
 
     private static double averageMillis(long nanos, long count) {
