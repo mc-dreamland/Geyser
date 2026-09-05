@@ -82,12 +82,14 @@ public class CustomEntityRegistryPopulator {
         // Load custom entities from mappings files
         mappingsConfigReader.loadEntityMappingsFromJson((key, item) -> {
             rid++;
-            NbtMap entityNbt = NbtMap.builder().putInt("rid", rid)
+            NbtMap entityNbt = NbtMap.builder()
+                .putBoolean("hasspawnegg", item.hasSpawnEgg())
+                .putBoolean("summonable", item.summonable())
                 .putString("id", key)
-                .putString("bid", "")
-                .putBoolean("hasspawnegg", false)
-                .putBoolean("summonable", false)
-                .putInt("type", 256).build();
+                .putString("bid", item.bid())
+                // TODO 如果bid不为空,则这里应该用继承实体的rid
+                .putInt("rid", rid)
+                .build();
             nbtMaps.add(entityNbt);
 
             int start = key.indexOf(":");
