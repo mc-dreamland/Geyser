@@ -121,6 +121,7 @@ public class Entity implements GeyserEntity {
 
     protected EntityDefinition<?> definition;
     private String curIdentifier;
+    private String appliedCustomEntityIdentifier;
 
     /**
      * Indicates if the entity has been initialized and spawned
@@ -209,6 +210,26 @@ public class Entity implements GeyserEntity {
     }
 
     public void spawnEntity() {
+        String customId = session.getPendingCustomEntityMappings().get(entityId);
+        if (customId != null) {
+            int colonIdx = customId.indexOf(":");
+            String shortId = colonIdx >= 0 ? customId.substring(colonIdx + 1) : customId;
+            if (Registries.CUSTOM_ENTITY_DEFINITIONS.containsKey(shortId)) {
+                session.getPendingCustomEntityMappings().remove(entityId);
+                spawnEntity(customId);  // 用自定义标识符生成，不走下面的原有逻辑
+                return;
+            }
+        }
+
+        if (appliedCustomEntityIdentifier != null) {
+            int colonIdx = appliedCustomEntityIdentifier.indexOf(":");
+            String shortId = colonIdx >= 0 ? appliedCustomEntityIdentifier.substring(colonIdx + 1) : appliedCustomEntityIdentifier;
+            if (Registries.CUSTOM_ENTITY_DEFINITIONS.containsKey(shortId)) {
+                spawnEntity(appliedCustomEntityIdentifier);
+                return;
+            }
+        }
+
         AddEntityPacket addEntityPacket = new AddEntityPacket();
         addEntityPacket.setIdentifier(definition.identifier());
         addEntityPacket.setRuntimeEntityId(geyserId);
@@ -264,7 +285,7 @@ public class Entity implements GeyserEntity {
         addEntityPacket.setIdentifier(identifier);
         addEntityPacket.setRuntimeEntityId(geyserId);
         addEntityPacket.setUniqueEntityId(geyserId);
-        addEntityPacket.setPosition(position);
+        addEntityPacket.setPosition(spawnPosition(position));
         addEntityPacket.setMotion(motion);
         addEntityPacket.setRotation(Vector2f.from(pitch, yaw));
         addEntityPacket.setHeadRotation(headYaw);
@@ -297,6 +318,8 @@ public class Entity implements GeyserEntity {
         valid = true;
 
         session.sendUpstreamPacket(addEntityPacket);
+
+        appliedCustomEntityIdentifier = identifier;
 
         flagsDirty = false;
 

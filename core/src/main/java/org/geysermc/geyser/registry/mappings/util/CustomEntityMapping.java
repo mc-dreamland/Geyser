@@ -25,5 +25,11 @@
 
 package org.geysermc.geyser.registry.mappings.util;
 
-public record CustomEntityMapping(String identifier, float width, float height) {
+public record CustomEntityMapping(String identifier,
+                                  String bid,
+                                  boolean hasSpawnEgg,
+                                  boolean summonable,
+                                  float width,
+                                  float height
+) {
 }

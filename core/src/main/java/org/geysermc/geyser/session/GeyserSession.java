@@ -830,6 +830,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     @Setter
     private int stepTicks = 0;
 
+    /**
+     * 尚未生成实体的待应用自定义实体映射
+     */
+    @Getter
+    private final Map<Integer, String> pendingCustomEntityMappings = new Int2ObjectOpenHashMap<>();
+
     //Netease OnGround
     @Getter
     @Setter

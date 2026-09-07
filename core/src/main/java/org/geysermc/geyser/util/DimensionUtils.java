@@ -71,6 +71,7 @@ public class DimensionUtils {
 
         session.getChunkCache().clear();
         session.getEntityCache().removeAllEntities();
+        session.getPendingCustomEntityMappings().clear();
         session.getItemFrameCache().clear();
         session.getLodestoneCache().clear();
         session.getPistonCache().clear();
