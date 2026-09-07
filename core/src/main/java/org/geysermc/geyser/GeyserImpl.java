@@ -240,8 +240,10 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
     }
 
     public void initialize() {
-        // Setup encryption early so we don't start if we can't auth
-        if (config().advanced().bedrock().validateBedrockLogin()) {
+        // The NetEase-only path validates its own root chain and must not initialize the
+        // Microsoft-backed Cloudburst utility, which performs remote discovery on startup.
+        if (config().advanced().bedrock().validateBedrockLogin()
+                && !config().netease().neteaseOnlyAuthentication()) {
             try {
                 EncryptionUtils.getMojangPublicKey();
             } catch (Throwable t) {
@@ -373,8 +375,6 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
 
     private void startInstance() {
         this.scheduledThread = Executors.newSingleThreadScheduledExecutor(new DefaultThreadFactory("Geyser Scheduled Thread"));
-
-        SkinProvider.initializeLocalSkins();
 
         if (isReloading) {
             // If we're reloading, the default locale in the config might have changed.

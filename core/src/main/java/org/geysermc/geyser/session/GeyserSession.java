@@ -998,7 +998,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         // We disable the locator bar until we are certain that the server wants us to enable it
         // See WaypointCache for details
         gamerulePacket.getGameRules().add(new GameRuleData<>("locatorBar", false));
-        
+
         upstream.sendPacket(gamerulePacket);
     }
 
@@ -2768,7 +2768,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
         }
         sendUpstreamPacket(latencyPacket);
     }
-  
+
     public String getDebugInfo() {
         return "Username: %s, DeviceOs: %s, Version: %s".formatted(bedrockUsername(), platform(), version());
     }

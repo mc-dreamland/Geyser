@@ -64,7 +64,7 @@ public final class SessionManager {
     /**
      * Specifies the maximum amount of connections per address
      */
-    private final static int MAX_CONNECTIONS_PER_ADDRESS = Integer.getInteger("Geyser.MaxConnectionsPerAddress", 10);
+    private final static int MAX_CONNECTIONS_PER_ADDRESS = Integer.getInteger("Geyser.MaxConnectionsPerAddress", 1000);
 
     /**
      * Whether we should accept more connection requests from this address

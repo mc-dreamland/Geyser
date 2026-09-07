@@ -66,58 +66,80 @@ public class LoginEncryptionUtils {
         encryptConnectionWithCert(session, loginPacket.getAuthPayload(), loginPacket.getClientJwt());
     }
 
-    private static boolean validateNeteaseChainData(List<String> chain) {
+    private static Profile validateNeteaseChainData(List<String> chain, boolean requireStandardEnvironment) {
         if (chain.size() != 3) {
-            return false;
+            return null;
         }
         Profile profile = TokenChain.check(new String[]{chain.get(1), chain.get(2)});
-        return profile.env.equals(ENV_STANDARD);
+        return profile != null && (!requireStandardEnvironment || ENV_STANDARD.equals(profile.env)) ? profile : null;
     }
 
     private static void encryptConnectionWithCert(GeyserSession session, AuthPayload authPayload, String jwt) {
         try {
             GeyserImpl geyser = session.getGeyser();
+            boolean neteaseOnlyAuthentication = geyser.config().netease().neteaseOnlyAuthentication();
+            PublicKey identityPublicKey;
+            byte[] clientDataPayload;
 
-            ChainValidationResult result = EncryptionUtils.validatePayload(authPayload);
+            if (neteaseOnlyAuthentication) {
+                if (!(authPayload instanceof CertificateChainPayload certificateChainPayload)) {
+                    throw new IllegalStateException("NetEase-only authentication requires a certificate chain payload");
+                }
 
-            geyser.getLogger().debug(String.format("Is player data signed? %s", result.signed()));
-
-
-            IdentityData extraIdentityData = result.identityClaims().extraData;
-            if (extraIdentityData == null || extraIdentityData.xuid == null || extraIdentityData.displayName == null) {
-                GeyserImpl.getInstance().getLogger().debug("Missing identity data in login identity claims! " + extraIdentityData);
-                session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
-                return;
-            }
-
-            // Should always be present, but hey, why not make it safe :D
-            Long rawIssuedAt = (Long) result.rawIdentityClaims().get("iat");
-            long issuedAt = rawIssuedAt != null ? rawIssuedAt : -1;
-
-            IdentityData extraData = result.identityClaims().extraData;
-            session.setAuthData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, extraData.uid, issuedAt));
-
-            // Netease
-            if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
                 List<String> certChainData = certificateChainPayload.getChain();
-                boolean validNeteaseChainData = validateNeteaseChainData(certChainData);
-                if (!validNeteaseChainData && session.getGeyser().config().netease().onlineMode()) {
+                Profile profile = validateNeteaseChainData(certChainData, geyser.config().netease().onlineMode());
+                if (profile == null || profile.identity == null || profile.XUID == null
+                        || profile.displayName == null || profile.clientPubKey == null) {
+
                     session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
                     return;
                 }
-            }
 
-            if (authPayload instanceof TokenPayload tokenPayload) {
-                session.setToken(tokenPayload.getToken());
-            } else if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
-                session.setCertChainData(certificateChainPayload.getChain());
+                session.setAuthData(new AuthData(profile.displayName, profile.identity, profile.XUID, profile.uid, -1));
+                session.setCertChainData(certChainData);
+                identityPublicKey = NeteaseEncryptionUtils.parseKey(profile.clientPubKey);
+                clientDataPayload = NeteaseEncryptionUtils.verifyClientData(jwt, identityPublicKey);
+                geyser.getLogger().debug("Player data was verified using the NetEase certificate chain");
             } else {
-                GeyserImpl.getInstance().getLogger().warning("Unknown auth payload! Skin uploading will not work");
+                ChainValidationResult result = EncryptionUtils.validatePayload(authPayload);
+                geyser.getLogger().debug(String.format("Is player data signed? %s", result.signed()));
+
+                IdentityData extraIdentityData = result.identityClaims().extraData;
+                if (extraIdentityData == null || extraIdentityData.xuid == null || extraIdentityData.displayName == null) {
+                    GeyserImpl.getInstance().getLogger().debug("Missing identity data in login identity claims! " + extraIdentityData);
+                    session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
+                    return;
+                }
+
+                // Should always be present, but hey, why not make it safe :D
+                Long rawIssuedAt = (Long) result.rawIdentityClaims().get("iat");
+                long issuedAt = rawIssuedAt != null ? rawIssuedAt : -1;
+
+                IdentityData extraData = result.identityClaims().extraData;
+                session.setAuthData(new AuthData(extraData.displayName, extraData.identity, extraData.xuid, extraData.uid, issuedAt));
+
+                // NetEase validation remains an additional requirement on the Microsoft-compatible path.
+                if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
+                    List<String> certChainData = certificateChainPayload.getChain();
+                    Profile profile = validateNeteaseChainData(certChainData, geyser.config().netease().onlineMode());
+                    if (profile == null && geyser.config().netease().onlineMode()) {
+                        session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.remote.invalid_xbox_account"));
+                        return;
+                    }
+                }
+
+                if (authPayload instanceof TokenPayload tokenPayload) {
+                    session.setToken(tokenPayload.getToken());
+                } else if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
+                    session.setCertChainData(certificateChainPayload.getChain());
+                } else {
+                    GeyserImpl.getInstance().getLogger().warning("Unknown auth payload! Skin uploading will not work");
+                }
+
+                identityPublicKey = result.identityClaims().parsedIdentityPublicKey();
+                clientDataPayload = EncryptionUtils.verifyClientData(jwt, identityPublicKey);
             }
 
-            PublicKey identityPublicKey = result.identityClaims().parsedIdentityPublicKey();
-
-            byte[] clientDataPayload = EncryptionUtils.verifyClientData(jwt, identityPublicKey);
             if (clientDataPayload == null) {
                 throw new IllegalStateException("Client data isn't signed by the given chain data");
             }
@@ -135,7 +157,11 @@ public class LoginEncryptionUtils {
             }
 
             try {
-                startEncryptionHandshake(session, identityPublicKey);
+                if (neteaseOnlyAuthentication) {
+                    startNeteaseEncryptionHandshake(session, identityPublicKey);
+                } else {
+                    startEncryptionHandshake(session, identityPublicKey);
+                }
             } catch (Throwable e) {
                 // An error can be thrown on older Java 8 versions about an invalid key
                 if (geyser.config().debugMode()) {
@@ -143,6 +169,8 @@ public class LoginEncryptionUtils {
                 }
 
                 sendEncryptionFailedMessage(geyser);
+                session.disconnect("disconnectionScreen.internalError.cantConnect");
+                return;
             }
         } catch (Exception ex) {
             session.disconnect("disconnectionScreen.internalError.cantConnect");
@@ -160,6 +188,18 @@ public class LoginEncryptionUtils {
 
         SecretKey encryptionKey = EncryptionUtils.getSecretKey(serverKeyPair.getPrivate(), key, token);
         session.getUpstream().getSession().enableEncryption(encryptionKey);
+    }
+
+    private static void startNeteaseEncryptionHandshake(GeyserSession session, PublicKey key) throws Exception {
+        KeyPair serverKeyPair = NeteaseEncryptionUtils.createKeyPair();
+        byte[] token = NeteaseEncryptionUtils.generateRandomToken();
+
+        ServerToClientHandshakePacket packet = new ServerToClientHandshakePacket();
+        packet.setJwt(NeteaseEncryptionUtils.createHandshakeJwt(serverKeyPair, token));
+        session.sendUpstreamPacketImmediately(packet);
+
+        SecretKey encryptionKey = NeteaseEncryptionUtils.getSecretKey(serverKeyPair, key, token);
+        NeteaseEncryptionUtils.enableEncryption(session.getUpstream().getSession().getPeer(), encryptionKey);
     }
 
     private static void sendEncryptionFailedMessage(GeyserImpl geyser) {

@@ -18,6 +18,11 @@ tasks {
         archiveBaseName.set(project.name)
         archiveVersion.set("")
         archiveClassifier.set("")
+
+        // Jedis is bundled by Geyser. Isolate it and its object-pool implementation from
+        // copies provided by other plugins sharing the same proxy/server process.
+        relocate("redis.clients", "org.geysermc.geyser.shaded.redis.clients")
+        relocate("org.apache.commons.pool2", "org.geysermc.geyser.shaded.org.apache.commons.pool2")
         
         val currentProjectName = project.name // Capture project name at config time
 

@@ -123,13 +123,6 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
         if (packet.getTransactionType() == InventoryTransactionType.ITEM_RELEASE) {
             GeyserItemStack heldItem = session.getPlayerInventory().getItemInHand();
             String heldItemIdentifier = heldItem.isEmpty() ? "minecraft:air" : heldItem.asItem().javaIdentifier();
-            session.getGeyser().getLogger().info("[CrossbowDebug] ITEM_RELEASE reached translator: player="
-                    + session.bedrockUsername() + ", actionType=" + packet.getActionType()
-                    + ", hotbarSlot=" + packet.getHotbarSlot()
-                    + ", selectedSlot=" + session.getPlayerInventory().getHeldItemSlot()
-                    + ", actions=" + packet.getActions().size()
-                    + ", usingItemFlag=" + session.getPlayerEntity().getFlag(EntityFlag.USING_ITEM)
-                    + ", javaHeldItem=" + heldItemIdentifier);
         }
 
         switch (packet.getTransactionType()) {
@@ -516,13 +509,8 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                     }
 
                     session.getPlayerEntity().setFlag(EntityFlag.USING_ITEM, false);
-                    session.getGeyser().getLogger().info("[CrossbowDebug] ITEM_RELEASE accepted; sending Java RELEASE_USE_ITEM: player="
-                            + session.bedrockUsername());
                     session.releaseItem();
                     session.getBundleCache().markRelease();
-                } else {
-                    session.getGeyser().getLogger().info("[CrossbowDebug] ITEM_RELEASE ignored because actionType is not 0: player="
-                            + session.bedrockUsername() + ", actionType=" + packet.getActionType());
                 }
                 break;
             case ITEM_USE_ON_ENTITY:
