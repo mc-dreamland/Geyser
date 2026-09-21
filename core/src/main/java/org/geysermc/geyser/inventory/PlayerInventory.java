@@ -134,11 +134,6 @@ public class PlayerInventory extends Inventory {
         super.setItem(slot, newItem, session);
     }
 
-    @Override
-    public boolean shouldConfirmContainerClose() {
-        return false;
-    }
-
     public GeyserItemStack getOffhand() {
         return items[45];
     }
