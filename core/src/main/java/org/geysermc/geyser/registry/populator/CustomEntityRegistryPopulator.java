@@ -84,7 +84,7 @@ public class CustomEntityRegistryPopulator {
             rid++;
             NbtMap entityNbt = NbtMap.builder().putInt("rid", rid)
                 .putString("id", key)
-                .putString("bid", "")
+                .putString("bid", item.bid())
                 .putBoolean("hasspawnegg", false)
                 .putBoolean("summonable", false)
                 .putInt("type", 256).build();
