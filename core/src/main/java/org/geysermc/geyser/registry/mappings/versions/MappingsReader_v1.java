@@ -29,6 +29,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import io.netty.util.internal.StringUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -845,10 +846,21 @@ public class MappingsReader_v1 extends MappingsReader {
         if (node == null) {
             throw new InvalidCustomMappingsFileException("Invalid item mappings entry");
         }
+        String bid = StringUtil.EMPTY_STRING;
+        boolean hasSpawnEgg = false;
+        boolean summonable = true;
         float width = 1.0f;
         float height = 1.0f;
 
-
+        if (node.has("bid")) {
+            bid = node.get("bid").getAsString();
+        }
+        if (node.has("has_spawn_egg")) {
+            hasSpawnEgg = node.get("has_spawn_egg").getAsBoolean();
+        }
+        if (node.has("summonable")) {
+            summonable = node.get("summonable").getAsBoolean();
+        }
         if (node.get("collision_box") instanceof JsonObject jsonNode) {
             if (jsonNode.has("width")) {
                 width = jsonNode.get("width").getAsFloat();
@@ -858,7 +870,7 @@ public class MappingsReader_v1 extends MappingsReader {
             }
         }
 
-        return new CustomEntityMapping(identifier, width, height);
+        return new CustomEntityMapping(identifier, bid, hasSpawnEgg, summonable, width, height);
     }
 
     /**

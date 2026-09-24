@@ -101,6 +101,9 @@ public class EntityCache {
             return;
         }
 
+        // Only pending mappings are stored in the session. Applied mappings live on the Entity itself.
+        session.getPendingCustomEntityMappings().remove(entity.getEntityId());
+
         if (entity instanceof PlayerEntity player) {
             session.getPlayerWithCustomHeads().remove(player.getUuid());
             synchronized (v860PlayerSkins) {
