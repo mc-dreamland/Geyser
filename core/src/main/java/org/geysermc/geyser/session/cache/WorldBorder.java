@@ -375,7 +375,7 @@ public class WorldBorder {
     }
 
     private void drawWall(Vector3f position, boolean drawWallX) {
-        int initialY = (int) (position.getY() - EntityDefinitions.PLAYER.offset() - 1);
+        int initialY = (int) (position.getY() - 1);
         for (int y = initialY; y < (initialY + 5); y++) {
             if (drawWallX) {
                 float x = position.getX();

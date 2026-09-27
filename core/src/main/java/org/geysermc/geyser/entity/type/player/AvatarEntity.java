@@ -45,7 +45,6 @@ import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RemoveEntityPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityLinkPacket;
 import org.geysermc.geyser.entity.EntityDefinition;
-import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.LivingEntity;
 import org.geysermc.geyser.level.block.Blocks;
@@ -120,7 +119,7 @@ public class AvatarEntity extends LivingEntity {
         addPlayerPacket.setUsername(username);
         addPlayerPacket.setRuntimeEntityId(geyserId);
         addPlayerPacket.setUniqueEntityId(geyserId);
-        addPlayerPacket.setPosition(spawnPosition(position.sub(0, definition.offset(), 0)));
+        addPlayerPacket.setPosition(spawnPosition(position));
         addPlayerPacket.setRotation(getBedrockRotation());
         addPlayerPacket.setMotion(motion);
         addPlayerPacket.setHand(ItemTranslator.translateToBedrock(session, getMainHandItem()));
@@ -213,7 +212,7 @@ public class AvatarEntity extends LivingEntity {
 
         MovePlayerPacket movePlayerPacket = new MovePlayerPacket();
         movePlayerPacket.setRuntimeEntityId(geyserId);
-        movePlayerPacket.setPosition(this.position);
+        movePlayerPacket.setPosition(getBedrockPosition());
         movePlayerPacket.setRotation(getBedrockRotation());
         movePlayerPacket.setOnGround(isOnGround);
         movePlayerPacket.setMode(this instanceof SessionPlayerEntity || teleported ? MovePlayerPacket.Mode.TELEPORT : MovePlayerPacket.Mode.NORMAL);
@@ -240,18 +239,15 @@ public class AvatarEntity extends LivingEntity {
 
         MovePlayerPacket movePlayerPacket = new MovePlayerPacket();
         movePlayerPacket.setRuntimeEntityId(geyserId);
-        movePlayerPacket.setPosition(position);
+        movePlayerPacket.setPosition(getBedrockPosition());
         movePlayerPacket.setRotation(getBedrockRotation());
         movePlayerPacket.setOnGround(isOnGround);
         movePlayerPacket.setMode(this instanceof SessionPlayerEntity ? MovePlayerPacket.Mode.TELEPORT : MovePlayerPacket.Mode.NORMAL);
-        // If the player is moved while sleeping, we have to adjust their y, so it appears
-        // correctly on Bedrock. This fixes GSit's lay.
-        if (getFlag(EntityFlag.SLEEPING)) {
-            if (bedPosition != null && (bedPosition.getY() == 0 || bedPosition.distanceSquared(position.toInt()) > 4)) {
-                // Force the player movement by using a teleport
-                movePlayerPacket.setPosition(Vector3f.from(position.getX(), position.getY() - definition.offset() + 0.2f, position.getZ()));
-                movePlayerPacket.setMode(MovePlayerPacket.Mode.TELEPORT);
-            }
+        // If the player is moved while sleeping, force a teleport so it appears correctly on Bedrock.
+        // This fixes GSit's lay.
+        if (getFlag(EntityFlag.SLEEPING) && bedPosition != null
+                && (bedPosition.getY() == 0 || bedPosition.distanceSquared(position.toInt()) > 4)) {
+            movePlayerPacket.setMode(MovePlayerPacket.Mode.TELEPORT);
         }
 
         if (movePlayerPacket.getMode() == MovePlayerPacket.Mode.TELEPORT) {
@@ -261,15 +257,16 @@ public class AvatarEntity extends LivingEntity {
         session.sendUpstreamPacket(movePlayerPacket);
     }
 
-    @Override
-    public void setPosition(Vector3f position) {
-        if (this.bedPosition != null) {
-            // As of Bedrock 1.21.22 and Fabric 1.21.1
-            // Messes with Bedrock if we send this to the client itself, though.
-            super.setPosition(position.up(0.2f));
-        } else {
-            super.setPosition(position.add(0, definition.offset(), 0));
+    /**
+     * Returns the position expected by Bedrock player movement packets.
+     * Player positions are stored at Java's feet internally.
+     */
+    public Vector3f getBedrockPosition() {
+        if (!(this instanceof SessionPlayerEntity) && bedPosition != null) {
+            // Sleeping remote players use the bed position with a small Bedrock-specific vertical offset.
+            return position.up(0.2f);
         }
+        return position.up(definition.offset());
     }
 
     @Override
@@ -387,7 +384,7 @@ public class AvatarEntity extends LivingEntity {
 
         if (pose == Pose.SWIMMING) {
             // This is just for, so we know if player is swimming or crawling.
-            if (session.getGeyser().getWorldManager().blockAt(session, position.down(EntityDefinitions.PLAYER.offset()).toInt()).is(Blocks.WATER)) {
+            if (session.getGeyser().getWorldManager().blockAt(session, position.toInt()).is(Blocks.WATER)) {
                 setFlag(EntityFlag.SWIMMING, true);
             } else {
                 setFlag(EntityFlag.CRAWLING, true);

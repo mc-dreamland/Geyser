@@ -46,6 +46,7 @@ import org.cloudburstmc.protocol.bedrock.packet.PlaySoundPacket;
 import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.ItemFrameEntity;
+import org.geysermc.geyser.entity.type.player.AvatarEntity;
 import org.geysermc.geyser.inventory.GeyserItemStack;
 import org.geysermc.geyser.inventory.Inventory;
 import org.geysermc.geyser.inventory.PlayerInventory;
@@ -267,9 +268,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         }
 
                         // As of 1.21, Paper does not have any additional range checks that would inconvenience normal players.
-                        Vector3f playerPosition = session.getPlayerEntity().getPosition();
-                        playerPosition = playerPosition.down(EntityDefinitions.PLAYER.offset() - session.getEyeHeight());
-
+                        Vector3f playerPosition = session.getPlayerEntity().getPosition().up(session.getEyeHeight());
                         if (!canInteractWithBlock(session, playerPosition, packetBlockPosition)) {
                             BlockUtils.restoreCorrectBlock(session, blockPos);
                             return;
@@ -439,7 +438,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                                             // BDS uses a LevelSoundEvent2Packet, but that doesn't work here... (as of 1.21.20)
                                             LevelSoundEventPacket soundPacket = new LevelSoundEventPacket();
                                             soundPacket.setSound(SoundEvent.valueOf("GOAT_CALL_" + instrument.bedrockInstrument().ordinal()));
-                                            soundPacket.setPosition(session.getPlayerEntity().getPosition());
+                                            soundPacket.setPosition(session.getPlayerEntity().getBedrockPosition());
                                             soundPacket.setIdentifier("minecraft:player");
                                             soundPacket.setExtraData(-1);
                                             session.sendUpstreamPacket(soundPacket);
@@ -579,7 +578,8 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
             return;
         }
 
-        Vector3f clickPosition = packet.getClickPosition().sub(entityPosition);
+        Vector3f bedrockEntityPosition = entity instanceof AvatarEntity avatar ? avatar.getBedrockPosition() : entityPosition;
+        Vector3f clickPosition = packet.getClickPosition().sub(bedrockEntityPosition);
         boolean isSpectator = session.getGameMode() == GameMode.SPECTATOR;
         for (Hand hand : EntityUtils.HANDS) {
             if (isSpectator) {

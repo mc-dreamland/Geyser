@@ -31,7 +31,6 @@ import org.cloudburstmc.protocol.bedrock.packet.ChunkRadiusUpdatedPacket;
 import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RespawnPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket;
-import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.TeleportCache;
@@ -56,7 +55,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
         final SessionPlayerEntity entity = session.getPlayerEntity();
         if (entity.getVehicle() != null) {
             // Vanilla ignores player teleports while mounted, but still acknowledges them.
-            acceptTeleport(session, entity.getPosition().down(EntityDefinitions.PLAYER.offset()).toDouble(),
+            acceptTeleport(session, entity.getPosition().toDouble(),
                 entity.getJavaYaw(), entity.getPitch(), packet.getId());
             return;
         }
@@ -64,7 +63,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
 
         position = position.add(
             packet.getRelatives().contains(PositionElement.X) ? entity.getPosition().getX() : 0,
-            packet.getRelatives().contains(PositionElement.Y) ? entity.getPosition().getY() - EntityDefinitions.PLAYER.offset() : 0,
+            packet.getRelatives().contains(PositionElement.Y) ? entity.getPosition().getY() : 0,
             packet.getRelatives().contains(PositionElement.Z) ? entity.getPosition().getZ() : 0);
 
         float newPitch = MathUtils.clamp(packet.getXRot() + (packet.getRelatives().contains(PositionElement.X_ROT) ? entity.getPitch() : 0), -90, 90);
@@ -82,7 +81,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
 
             RespawnPacket respawnPacket = new RespawnPacket();
             respawnPacket.setRuntimeEntityId(0); // Bedrock server behavior
-            respawnPacket.setPosition(entity.getPosition());
+            respawnPacket.setPosition(entity.getBedrockPosition());
             respawnPacket.setState(RespawnPacket.State.SERVER_READY);
             session.sendUpstreamPacket(respawnPacket);
 
@@ -90,7 +89,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
 
             MovePlayerPacket movePlayerPacket = new MovePlayerPacket();
             movePlayerPacket.setRuntimeEntityId(entity.getGeyserId());
-            movePlayerPacket.setPosition(entity.getPosition());
+            movePlayerPacket.setPosition(entity.getBedrockPosition());
             movePlayerPacket.setRotation(entity.getBedrockRotation());
             movePlayerPacket.setMode(MovePlayerPacket.Mode.RESPAWN);
             session.sendUpstreamPacket(movePlayerPacket);
@@ -122,9 +121,9 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
             return;
         }
 
-        session.getGeyser().getLogger().debug("Teleport (" + teleportId + ") from " + entity.getPosition().getX() + " " + (entity.getPosition().getY() - EntityDefinitions.PLAYER.offset()) + " " + entity.getPosition().getZ());
+        session.getGeyser().getLogger().debug("Teleport (" + teleportId + ") from " + entity.getPosition().getX() + " " + entity.getPosition().getY() + " " + entity.getPosition().getZ());
 
-        Vector3f lastPlayerPosition = entity.getPosition().down(EntityDefinitions.PLAYER.offset());
+        Vector3f lastPlayerPosition = entity.getPosition();
         float lastPlayerPitch = entity.getPitch();
         float lastPlayerYaw = entity.getYaw();
         Vector3f teleportDestination = position.toFloat();
@@ -142,7 +141,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
         TeleportCache.TeleportType type = (deltaMovement.distanceSquared(Vector3f.ZERO) > 1.0E-8F) ?
             TeleportCache.TeleportType.KEEP_VELOCITY : TeleportCache.TeleportType.NORMAL;
 
-        // Cache and send the collision-adjusted Bedrock destination while preserving the exact Java destination.
+        // Cache the exact Java destination and a collision-adjusted Java-feet destination for Bedrock.
         TeleportCache teleport = new TeleportCache(session, teleportDestination, deltaMovement, newPitch, newYaw, teleportId, type);
         session.setUnconfirmedTeleport(teleport);
         entity.moveAbsolute(teleport.getAdjustedPosition(), newYaw, newPitch, false, true);
@@ -161,7 +160,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
             session.sendUpstreamPacket(entityMotionPacket);
         }
 
-        session.getGeyser().getLogger().debug("to " + entity.getPosition().getX() + " " + (entity.getPosition().getY() - EntityDefinitions.PLAYER.offset()) + " " + entity.getPosition().getZ());
+        session.getGeyser().getLogger().debug("to " + entity.getPosition().getX() + " " + entity.getPosition().getY() + " " + entity.getPosition().getZ());
     }
 
     private void acceptTeleport(GeyserSession session, Vector3d position, float yaw, float pitch, int id) {

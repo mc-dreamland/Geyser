@@ -38,7 +38,6 @@ import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateAttributesPacket;
-import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.entity.attribute.GeyserAttributeType;
 import org.geysermc.geyser.entity.type.BoatEntity;
 import org.geysermc.geyser.entity.type.Entity;
@@ -177,7 +176,7 @@ public class SessionPlayerEntity extends PlayerEntity {
     @Override
     public void moveRelativeRaw(double relX, double relY, double relZ, float yaw, float pitch, float headYaw, boolean isOnGround) {
         super.moveRelativeRaw(relX, relY, relZ, yaw, pitch, headYaw, isOnGround);
-        session.getCollisionManager().updatePlayerBoundingBox(this.position.down(definition.offset()));
+        session.getCollisionManager().updatePlayerBoundingBox(this.position);
     }
 
     @Override
@@ -189,7 +188,7 @@ public class SessionPlayerEntity extends PlayerEntity {
                 session.setNoClip(false);
             }
         }
-        this.position = position.add(0, definition.offset(), 0);
+        this.position = position;
     }
 
     @Override
@@ -222,7 +221,7 @@ public class SessionPlayerEntity extends PlayerEntity {
         
         MovePlayerPacket movePlayerPacket = new MovePlayerPacket();
         movePlayerPacket.setRuntimeEntityId(geyserId);
-        movePlayerPacket.setPosition(position);
+        movePlayerPacket.setPosition(getBedrockPosition());
         movePlayerPacket.setRotation(getBedrockRotation());
         movePlayerPacket.setOnGround(isOnGround());
         movePlayerPacket.setMode(MovePlayerPacket.Mode.TELEPORT);
@@ -238,17 +237,16 @@ public class SessionPlayerEntity extends PlayerEntity {
     }
 
     /**
-     * Set the player's position without applying an offset or moving the bounding box
-     * This is used in BedrockMovePlayer which receives the player's position
-     * with the offset pre-applied
+     * Sets the player's Java feet position without moving the bounding box.
+     * This is used while processing Bedrock movement after its protocol position has been converted.
      *
-     * @param position the new position of the Bedrock player
+     * @param position the new Java feet position
      */
     public void setPositionManual(Vector3f position) {
         this.position = position;
 
         // Player is "above" the void so they're not supposed to no clip.
-        if (session.isNoClip() && position.getY() - EntityDefinitions.PLAYER.offset() >= session.getBedrockDimension().minY() - 5) {
+        if (session.isNoClip() && position.getY() >= session.getBedrockDimension().minY() - 5) {
             session.setNoClip(false);
         }
     }
@@ -564,7 +562,7 @@ public class SessionPlayerEntity extends PlayerEntity {
     public float getJumpVelocity() {
         float velocity = 0.42F;
 
-        if (session.getGeyser().getWorldManager().blockAt(session, this.getPosition().sub(0, EntityDefinitions.PLAYER.offset() + 0.1F, 0).toInt()).is(Blocks.HONEY_BLOCK)) {
+        if (session.getGeyser().getWorldManager().blockAt(session, this.getPosition().down(0.1F).toInt()).is(Blocks.HONEY_BLOCK)) {
             velocity *= 0.6F;
         }
 
@@ -575,7 +573,7 @@ public class SessionPlayerEntity extends PlayerEntity {
         if (session.getGameMode() == GameMode.SPECTATOR) {
             return false;
         }
-        Vector3i pos = getPosition().down(EntityDefinitions.PLAYER.offset()).toInt();
+        Vector3i pos = getPosition().toInt();
         BlockState state = session.getGeyser().getWorldManager().blockAt(session, pos);
         if (state.block().is(session, BlockTag.CLIMBABLE)) {
             return true;

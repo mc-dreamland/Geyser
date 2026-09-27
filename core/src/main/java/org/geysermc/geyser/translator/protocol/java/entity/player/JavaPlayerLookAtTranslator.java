@@ -37,7 +37,7 @@ public class JavaPlayerLookAtTranslator extends PacketTranslator<ClientboundPlay
     @Override
     public void translate(GeyserSession session, ClientboundPlayerLookAtPacket packet) {
         var targetPosition = targetPosition(session, packet);
-        var selfPosition = session.getPlayerEntity().getPosition();
+        var selfPosition = session.getPlayerEntity().getPosition().up(session.getEyeHeight());
 
         var xDelta = targetPosition.getX() - selfPosition.getX();
         var yDelta = targetPosition.getY() - selfPosition.getY();

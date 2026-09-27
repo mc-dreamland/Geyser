@@ -89,7 +89,7 @@ public class JavaGameEventTranslator extends PacketTranslator<ClientboundGameEve
                     // Fix a bug where the player has glitched movement and thinks they are still on the ground
                     MovePlayerPacket movePlayerPacket = new MovePlayerPacket();
                     movePlayerPacket.setRuntimeEntityId(entity.getGeyserId());
-                    movePlayerPacket.setPosition(entity.getPosition());
+                    movePlayerPacket.setPosition(entity.getBedrockPosition());
                     movePlayerPacket.setRotation(entity.getBedrockRotation());
                     movePlayerPacket.setOnGround(false);
                     movePlayerPacket.setMode(MovePlayerPacket.Mode.TELEPORT);
