@@ -31,7 +31,9 @@ import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketSerializer;
 import org.cloudburstmc.protocol.bedrock.codec.v662.serializer.PlayerAuthInputSerializer_v662;
+import org.cloudburstmc.protocol.bedrock.codec.v766.serializer.PlayerAuthInputSerializer_v766;
 import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
+import org.cloudburstmc.protocol.bedrock.data.PlayerBlockActionData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.ItemUseTransaction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.LegacySetItemSlotData;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
@@ -44,7 +46,7 @@ public final class NeteasePlayerAuthInputSerializer {
     private static final int NETEASE_INPUT_BITS = 67; // TODO 每次协议更新记得检查枚举数量是否变化
     private static final PlayerAuthInputData[] NETEASE_WIRE_TO_INPUT = createWireToInputMapping();
 
-    public static final BedrockPacketSerializer<PlayerAuthInputPacket> V819_860 = new PlayerAuthInputSerializer_v662() {
+    public static final BedrockPacketSerializer<PlayerAuthInputPacket> V819_860_898 = new PlayerAuthInputSerializer_v662() {
         @Override
         public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, PlayerAuthInputPacket packet) {
             //v388

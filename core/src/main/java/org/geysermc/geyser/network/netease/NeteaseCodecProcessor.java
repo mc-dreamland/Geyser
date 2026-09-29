@@ -28,21 +28,25 @@ package org.geysermc.geyser.network.netease;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.v361.serializer.ClientCacheStatusSerializer_v361;
 import org.cloudburstmc.protocol.bedrock.data.PacketRecipient;
+import org.cloudburstmc.protocol.bedrock.packet.AnimatePacket;
 import org.cloudburstmc.protocol.bedrock.packet.BiomeDefinitionListPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ClientCacheBlobStatusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ClientCacheStatusPacket;
+import org.cloudburstmc.protocol.bedrock.packet.CommandRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerOpenPacket;
-import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
-import org.cloudburstmc.protocol.bedrock.packet.ResourcePackClientResponsePacket;
+import org.cloudburstmc.protocol.bedrock.packet.SetPlayerInventoryOptionsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
 import org.geysermc.geyser.network.netease.packets.NeteaseJsonPacket;
 import org.geysermc.geyser.network.netease.packets.SetDimensionLocalTimePacket;
+import org.geysermc.geyser.network.netease.serializers.NeteaseAnimateSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteaseBiomeDefinitionListSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteaseClientCacheBlobStatusSerializer;
+import org.geysermc.geyser.network.netease.serializers.NeteaseCommandRequestSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteaseContainerOpenSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteaseJsonSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteasePlayerAuthInputSerializer;
+import org.geysermc.geyser.network.netease.serializers.NeteaseSetPlayerInventoryOptionsSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteaseTextSerializer;
 import org.geysermc.geyser.network.netease.serializers.SetDimensionLocalTimeSerializer;
 
@@ -67,14 +71,20 @@ public final class NeteaseCodecProcessor {
         codecBuilder.updateSerializer(ClientCacheBlobStatusPacket.class, NeteaseClientCacheBlobStatusSerializer.INSTANCE);
         codecBuilder.updateSerializer(ClientCacheStatusPacket.class, ClientCacheStatusSerializer_v361.INSTANCE);
 
-        if (protocolVersion >= 819) {
-            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V819_860);
+        if (protocolVersion >= 898) {
+            codecBuilder.updateSerializer(AnimatePacket.class, NeteaseAnimateSerializer.V898);
+            codecBuilder.updateSerializer(CommandRequestPacket.class, NeteaseCommandRequestSerializer.V898);
+            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V819_860_898);
+            codecBuilder.updateSerializer(TextPacket.class, NeteaseTextSerializer.V898);
+        } else if (protocolVersion >= 819) {
+            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V819_860_898);
             codecBuilder.updateSerializer(TextPacket.class, NeteaseTextSerializer.INSTANCE);
         }
 
-        if (protocolVersion == 860) {
+        if (protocolVersion >= 860) {
             codecBuilder.updateSerializer(BiomeDefinitionListPacket.class, NeteaseBiomeDefinitionListSerializer.V860);
             codecBuilder.updateSerializer(ContainerOpenPacket.class, NeteaseContainerOpenSerializer.V860);
+            codecBuilder.updateSerializer(SetPlayerInventoryOptionsPacket.class, NeteaseSetPlayerInventoryOptionsSerializer.V860);
         }
         //TODO 后续尽量将所有网易特性的包都由当前类进行注册
     }

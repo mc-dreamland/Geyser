@@ -126,7 +126,7 @@ public class ItemRegistryPopulator {
         List<PaletteVersion> paletteVersions = new ArrayList<>(11);
         paletteVersions.add(new PaletteVersion("1_21_93", Bedrock_v819.CODEC.getProtocolVersion(), Conversion827_819::remapItem));
         paletteVersions.add(new PaletteVersion("1_21_120", Bedrock_v860.CODEC.getProtocolVersion(), Conversion859_844::remapItem));
-        paletteVersions.add(new PaletteVersion("1_21_120", Bedrock_v898.CODEC.getProtocolVersion(), Conversion859_844::remapItem));
+        paletteVersions.add(new PaletteVersion("1_21_130", Bedrock_v898.CODEC.getProtocolVersion()));
 
         GeyserBootstrap bootstrap = GeyserImpl.getInstance().getBootstrap();
 
