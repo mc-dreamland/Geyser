@@ -507,6 +507,9 @@ public interface GeyserConfig {
 
         @DefaultNumeric(6379)
         int port();
+
+        @DefaultString("mcnetgame")
+        String password();
     }
 
     @ConfigSerializable
