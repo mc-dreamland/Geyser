@@ -57,23 +57,18 @@ public class JavaTeleportEntityTranslator extends PacketTranslator<ClientboundTe
             return;
         }
 
-        Vector3f currentBedrockPosition = entity.getPosition();
-        Vector3d currentJavaPosition = Vector3d.from(
-            currentBedrockPosition.getX(),
-            currentBedrockPosition.getY() - entity.getDefinition().offset(),
-            currentBedrockPosition.getZ()
-        );
+        Vector3d currentPosition = entity.getPosition().toDouble();
         Vector3d position = packet.getPosition().add(
-            packet.getRelatives().contains(PositionElement.X) ? currentJavaPosition.getX() : 0,
-            packet.getRelatives().contains(PositionElement.Y) ? currentJavaPosition.getY() : 0,
-            packet.getRelatives().contains(PositionElement.Z) ? currentJavaPosition.getZ() : 0
+            packet.getRelatives().contains(PositionElement.X) ? currentPosition.getX() : 0,
+            packet.getRelatives().contains(PositionElement.Y) ? currentPosition.getY() : 0,
+            packet.getRelatives().contains(PositionElement.Z) ? currentPosition.getZ() : 0
         );
 
         boolean hasRelativePosition = packet.getRelatives().contains(PositionElement.X)
             || packet.getRelatives().contains(PositionElement.Y)
             || packet.getRelatives().contains(PositionElement.Z);
         boolean interpolate = (entity instanceof LivingEntity || hasRelativePosition)
-            && currentJavaPosition.distance(position) < 4096.0;
+            && currentPosition.distance(position) < 4096.0;
 
         float newPitch = MathUtils.clamp(packet.getXRot()
             + (packet.getRelatives().contains(PositionElement.X_ROT) ? entity.getPitch() : 0), -90, 90);
@@ -84,9 +79,9 @@ public class JavaTeleportEntityTranslator extends PacketTranslator<ClientboundTe
 
         if (interpolate) {
             entity.moveRelative(
-                position.getX() - currentJavaPosition.getX(),
-                position.getY() - currentJavaPosition.getY(),
-                position.getZ() - currentJavaPosition.getZ(),
+                position.getX() - currentPosition.getX(),
+                position.getY() - currentPosition.getY(),
+                position.getZ() - currentPosition.getZ(),
                 newYaw, newPitch, newYaw, packet.isOnGround()
             );
         } else {

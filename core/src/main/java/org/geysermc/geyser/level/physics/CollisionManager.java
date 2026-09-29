@@ -252,7 +252,7 @@ public class CollisionManager {
         PlayerEntity entity = session.getPlayerEntity();
         MovePlayerPacket movePlayerPacket = new MovePlayerPacket();
         movePlayerPacket.setRuntimeEntityId(entity.getGeyserId());
-        movePlayerPacket.setPosition(entity.getPosition());
+        movePlayerPacket.setPosition(entity.getBedrockPosition());
         movePlayerPacket.setRotation(entity.getBedrockRotation());
         movePlayerPacket.setMode(MovePlayerPacket.Mode.NORMAL);
         session.sendUpstreamPacket(movePlayerPacket);
@@ -454,7 +454,8 @@ public class CollisionManager {
      * @return if the player is currently in a water block
      */
     public boolean isPlayerInWater() {
-        BlockState state = session.getGeyser().getWorldManager().blockAt(session, session.getPlayerEntity().getPosition().toInt());
+        BlockState state = session.getGeyser().getWorldManager().blockAt(session,
+                session.getPlayerEntity().getPosition().up(EntityDefinitions.PLAYER.offset()).toInt());
         return state.is(Blocks.WATER) && state.getValue(Properties.LEVEL) == 0;
     }
 

@@ -182,7 +182,8 @@ public class BlockInventoryHolder extends InventoryHolder {
 
         Vector3i lastInteractionBlockPosition = session.getLastInteractionBlockPosition();
         // Netease: still require the interacted block to remain within normal reach so we don't reuse a far-away block.
-        return position.distance(lastInteractionBlockPosition.getX(), lastInteractionBlockPosition.getY(), lastInteractionBlockPosition.getZ()) < 5.01f;
+        Vector3f eyePosition = position.up(session.getEyeHeight());
+        return eyePosition.distance(lastInteractionBlockPosition.getX(), lastInteractionBlockPosition.getY(), lastInteractionBlockPosition.getZ()) < 5.01f;
     }
 
     /**
