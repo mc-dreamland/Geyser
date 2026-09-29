@@ -858,7 +858,16 @@ public class MappingsReader_v1 extends MappingsReader {
             }
         }
 
-        return new CustomEntityMapping(identifier, width, height);
+        String bid = "";
+        if (node.has("bid")) {
+            JsonElement bidNode = node.get("bid");
+            if (!bidNode.isJsonPrimitive() || !bidNode.getAsJsonPrimitive().isString()) {
+                throw new InvalidCustomMappingsFileException("bid must be a string");
+            }
+            bid = bidNode.getAsString();
+        }
+
+        return new CustomEntityMapping(identifier, width, height, bid);
     }
 
     /**

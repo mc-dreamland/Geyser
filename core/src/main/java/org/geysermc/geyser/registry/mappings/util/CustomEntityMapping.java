@@ -25,5 +25,8 @@
 
 package org.geysermc.geyser.registry.mappings.util;
 
-public record CustomEntityMapping(String identifier, float width, float height) {
+public record CustomEntityMapping(String identifier, float width, float height, String bid) {
+    public CustomEntityMapping(String identifier, float width, float height) {
+        this(identifier, width, height, "");
+    }
 }
