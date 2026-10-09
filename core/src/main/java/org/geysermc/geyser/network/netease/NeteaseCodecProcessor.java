@@ -35,6 +35,7 @@ import org.cloudburstmc.protocol.bedrock.packet.ClientCacheStatusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.CommandRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerOpenPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ResourcePackStackPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetPlayerInventoryOptionsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
 import org.geysermc.geyser.network.netease.packets.NeteaseJsonPacket;
@@ -46,6 +47,7 @@ import org.geysermc.geyser.network.netease.serializers.NeteaseCommandRequestSeri
 import org.geysermc.geyser.network.netease.serializers.NeteaseContainerOpenSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteaseJsonSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteasePlayerAuthInputSerializer;
+import org.geysermc.geyser.network.netease.serializers.NeteaseResourcePackStackSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteaseSetPlayerInventoryOptionsSerializer;
 import org.geysermc.geyser.network.netease.serializers.NeteaseTextSerializer;
 import org.geysermc.geyser.network.netease.serializers.SetDimensionLocalTimeSerializer;
@@ -75,6 +77,7 @@ public final class NeteaseCodecProcessor {
             codecBuilder.updateSerializer(AnimatePacket.class, NeteaseAnimateSerializer.V898);
             codecBuilder.updateSerializer(CommandRequestPacket.class, NeteaseCommandRequestSerializer.V898);
             codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V819_860_898);
+            codecBuilder.updateSerializer(ResourcePackStackPacket.class, NeteaseResourcePackStackSerializer.V898);
             codecBuilder.updateSerializer(TextPacket.class, NeteaseTextSerializer.V898);
         } else if (protocolVersion >= 819) {
             codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V819_860_898);
