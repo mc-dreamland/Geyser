@@ -47,6 +47,7 @@ import org.geysermc.geyser.api.block.custom.component.PlacementConditions.Face;
 import org.geysermc.geyser.api.block.custom.component.TransformationComponent;
 import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.api.item.custom.CustomItemOptions;
+import org.geysermc.geyser.api.item.custom.NeteaseChargeAnimationComponent;
 import org.geysermc.geyser.api.item.custom.NeteaseFrameAnimationComponent;
 import org.geysermc.geyser.api.util.CreativeCategory;
 import org.geysermc.geyser.item.exception.InvalidCustomMappingsFileException;
@@ -84,6 +85,8 @@ import java.util.stream.IntStream;
  * A class responsible for reading custom item and block mappings from a JSON file
  */
 public class MappingsReader_v1 extends MappingsReader {
+    private static final String NETEASE_CHARGE_ANIMATION_MAPPING = "netease_frame_animation";
+    private static final String NETEASE_CHARGE_ANIMATION_COMPONENT = "netease:frame_animation";
     private static final String NETEASE_FRAME_ANIMATION_MAPPING = "netease_frame_anim_in_scene";
     private static final String NETEASE_FRAME_ANIMATION_COMPONENT = "netease:frame_anim_in_scene";
     private static final int[] ROTATIONS = {0, -90, 180, 90};
@@ -275,6 +278,11 @@ public class MappingsReader_v1 extends MappingsReader {
             customItemData.neteaseFrameAnimation(frameAnimation);
         }
 
+        NeteaseChargeAnimationComponent chargeAnimation = readNeteaseChargeAnimationComponent(node);
+        if (chargeAnimation != null) {
+            customItemData.neteaseChargeAnimation(chargeAnimation);
+        }
+
         if (node.get("tags") instanceof JsonArray tags) {
             Set<String> tagsSet = new ObjectOpenHashSet<>();
             tags.forEach(tag -> tagsSet.add(tag.getAsString()));
@@ -282,6 +290,46 @@ public class MappingsReader_v1 extends MappingsReader {
         }
 
         return customItemData.build();
+    }
+
+    static @Nullable NeteaseChargeAnimationComponent readNeteaseChargeAnimationComponent(JsonObject node) throws InvalidCustomMappingsFileException {
+        JsonElement element = node.get(NETEASE_CHARGE_ANIMATION_MAPPING);
+        if (element == null) {
+            element = node.get(NETEASE_CHARGE_ANIMATION_COMPONENT);
+        }
+        if (element == null) {
+            return null;
+        }
+        if (!(element instanceof JsonObject component)) {
+            throw new InvalidCustomMappingsFileException(NETEASE_CHARGE_ANIMATION_MAPPING + " must be an object");
+        }
+
+        JsonElement framesNode = component.get("frame_count");
+        if (!(framesNode instanceof JsonPrimitive framesPrimitive) || !framesPrimitive.isNumber()) {
+            throw new InvalidCustomMappingsFileException(NETEASE_CHARGE_ANIMATION_MAPPING + ".frame_count must be an integer");
+        }
+        int frameCount;
+        try {
+            frameCount = Integer.parseInt(framesPrimitive.getAsString());
+        } catch (NumberFormatException exception) {
+            throw new InvalidCustomMappingsFileException(NETEASE_CHARGE_ANIMATION_MAPPING + ".frame_count must be an integer");
+        }
+        if (frameCount <= 0) {
+            throw new InvalidCustomMappingsFileException(NETEASE_CHARGE_ANIMATION_MAPPING + ".frame_count must be greater than zero");
+        }
+
+        JsonElement textureNode = component.get("texture_name");
+        if (!(textureNode instanceof JsonPrimitive texturePrimitive) || !texturePrimitive.isString()
+                || texturePrimitive.getAsString().isBlank()) {
+            throw new InvalidCustomMappingsFileException(NETEASE_CHARGE_ANIMATION_MAPPING + ".texture_name must be a non-empty string");
+        }
+
+        JsonElement toolbarNode = component.get("animate_in_toolbar");
+        if (!(toolbarNode instanceof JsonPrimitive toolbarPrimitive) || !toolbarPrimitive.isBoolean()) {
+            throw new InvalidCustomMappingsFileException(NETEASE_CHARGE_ANIMATION_MAPPING + ".animate_in_toolbar must be a boolean");
+        }
+
+        return new NeteaseChargeAnimationComponent(frameCount, texturePrimitive.getAsString(), toolbarPrimitive.getAsBoolean());
     }
 
     static @Nullable NeteaseFrameAnimationComponent readNeteaseFrameAnimationComponent(JsonObject node) throws InvalidCustomMappingsFileException {

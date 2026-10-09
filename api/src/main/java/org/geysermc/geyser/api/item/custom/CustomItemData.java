@@ -116,6 +116,15 @@ public interface CustomItemData {
     }
 
     /**
+     * Gets the NetEase charging frames component for this item.
+     *
+     * @return the charging frames component, or null if no charging frames are configured
+     */
+    default @Nullable NeteaseChargeAnimationComponent neteaseChargeAnimation() {
+        return null;
+    }
+
+    /**
      * Gets the item's set of tags that can be used in Molang.
      * Equivalent to "tag:some_tag"
      *
@@ -152,6 +161,10 @@ public interface CustomItemData {
         Builder renderOffsets(@Nullable CustomRenderOffsets renderOffsets);
 
         default Builder neteaseFrameAnimation(@Nullable NeteaseFrameAnimationComponent frameAnimation) {
+            return this;
+        }
+
+        default Builder neteaseChargeAnimation(@Nullable NeteaseChargeAnimationComponent chargeAnimation) {
             return this;
         }
 

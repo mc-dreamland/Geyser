@@ -37,6 +37,7 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.ItemVersion;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.api.item.custom.CustomRenderOffsets;
+import org.geysermc.geyser.api.item.custom.NeteaseChargeAnimationComponent;
 import org.geysermc.geyser.api.item.custom.NeteaseFrameAnimationComponent;
 import org.geysermc.geyser.api.item.custom.NonVanillaCustomItemData;
 import org.geysermc.geyser.api.util.TriState;
@@ -281,6 +282,7 @@ public class CustomItemRegistryPopulator {
 
         componentBuilder.putCompound("minecraft:display_name", NbtMap.builder().putString("value", customItemData.displayName()).build());
         addNeteaseFrameAnimationComponent(customItemData, componentBuilder);
+        addNeteaseChargeAnimationComponent(customItemData, componentBuilder);
 
         // Add a Geyser tag to the item, allowing Molang queries
         addItemTag(componentBuilder, "geyser:is_custom");
@@ -307,6 +309,19 @@ public class CustomItemRegistryPopulator {
                     .build());
             itemProperties.putBoolean("use_duration", true);
         }
+    }
+
+    static void addNeteaseChargeAnimationComponent(CustomItemData customItemData, NbtMapBuilder componentBuilder) {
+        NeteaseChargeAnimationComponent chargeAnimation = customItemData.neteaseChargeAnimation();
+        if (chargeAnimation == null) {
+            return;
+        }
+
+        componentBuilder.putCompound("netease:frame_animation", NbtMap.builder()
+                .putInt("frame_count", chargeAnimation.frameCount())
+                .putString("texture_name", chargeAnimation.textureName())
+                .putBoolean("animate_in_toolbar", chargeAnimation.animateInToolbar())
+                .build());
     }
 
     static void addNeteaseFrameAnimationComponent(CustomItemData customItemData, NbtMapBuilder componentBuilder) {

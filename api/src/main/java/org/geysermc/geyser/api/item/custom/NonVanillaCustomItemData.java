@@ -249,6 +249,11 @@ public interface NonVanillaCustomItemData extends CustomItemData {
         }
 
         @Override
+        default Builder neteaseChargeAnimation(@Nullable NeteaseChargeAnimationComponent chargeAnimation) {
+            return this;
+        }
+
+        @Override
         Builder tags(@Nullable Set<String> tags);
 
         NonVanillaCustomItemData build();

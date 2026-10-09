@@ -31,6 +31,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.geysermc.geyser.api.item.custom.CustomItemOptions;
 import org.geysermc.geyser.api.item.custom.CustomRenderOffsets;
+import org.geysermc.geyser.api.item.custom.NeteaseChargeAnimationComponent;
 import org.geysermc.geyser.api.item.custom.NeteaseFrameAnimationComponent;
 import org.geysermc.geyser.api.item.custom.NonVanillaCustomItemData;
 
@@ -61,7 +62,7 @@ public final class GeyserNonVanillaCustomItemData extends GeyserCustomItemData i
     public GeyserNonVanillaCustomItemData(Builder builder) {
         super(builder.name, builder.customItemOptions, builder.displayName, builder.icon, builder.allowOffhand,
                 builder.displayHandheld, builder.creativeCategory, builder.creativeGroup,
-                builder.textureSize, builder.renderOffsets, builder.neteaseFrameAnimation, builder.tags);
+                builder.textureSize, builder.renderOffsets, builder.neteaseFrameAnimation, builder.neteaseChargeAnimation, builder.tags);
 
         this.identifier = builder.identifier;
         this.javaId = builder.javaId;
@@ -242,6 +243,11 @@ public final class GeyserNonVanillaCustomItemData extends GeyserCustomItemData i
         @Override
         public Builder neteaseFrameAnimation(@Nullable NeteaseFrameAnimationComponent frameAnimation) {
             return (Builder) super.neteaseFrameAnimation(frameAnimation);
+        }
+
+        @Override
+        public Builder neteaseChargeAnimation(@Nullable NeteaseChargeAnimationComponent chargeAnimation) {
+            return (Builder) super.neteaseChargeAnimation(chargeAnimation);
         }
 
         @Override
