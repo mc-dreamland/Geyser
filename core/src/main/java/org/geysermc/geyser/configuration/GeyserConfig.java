@@ -269,6 +269,12 @@ public interface GeyserConfig {
             return CooldownUtils.CooldownType.TITLE;
         }
 
+        @Comment("""
+            使用网易 AttackCDShow 模组显示攻击冷却，替代原有的标题或快捷栏提示。
+            仅在 show-cooldown 未禁用且玩家开启冷却显示时生效，客户端需要安装配套模组。""")
+        @DefaultBoolean(false)
+        boolean neteaseAttackCooldown();
+
         @SuppressWarnings("BooleanMethodIsAlwaysInverted")
         @Comment("""
             Bedrock clients can freeze when opening up the command prompt for the first time if given a lot of commands.
@@ -508,7 +514,8 @@ public interface GeyserConfig {
         @DefaultNumeric(6379)
         int port();
 
-        @DefaultString("mcnetgame")
+        @Comment("Redis 密码，留空或不配置时不进行密码认证。")
+        @DefaultString("")
         String password();
     }
 
@@ -533,7 +540,10 @@ public interface GeyserConfig {
         @Comment("""
                 是否启用 Bedrock 客户端 Blob Cache。
                 启用后，热点区块会以 Blob 引用方式发送以节省带宽。若出现传送后部分区块不渲染、区块空白或客户端
-                缓存兼容性问题，请先将此项设为 false 进行排查。""")
+                缓存兼容性问题，请先将此项设为 false 进行排查。
+                ClientBlobCacheSummary 中 raw 字节统计仅覆盖使用 Blob Cache 的区块，按压缩前数据估算；
+                totalRawSavedGiBEstimate 为累计下行节省估算，不代表实际网络流量，补发可能使其为负。
+                storePayloadBytes 为全局 Blob 池的数据大小，不包含对象开销及会话仍持有的已淘汰数据。""")
         @DefaultBoolean(true)
         boolean enableBlobCache();
 
@@ -609,6 +619,17 @@ public interface GeyserConfig {
         @Comment("Whether custom Bedrock geometry should be accepted.")
         @DefaultBoolean(false)
         boolean allowCustomGeometry();
+
+        @Comment("""
+                是否加载 packs/Encryption 中的网易加密 ZIP。
+                开启后将其中 resource_packs、behavior_packs 内的包分别打包为 ZIP，
+                按包目录名与 packs/ResourcePacks、packs/BehaviorPacks 中去掉扩展名的文件名对应。
+                同名包选择较新的 header.version；版本相同优先加密包，原目录独有的包仍会加载。
+                拆分的 ZIP 缓存于 cache/netease_encrypted_packs，自选资源包目录不变。
+                完整启动时自动清理未使用的旧缓存；运行中重载保留旧文件，避免中断玩家下载。
+                修改配置后重启或重载；更新包文件后可使用 /geyser loadpacks 重新加载。""")
+        @DefaultBoolean(false)
+        boolean useEncryptedPackDirectories();
 
         @Comment("""
                 网易客户端资源包分片发送间隔，单位为毫秒。

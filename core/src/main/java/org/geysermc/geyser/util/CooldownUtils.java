@@ -27,6 +27,7 @@ package org.geysermc.geyser.util;
 
 import lombok.Getter;
 import org.cloudburstmc.protocol.bedrock.packet.SetTitlePacket;
+import org.geysermc.geyser.network.netease.NeteaseAttackCooldown;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.PreferencesCache;
 import org.geysermc.geyser.text.ChatColor;
@@ -50,6 +51,13 @@ public class CooldownUtils {
 
         if (session.getAttackSpeed() == 0.0 || session.getAttackSpeed() > 20) {
             return; // 0.0 usually happens on login and causes issues with visuals; anything above 20 means a plugin like OldCombatMechanics is being used
+        }
+        if (session.getGeyser().config().gameplay().neteaseAttackCooldown()) {
+            double tickrateMultiplier = Math.max(session.getMillisecondsPerTick() / 50, 1.0);
+            double cooldownSeconds = tickrateMultiplier / session.getAttackSpeed();
+            session.setLastHitTime(System.currentTimeMillis());
+            session.sendUpstreamPacket(NeteaseAttackCooldown.createPacket(cooldownSeconds));
+            return;
         }
         // Set the times to stay a bit with no fade in nor out
         SetTitlePacket titlePacket = new SetTitlePacket();

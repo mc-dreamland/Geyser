@@ -70,6 +70,7 @@ import org.geysermc.geyser.api.event.lifecycle.GeyserShutdownEvent;
 import org.geysermc.geyser.api.network.AuthType;
 import org.geysermc.geyser.api.network.BedrockListener;
 import org.geysermc.geyser.api.network.RemoteServer;
+import org.geysermc.geyser.api.pack.PathPackCodec;
 import org.geysermc.geyser.api.util.MinecraftVersion;
 import org.geysermc.geyser.api.util.PlatformType;
 import org.geysermc.geyser.command.CommandRegistry;
@@ -85,10 +86,12 @@ import org.geysermc.geyser.level.BedrockDimension;
 import org.geysermc.geyser.level.WorldManager;
 import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.network.netty.GeyserServer;
+import org.geysermc.geyser.pack.url.GeyserUrlPackCodec;
 import org.geysermc.geyser.ping.GeyserLegacyPingPassthrough;
 import org.geysermc.geyser.registry.BlockRegistries;
 import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.registry.loader.BehaviorPackLoader;
+import org.geysermc.geyser.registry.loader.NeteaseEncryptedPackLoader;
 import org.geysermc.geyser.registry.loader.OptionalResourcePackLoader;
 import org.geysermc.geyser.registry.loader.ResourcePackLoader;
 import org.geysermc.geyser.registry.populator.DataComponentRegistryPopulator;
@@ -134,6 +137,7 @@ import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -375,7 +379,11 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         String password = geyserConfig.netease().redis().password();
         int timeout = 2000;
 
-        pool = new JedisPool(config, host, port, timeout, password);
+        if (password == null || password.isEmpty()) {
+            pool = new JedisPool(config, host, port, timeout);
+        } else {
+            pool = new JedisPool(config, host, port, timeout, password);
+        }
     }
 
     private void startInstance() {
@@ -401,6 +409,24 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         Registries.RESOURCE_PACKS.load();
         Registries.OPTIONAL_RESOURCE_PACKS.load();
         Registries.BEHAVIOR_PACKS.load();
+
+        if (!isReloading && sessionManager.size() == 0) {
+            // Run before the Bedrock listener starts. Live pack reloads must retain old download files.
+            var activePackPaths = new HashSet<Path>();
+            for (var packs : List.of(Registries.RESOURCE_PACKS.get(), Registries.OPTIONAL_RESOURCE_PACKS.get(),
+                    Registries.BEHAVIOR_PACKS.get())) {
+                for (var holder : packs.values()) {
+                    var codec = holder.codec();
+                    PathPackCodec pathCodec = codec instanceof PathPackCodec local ? local
+                            : codec instanceof GeyserUrlPackCodec remote ? remote.getFallback() : null;
+                    if (pathCodec != null) {
+                        activePackPaths.add(pathCodec.path());
+                    }
+                }
+            }
+            NeteaseEncryptedPackLoader.cleanupUnused(bootstrap.getConfigFolder().resolve("cache/netease_encrypted_packs"),
+                    activePackPaths, logger);
+        }
 
         // Warnings to users who enable options that they might not need.
         if (config.advanced().bedrock().useHaproxyProtocol()) {

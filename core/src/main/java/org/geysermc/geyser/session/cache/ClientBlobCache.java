@@ -37,6 +37,7 @@ import org.cloudburstmc.protocol.bedrock.packet.ClientCacheMissResponsePacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket;
 import org.geysermc.geyser.session.GeyserSession;
 
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -79,6 +80,8 @@ public final class ClientBlobCache {
     private static final LongAdder SUMMARY_RESPONSES = new LongAdder();
     private static final LongAdder SUMMARY_FAILURES = new LongAdder();
     private static final AtomicLong SUMMARY_LAST_LOG_NANOS = new AtomicLong(System.nanoTime());
+    private static final TrafficCounters GLOBAL_TRAFFIC = new TrafficCounters();
+    private static final TrafficCounters SUMMARY_TRAFFIC = new TrafficCounters();
 
     private static final long PRIME64_1 = -7046029288634856825L;
     private static final long PRIME64_2 = -4417276706812531889L;
@@ -156,6 +159,17 @@ public final class ClientBlobCache {
         packet.setCachingEnabled(true);
         packet.getBlobIds().addAll(blobIds);
         packet.setData(Unpooled.wrappedBuffer(payload, cachePayloadOffset, payload.length - cachePayloadOffset));
+        if (!this.session.getUpstream().isClosed()) {
+            // Compare the ordinary network payload, not the larger persistent-NBT blob representation.
+            long baselineBytes = (long) payload.length + unsignedVarIntSize(payload.length);
+            int tailBytes = payload.length - cachePayloadOffset;
+            long cacheChunkBytes = (long) tailBytes + unsignedVarIntSize(tailBytes)
+                    + (long) blobIds.size() * Long.BYTES + unsignedVarIntSize(blobIds.size());
+            GLOBAL_TRAFFIC.addChunk(baselineBytes, cacheChunkBytes);
+            SUMMARY_TRAFFIC.addChunk(baselineBytes, cacheChunkBytes);
+        }
+        SUMMARY_PREPARED_CHUNKS.increment();
+        logSummary();
         return true;
     }
 
@@ -167,6 +181,7 @@ public final class ClientBlobCache {
 
         ClientCacheMissResponsePacket response = new ClientCacheMissResponsePacket();
         int unknownNaks = 0;
+        long responseBytes = 0;
         for (long blobId : packet.getNaks()) {
             Blob blob = this.pendingBlobs.get(blobId);
             if (blob == null) {
@@ -175,6 +190,7 @@ public final class ClientBlobCache {
             }
             if (!response.getBlobs().containsKey(blobId)) {
                 response.getBlobs().put(blobId, blob.buffer());
+                responseBytes += (long) blob.length + unsignedVarIntSize(blob.length) + Long.BYTES;
             }
         }
 
@@ -188,6 +204,10 @@ public final class ClientBlobCache {
         GLOBAL_CLIENT_BLOB_MISSES.add(clientMisses);
         SUMMARY_CLIENT_HITS.add(clientHits);
         SUMMARY_CLIENT_MISSES.add(clientMisses);
+        long statusBytes = ((long) clientHits + clientMisses) * Long.BYTES
+                + unsignedVarIntSize(clientHits) + unsignedVarIntSize(clientMisses);
+        GLOBAL_TRAFFIC.statusBytes.add(statusBytes);
+        SUMMARY_TRAFFIC.statusBytes.add(statusBytes);
 
         int responseCount = response.getBlobs().size();
         int failures = unknownNaks;
@@ -199,6 +219,9 @@ public final class ClientBlobCache {
         } else {
             // Cache misses block chunk construction client-side, so bypass the normal send queue.
             this.session.sendUpstreamPacketImmediately(response);
+            responseBytes += unsignedVarIntSize(responseCount);
+            GLOBAL_TRAFFIC.missResponseBytes.add(responseBytes);
+            SUMMARY_TRAFFIC.missResponseBytes.add(responseBytes);
         }
         GLOBAL_BLOB_FAILURES.add(failures);
         SUMMARY_RESPONSES.add(responseCount);
@@ -268,10 +291,8 @@ public final class ClientBlobCache {
         }
         GLOBAL_BLOB_STORE_HITS.add(storeHits);
         GLOBAL_BLOB_STORE_MISSES.add(storeMisses);
-        SUMMARY_PREPARED_CHUNKS.increment();
         SUMMARY_STORE_HITS.add(storeHits);
         SUMMARY_STORE_MISSES.add(storeMisses);
-        logSummary();
         return blobIds;
     }
 
@@ -291,6 +312,9 @@ public final class ClientBlobCache {
             return;
         }
 
+        TrafficSnapshot traffic = SUMMARY_TRAFFIC.snapshot(true);
+        TrafficSnapshot totalTraffic = GLOBAL_TRAFFIC.snapshot(false);
+        long storePayloadBytes = GLOBAL_BLOBS.asMap().values().stream().mapToLong(blob -> blob.length).sum();
         this.session.getGeyser().getLogger().info("[ClientBlobCacheSummary] windowSeconds="
                 + ((now - previousLog) / 1_000_000_000.0D)
                 + " preparedChunks=" + SUMMARY_PREPARED_CHUNKS.sumThenReset()
@@ -305,7 +329,67 @@ public final class ClientBlobCache {
                 + " totalStoreMisses=" + GLOBAL_BLOB_STORE_MISSES.sum()
                 + " totalClientHits=" + GLOBAL_CLIENT_BLOB_HITS.sum()
                 + " totalClientMisses=" + GLOBAL_CLIENT_BLOB_MISSES.sum()
-                + " totalFailures=" + GLOBAL_BLOB_FAILURES.sum());
+                + " totalFailures=" + GLOBAL_BLOB_FAILURES.sum()
+                + " byteAccounting=uncompressed-estimate"
+                + traffic.logFields("")
+                + totalTraffic.logFields("total")
+                + " totalRawSavedGiBEstimate=" + String.format(Locale.ROOT, "%.3f", totalTraffic.savedBytesEstimate() / 1073741824.0D)
+                + " storePayloadBytes=" + storePayloadBytes
+                + " storeMaxPayloadBytes=" + GLOBAL_CACHE_MAX_BYTES);
+    }
+
+    private static int unsignedVarIntSize(int value) {
+        return Math.max(1, (Integer.SIZE - Integer.numberOfLeadingZeros(value) + 6) / 7);
+    }
+
+    static TrafficSnapshot totalTraffic() {
+        return GLOBAL_TRAFFIC.snapshot(false);
+    }
+
+    /**
+     * Uncompressed size estimates for successfully prepared cache-mode chunks and submitted miss responses.
+     * Counts payload lengths, hash IDs and their VarInt prefixes. Common LevelChunk fields, packet/batch
+     * headers, compression, encryption, RakNet overhead and retransmissions are excluded.
+     * ACK/NAK bytes are inbound and reported separately; they never count as saved outbound bytes.
+     */
+    record TrafficSnapshot(long baselineBytes, long cacheChunkBytes, long missResponseBytes, long statusBytes) {
+        long savedBytesEstimate() {
+            // Do not clamp: misses can arrive in later windows or cost more than the ordinary chunk payload.
+            return baselineBytes - cacheChunkBytes - missResponseBytes;
+        }
+
+        double savedPercentEstimate() {
+            return baselineBytes == 0 ? 0.0D : savedBytesEstimate() * 100.0D / baselineBytes;
+        }
+
+        private String logFields(String prefix) {
+            String raw = prefix.isEmpty() ? "raw" : prefix + "Raw";
+            return " " + raw + "BaselineBytes=" + baselineBytes
+                    + " " + raw + "CacheChunkBytes=" + cacheChunkBytes
+                    + " " + raw + "MissResponseBytes=" + missResponseBytes
+                    + " " + raw + "StatusBytes=" + statusBytes
+                    + " " + raw + "SavedBytesEstimate=" + savedBytesEstimate()
+                    + " " + raw + "SavedPercentEstimate=" + String.format(Locale.ROOT, "%.2f", savedPercentEstimate());
+        }
+    }
+
+    private static final class TrafficCounters {
+        private final LongAdder baselineBytes = new LongAdder();
+        private final LongAdder cacheChunkBytes = new LongAdder();
+        private final LongAdder missResponseBytes = new LongAdder();
+        private final LongAdder statusBytes = new LongAdder();
+
+        private void addChunk(long baseline, long cached) {
+            baselineBytes.add(baseline);
+            cacheChunkBytes.add(cached);
+        }
+
+        private TrafficSnapshot snapshot(boolean reset) {
+            return new TrafficSnapshot(reset ? baselineBytes.sumThenReset() : baselineBytes.sum(),
+                    reset ? cacheChunkBytes.sumThenReset() : cacheChunkBytes.sum(),
+                    reset ? missResponseBytes.sumThenReset() : missResponseBytes.sum(),
+                    reset ? statusBytes.sumThenReset() : statusBytes.sum());
+        }
     }
 
     static long xxHash64(byte[] data, int offset, int length) {

@@ -116,6 +116,13 @@ public class BehaviorPackLoader implements RegistryLoader<Path, Map<UUID, Resour
             resourcePacks = new ArrayList<>();
         }
 
+        if (GeyserImpl.getInstance().config().netease().useEncryptedPackDirectories()) {
+            resourcePacks = NeteaseEncryptedPackLoader.merge(resourcePacks,
+                    directory.getParent().resolve("Encryption"),
+                    GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("cache/netease_encrypted_packs"),
+                    NeteaseEncryptedPackLoader.PackType.BEHAVIOR, GeyserImpl.getInstance().getLogger());
+        }
+
         //noinspection deprecation - we know
         GeyserLoadBehaviorPacksEvent event = new GeyserLoadBehaviorPacksEvent(resourcePacks);
         GeyserImpl.getInstance().eventBus().fire(event);

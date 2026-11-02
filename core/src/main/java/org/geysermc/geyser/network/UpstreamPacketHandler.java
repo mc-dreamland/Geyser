@@ -81,6 +81,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayDeque;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -210,8 +211,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         LoginEncryptionUtils.encryptPlayerConnection(session, loginPacket);
 
-
-        GeyserImpl.getInstance().getLogger().info(String.format("Player %s : %s connected with protocol version %s!",
+        geyser.getLogger().info(String.format("Player %s : %s connected with protocol version %s!",
             session.bedrockUsername(), session.playerUuid(), session.protocolVersion()));
         if (session.isClosed()) {
             // Can happen if Xbox validation fails
@@ -251,7 +251,6 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
 
         ResourcePacksInfoPacket resourcePacksInfo = new ResourcePacksInfoPacket();
         resourcePacksInfo.getResourcePackInfos().addAll(this.resourcePackLoadEvent.infoPacketEntries());
-        resourcePacksInfo.getResourcePackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
 
 
         if (geyser.config().netease().optionalPacks().enableOptionalPacks()) {
@@ -273,6 +272,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                 resourcePacksInfo.getResourcePackInfos().addAll(this.optionalResourcePacksEvent.infoPacketEntries());
             }
         }
+        resourcePacksInfo.getResourcePackInfos().addAll(this.behaviorPackLoadEvent.infoPacketEntries());
         resourcePacksInfo.setVibrantVisualsForceDisabled(!session.isAllowVibrantVisuals());
 
         resourcePacksInfo.setForcedToAccept(GeyserImpl.getInstance().config().gameplay().forceResourcePacks() ||
@@ -312,7 +312,10 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             case SEND_PACKS -> {
                 // Bedrock clients can send empty "send_packs" responses, in which case we shouldn't send anything back
                 if (!packet.getPackIds().isEmpty()) {
-                    packsToSend.addAll(packet.getPackIds());
+                    // Keep the client's order within each category, but download regular packs before optional and behavior packs.
+                    packsToSend.addAll(packet.getPackIds().stream()
+                        .sorted(Comparator.comparingInt(this::resourcePackDownloadOrder))
+                        .toList());
                     sendPackDataInfo(packsToSend.pop());
                     return PacketSignal.HANDLED;
                 }
@@ -336,7 +339,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                 session.disconnect("disconnectionScreen.resourcePack");
             }
             default -> {
-                GeyserImpl.getInstance().getLogger().debug("received unknown status packet: " + packet);
+                geyser.getLogger().debug("received unknown status packet: " + packet);
                 session.disconnect("disconnectionScreen.resourcePack");
             }
         }
@@ -406,7 +409,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         }
 
         if (holder == null) {
-            GeyserImpl.getInstance().getLogger().debug("Client {0} tried to request pack id {1} not sent to it!",
+            geyser.getLogger().debug("Client {0} tried to request pack id {1} not sent to it!",
                 session.bedrockUsername(), packet.getPackId());
             session.disconnect("disconnectionScreen.resourcePack");
             return PacketSignal.HANDLED;
@@ -440,7 +443,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             holder = this.behaviorPackLoadEvent.getPacks().get(packet.getPackId());
         }
         if (holder == null) {
-            GeyserImpl.getInstance().getLogger().debug("Client {0} tried to request pack id {1} not sent to it!",
+            geyser.getLogger().debug("Client {0} tried to request pack id {1} not sent to it!",
                 session.bedrockUsername(), packet.getPackId());
             chunkRequestQueue.clear();
             session.disconnect("disconnectionScreen.resourcePack");
@@ -494,12 +497,39 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         }
     }
 
+    private int resourcePackDownloadOrder(String id) {
+        String[] packId = id.split("_");
+        if (packId.length < 2) {
+            return 3;
+        }
+
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(packId[0]);
+        } catch (IllegalArgumentException e) {
+            return 3;
+        }
+
+        // Match sendPackDataInfo's holder selection if a UUID occurs in more than one category.
+        if (this.behaviorPackLoadEvent.getPacks().containsKey(uuid)) {
+            return 2;
+        }
+        if (this.optionalResourcePacksEvent != null && this.optionalResourcePacksEvent.getPacks().containsKey(uuid)) {
+            return 1;
+        }
+        if (this.resourcePackLoadEvent.getPacks().containsKey(uuid)) {
+            return 0;
+        }
+        // Keep invalid/unknown requests so sendPackDataInfo still rejects them through the existing disconnect path.
+        return 3;
+    }
+
     private void sendPackDataInfo(String id) {
         ResourcePackDataInfoPacket data = new ResourcePackDataInfoPacket();
         String[] packID = id.split("_");
 
         if (packID.length < 2) {
-            GeyserImpl.getInstance().getLogger().debug("Client {0} tried to request invalid pack id {1}!",
+            geyser.getLogger().debug("Client {0} tried to request invalid pack id {1}!",
                 session.bedrockUsername(), packID);
             session.disconnect("disconnectionScreen.resourcePack");
             return;
@@ -509,7 +539,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         try {
             packId = UUID.fromString(packID[0]);
         } catch (IllegalArgumentException e) {
-            GeyserImpl.getInstance().getLogger().debug("Client {0} tried to request pack with an invalid id {1})",
+            geyser.getLogger().debug("Client {0} tried to request pack with an invalid id {1})",
                 session.bedrockUsername(), id);
             session.disconnect("disconnectionScreen.resourcePack");
             return;
@@ -531,7 +561,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         }
 
         if (holder == null) {
-            GeyserImpl.getInstance().getLogger().debug("Client {0} tried to request pack id {1} not sent to it!",
+            geyser.getLogger().debug("Client {0} tried to request pack id {1} not sent to it!",
                 session.bedrockUsername(), id);
             session.disconnect("disconnectionScreen.resourcePack");
             return;
@@ -551,19 +581,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         data.setPremium(false);
 
         session.sendUpstreamPacket(data);
-
-        totalSentPackBytes += codec.size();
-        GeyserImpl.getInstance().getLogger().debug(String.format(
-            "[Geyser] 开始下发资源包：%s（类型：%s），大小：%,d 字节，共 %d 个分片。累计发送大小: %,d 字节。",
-            header.name(),
-            data.getType(),
-            codec.size(),
-            chunkCount,
-            totalSentPackBytes
-        ));
     }
-
-    private static long totalSentPackBytes = 0L;
 
     private int neteaseResourcePackChunkSendDelay() {
         return geyser.config().netease().resourcePackChunkSendDelayMs();

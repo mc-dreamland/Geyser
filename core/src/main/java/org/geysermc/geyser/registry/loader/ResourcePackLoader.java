@@ -116,6 +116,13 @@ public class ResourcePackLoader implements RegistryLoader<Path, Map<UUID, Resour
             resourcePacks = new ArrayList<>();
         }
 
+        if (GeyserImpl.getInstance().config().netease().useEncryptedPackDirectories()) {
+            resourcePacks = NeteaseEncryptedPackLoader.merge(resourcePacks,
+                    directory.getParent().resolve("Encryption"),
+                    GeyserImpl.getInstance().getBootstrap().getConfigFolder().resolve("cache/netease_encrypted_packs"),
+                    NeteaseEncryptedPackLoader.PackType.RESOURCE, GeyserImpl.getInstance().getLogger());
+        }
+
         // Add custom skull pack
         Path skullResourcePack = SkullResourcePackManager.createResourcePack();
         if (skullResourcePack != null) {
