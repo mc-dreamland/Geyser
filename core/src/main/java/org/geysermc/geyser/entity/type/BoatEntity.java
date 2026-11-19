@@ -25,6 +25,9 @@
 
 package org.geysermc.geyser.entity.type;
 
+import org.cloudburstmc.protocol.bedrock.packet.MoveEntityDeltaPacket;
+import org.geysermc.geyser.network.GameProtocol;
+import org.geysermc.geyser.session.GeyserSession;
 import lombok.Getter;
 import org.cloudburstmc.math.GenericMath;
 import org.cloudburstmc.math.vector.Vector2f;
@@ -33,22 +36,16 @@ import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.packet.AnimatePacket;
 import org.cloudburstmc.protocol.bedrock.packet.MoveEntityAbsolutePacket;
-import org.cloudburstmc.protocol.bedrock.packet.MoveEntityDeltaPacket;
-import org.geysermc.geyser.entity.EntityDefinition;
-import org.geysermc.geyser.entity.EntityDefinitions;
+import org.geysermc.geyser.entity.spawn.EntitySpawnContext;
 import org.geysermc.geyser.entity.vehicle.BoatVehicleComponent;
 import org.geysermc.geyser.entity.vehicle.ClientVehicle;
 import org.geysermc.geyser.entity.vehicle.VehicleComponent;
-import org.geysermc.geyser.network.GameProtocol;
-import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.util.InteractionResult;
 import org.geysermc.geyser.util.InteractiveTag;
 import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.BooleanEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPaddleBoatPacket;
-
-import java.util.UUID;
 
 public class BoatEntity extends Entity implements Tickable, Leashable, ClientVehicle {
 
@@ -86,9 +83,12 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
     private float lerpYaw, lerpHeadYaw;
     private int lerpSteps;
 
-    public BoatEntity(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, BoatVariant variant) {
+    public BoatEntity(EntitySpawnContext context, BoatVariant variant) {
+        super(context);
         // Initial rotation is incorrect
-        super(session, entityId, geyserId, uuid, definition, position.add(0d, definition.offset(), 0d), motion, yaw + 90, 0, yaw + 90);
+        setYaw(yaw + 90);
+        setPitch(0);
+        setHeadYaw(headYaw + 90);
         this.variant = variant;
         this.lerpPosition = position;
         this.lerpYaw = yaw + 90;
@@ -117,31 +117,19 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
         this.vehicleComponent.moveAbsolute(position.getX(), position.getY(), position.getZ());
 
         // We don't include the rotation (y) as it causes the boat to appear sideways
-        setPosition(position.add(0d, this.definition.offset(), 0d));
+        setPosition(position);
         setYaw(yaw + 90);
         setHeadYaw(yaw + 90);
         setOnGround(isOnGround);
 
         MoveEntityAbsolutePacket moveEntityPacket = new MoveEntityAbsolutePacket();
         moveEntityPacket.setRuntimeEntityId(geyserId);
-        if (session.getPlayerEntity().getVehicle() == this && session.getPlayerEntity().isRidingInFront()) {
-            // Minimal glitching when ClientboundMoveVehiclePacket is sent
-            moveEntityPacket.setPosition(position.up(EntityDefinitions.PLAYER.offset() - this.definition.offset()));
-        } else {
-            moveEntityPacket.setPosition(this.position);
-        }
-        moveEntityPacket.setRotation(getBedrockRotation());
+        moveEntityPacket.setPosition(bedrockPosition());
+        moveEntityPacket.setRotation(bedrockRotation());
         moveEntityPacket.setOnGround(isOnGround);
         moveEntityPacket.setTeleported(teleported);
 
         session.sendUpstreamPacket(moveEntityPacket);
-    }
-
-    /**
-     * Move the boat without making the adjustments needed to translate from Java
-     */
-    public void moveAbsoluteWithoutAdjustments(Vector3f position, float yaw, boolean isOnGround, boolean teleported) {
-        super.moveAbsoluteRaw(position, yaw, 0, yaw, isOnGround, teleported);
     }
 
     @Override
@@ -158,7 +146,7 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
             this.lerpPosition = lerpSteps == 0
                     ? Vector3f.from(
                             this.position.getX() + relX,
-                            this.position.getY() - definition.offset() + relY,
+                            this.position.getY() + relY,
                             this.position.getZ() + relZ)
                     : this.lerpPosition.add(relX, relY, relZ);
             this.lerpYaw = bedrockYaw;
@@ -184,7 +172,7 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
     public void moveAbsolute(Vector3f position, float yaw, float pitch, float headYaw, boolean isOnGround, boolean teleported) {
         if (shouldLerp()) {
             float deltaX = position.getX() - this.position.getX();
-            float deltaY = position.getY() - (this.position.getY() - definition.offset());
+            float deltaY = position.getY() - this.position.getY();
             float deltaZ = position.getZ() - this.position.getZ();
             float distanceSquared = deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ;
 
@@ -283,7 +271,7 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
         if (this.lerpSteps > 0) {
             float time = 1.0f / this.lerpSteps;
             float lerpXTotal = GenericMath.lerp(this.position.getX(), this.lerpPosition.getX(), time);
-            float lerpYTotal = GenericMath.lerp(this.position.getY() - this.definition.offset(), this.lerpPosition.getY(), time) + this.definition.offset();
+            float lerpYTotal = GenericMath.lerp(this.position.getY(), this.lerpPosition.getY(), time);
             float lerpZTotal = GenericMath.lerp(this.position.getZ(), this.lerpPosition.getZ(), time);
             float lerpYaw = this.yaw + MathUtils.wrapDegrees(this.lerpYaw - this.yaw) * time;
             float lerpHeadYaw = this.headYaw + MathUtils.wrapDegrees(this.lerpHeadYaw - this.headYaw) * time;
@@ -291,7 +279,7 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
             MoveEntityDeltaPacket moveEntityPacket = new MoveEntityDeltaPacket();
             moveEntityPacket.setRuntimeEntityId(geyserId);
             moveEntityPacket.setX(lerpXTotal);
-            moveEntityPacket.setY(lerpYTotal);
+            moveEntityPacket.setY(lerpYTotal + offset);
             moveEntityPacket.setZ(lerpZTotal);
             moveEntityPacket.setYaw(lerpYaw);
             moveEntityPacket.setPitch(this.pitch);
@@ -324,7 +312,7 @@ public class BoatEntity extends Entity implements Tickable, Leashable, ClientVeh
             this.headYaw = lerpHeadYaw;
             this.lerpSteps--;
 
-            vehicleComponent.moveAbsolute(lerpXTotal, lerpYTotal - definition.offset(), lerpZTotal);
+            vehicleComponent.moveAbsolute(lerpXTotal, lerpYTotal, lerpZTotal);
         }
         // Java sends simply "true" and "false" (is_paddling_left), Bedrock keeps sending packets as you're rowing
         if (session.getPlayerEntity().getVehicle() == this) {

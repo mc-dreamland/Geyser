@@ -89,8 +89,8 @@ public class EntityCache {
     public boolean cacheEntity(Entity entity) {
         // Check to see if the entity exists, otherwise we can end up with duplicated mobs
         if (!entityIdTranslations.containsKey(entity.getEntityId())) {
-            entityIdTranslations.put(entity.getEntityId(), entity.getGeyserId());
-            entities.put(entity.getGeyserId(), entity);
+            entityIdTranslations.put(entity.getEntityId(), entity.geyserId());
+            entities.put(entity.geyserId(), entity);
             return true;
         }
         return false;
@@ -146,7 +146,7 @@ public class EntityCache {
     public void addPlayerEntity(PlayerEntity entity) {
         synchronized (playerEntities) {
             // putIfAbsent matches the behavior of playerInfoMap in Java as of 1.19.3
-            boolean exists = playerEntities.putIfAbsent(entity.getUuid(), entity) != null;
+            boolean exists = playerEntities.putIfAbsent(entity.uuid(), entity) != null;
             if (exists) {
                 return;
             }

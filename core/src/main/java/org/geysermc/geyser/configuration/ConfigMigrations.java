@@ -45,6 +45,17 @@ public class ConfigMigrations {
     public static final BiFunction<Class<? extends GeyserConfig>, GeyserBootstrap, ConfigurationTransformation.Versioned> TRANSFORMER = (configClass, bootstrap) ->
         ConfigurationTransformation.versionedBuilder()
         .versionKey("config-version")
+        .addVersion(10, ConfigurationTransformation.builder()
+            .addAction(path("gameplay", "show-cooldown"), (path, value) -> {
+                String previous = value.getString();
+                if ("title".equals(previous)) {
+                    value.set("crosshair");
+                } else if ("actionbar".equals(previous)) {
+                    value.set("hotbar");
+                }
+                return new Object[]{"gameplay", "cooldown-type"};
+            })
+            .build())
         .addVersion(9, ConfigurationTransformation.builder().build())
         .addVersion(8, ConfigurationTransformation.builder().build())
         .addVersion(7, ConfigurationTransformation.builder().build())
@@ -116,7 +127,7 @@ public class ConfigMigrations {
                 }
                 if (Objects.equals(previous, "no-emotes")) {
                     value.set(false);
-                    return new Object[]{ "gameplay", "show-emotes" };
+                    return new Object[]{ "gameplay", "emotes-enabled" };
                 }
                 return null;
             })

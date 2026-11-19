@@ -80,6 +80,10 @@ public class SkinManager {
     /**
      * Builds a Bedrock player list entry from our existing, cached Bedrock skin information
      */
+    public static PlayerListPacket.Entry buildEntryFromCachedSkin(GeyserSession session, AvatarEntity playerEntity) {
+        return buildCachedEntry(session, playerEntity);
+    }
+
     public static PlayerListPacket.Entry buildCachedEntry(GeyserSession session, AvatarEntity playerEntity) {
         // First: see if we have the cached skin texture ID.
         GameProfileData data = GameProfileData.from(playerEntity);

@@ -134,7 +134,7 @@ public final class GeyserServer {
 //        ServerBootstrap bootstrap = this.createBootstrap();
         // setup SO_REUSEPORT if exists - or, if the option does not actually exist, reset listen count
         // otherwise, we try to bind multiple times which wont work if so_reuseport is not valid
-//        if (!Bootstraps.setupBootstrap(bootstrap)) {
+//        if (!Bootstraps.setupBootstrap(bootstrap, TRANSPORT)) {
 //            this.listenCount = 1;
 //        }
 
@@ -155,7 +155,7 @@ public final class GeyserServer {
         for (int i = 0; i < listenCount; i++) {
             System.out.println("#bind -> " + i);
             ServerBootstrap bootstrap = createBootstrap();
-            if (!Bootstraps.setupBootstrap(bootstrap)) {
+            if (!Bootstraps.setupBootstrap(bootstrap, TRANSPORT)) {
                 this.listenCount = 1;
             }
             ChannelFuture future = bootstrap.bind(address);

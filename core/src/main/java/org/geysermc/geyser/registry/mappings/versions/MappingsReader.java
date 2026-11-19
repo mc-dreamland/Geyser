@@ -25,10 +25,12 @@
 
 package org.geysermc.geyser.registry.mappings.versions;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.geysermc.geyser.api.item.custom.CustomItemData;
 import org.geysermc.geyser.api.item.custom.CustomRenderOffsets;
+import org.geysermc.geyser.api.item.custom.v2.CustomItemDefinition;
+import org.geysermc.geyser.api.util.Identifier;
 import org.geysermc.geyser.item.exception.InvalidCustomMappingsFileException;
 import org.geysermc.geyser.registry.mappings.util.CustomBlockMapping;
 import org.geysermc.geyser.registry.mappings.util.CustomEntityMapping;
@@ -37,16 +39,22 @@ import java.nio.file.Path;
 import java.util.function.BiConsumer;
 
 public abstract class MappingsReader {
-    public abstract void readItemMappings(Path file, JsonObject mappingsRoot, BiConsumer<String, CustomItemData> consumer);
+    public abstract void readItemMappings(Path file, JsonObject mappingsRoot, BiConsumer<Identifier, CustomItemDefinition> consumer);
     public abstract void readBlockMappings(Path file, JsonObject mappingsRoot, BiConsumer<String, CustomBlockMapping> consumer);
     // Netease: keep custom entity mappings on the Gson-based reader contract.
-    public abstract void readEntityMappings(Path file, JsonObject mappingsRoot, BiConsumer<String, CustomEntityMapping> consumer);
+    public void readEntityMappings(Path file, JsonObject mappingsRoot, BiConsumer<String, CustomEntityMapping> consumer) {
+        throw new UnsupportedOperationException("Custom entity mappings require format version 1");
+    }
 
-    public abstract CustomItemData readItemMappingEntry(JsonObject node) throws InvalidCustomMappingsFileException;
-    public abstract CustomBlockMapping readBlockMappingEntry(String identifier, JsonObject node) throws InvalidCustomMappingsFileException;
+    public abstract CustomItemDefinition readItemMappingEntry(Identifier identifier, JsonElement node) throws InvalidCustomMappingsFileException;
+    public abstract CustomBlockMapping readBlockMappingEntry(String identifier, JsonElement node) throws InvalidCustomMappingsFileException;
     // Netease: expose custom skull block and custom entity mapping readers on the shared Gson contract.
-    public abstract CustomBlockMapping readSkullBlockMappingEntry(String identifier, JsonObject node) throws InvalidCustomMappingsFileException;
-    public abstract CustomEntityMapping readEntityMappingEntry(String identifier, JsonObject node) throws InvalidCustomMappingsFileException;
+    public CustomBlockMapping readSkullBlockMappingEntry(String identifier, JsonObject node) throws InvalidCustomMappingsFileException {
+        throw new InvalidCustomMappingsFileException("Custom skull block mappings require format version 1");
+    }
+    public CustomEntityMapping readEntityMappingEntry(String identifier, JsonObject node) throws InvalidCustomMappingsFileException {
+        throw new InvalidCustomMappingsFileException("Custom entity mappings require format version 1");
+    }
 
     protected @Nullable CustomRenderOffsets fromJsonObject(JsonObject node) {
         if (node == null) {
@@ -54,8 +62,8 @@ public abstract class MappingsReader {
         }
 
         return new CustomRenderOffsets(
-                getHandOffsets(node, "main_hand"),
-                getHandOffsets(node, "off_hand")
+            getHandOffsets(node, "main_hand"),
+            getHandOffsets(node, "off_hand")
         );
     }
 
@@ -65,8 +73,8 @@ public abstract class MappingsReader {
         }
 
         return new CustomRenderOffsets.Hand(
-                getPerspectiveOffsets(tmpNode, "first_person"),
-                getPerspectiveOffsets(tmpNode, "third_person")
+            getPerspectiveOffsets(tmpNode, "first_person"),
+            getPerspectiveOffsets(tmpNode, "third_person")
         );
     }
 
@@ -76,9 +84,9 @@ public abstract class MappingsReader {
         }
 
         return new CustomRenderOffsets.Offset(
-                getOffsetXYZ(tmpNode, "position"),
-                getOffsetXYZ(tmpNode, "rotation"),
-                getOffsetXYZ(tmpNode, "scale")
+            getOffsetXYZ(tmpNode, "position"),
+            getOffsetXYZ(tmpNode, "rotation"),
+            getOffsetXYZ(tmpNode, "scale")
         );
     }
 

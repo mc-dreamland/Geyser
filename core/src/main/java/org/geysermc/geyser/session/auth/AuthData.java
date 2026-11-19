@@ -35,8 +35,13 @@ import java.util.UUID;
  * @param xuid The xuid of the user
  * @param uid The Bedrock UID used by skin-related flows
  * @param issuedAt The unix time (in seconds) that the JWT was issued
+ * @param playFabId The PlayFab ID of the user
  */
-public record AuthData(String name, UUID uuid, String xuid, long uid, long issuedAt) {
+public record AuthData(String name, UUID uuid, String xuid, long uid, long issuedAt, String playFabId) {
+    public AuthData(String name, UUID uuid, String xuid, long uid, long issuedAt) {
+        this(name, uuid, xuid, uid, issuedAt, "");
+    }
+
     public AuthData(String name, UUID uuid, String xuid) {
         this(name, uuid, xuid, -1L, -1L);
     }

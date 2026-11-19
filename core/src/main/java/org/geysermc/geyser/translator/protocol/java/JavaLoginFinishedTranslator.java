@@ -52,16 +52,16 @@ public class JavaLoginFinishedTranslator extends PacketTranslator<ClientboundLog
         // Required, or else Floodgate players break with Spigot chunk caching
         GameProfile profile = packet.getProfile();
         playerEntity.setUsername(profile.getName());
-        playerEntity.setUuid(profile.getId());
+        playerEntity.uuid(profile.getId());
 
-        session.getGeyser().getSessionManager().addSession(playerEntity.getUuid(), session);
+        session.getGeyser().getSessionManager().addSession(playerEntity.uuid(), session);
 
         // Check if they are not using a linked account
-        if (remoteAuthType == AuthType.OFFLINE || playerEntity.getUuid().getMostSignificantBits() == 0) {
+        if (remoteAuthType == AuthType.OFFLINE || playerEntity.uuid().getMostSignificantBits() == 0) {
             SkinManager.handleBedrockSkin(playerEntity, session.getClientData());
         }
 
-        if (remoteAuthType == AuthType.FLOODGATE) {
+        if (session.getGeyser().getSkinUploader() != null) {
             // We'll send the skin upload a bit after the handshake packet (aka this packet),
             // because otherwise the global server returns the data too fast.
             // We upload it after we know for sure that the target server

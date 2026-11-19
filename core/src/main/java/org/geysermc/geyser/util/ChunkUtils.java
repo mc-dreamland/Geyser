@@ -55,9 +55,7 @@ public class ChunkUtils {
     private static final boolean SHOW_CHUNK_HEIGHT_WARNING_LOGS = Boolean.parseBoolean(System.getProperty("Geyser.ShowChunkHeightWarningLogs", "true"));
 
     public static final byte[] EMPTY_BIOME_DATA;
-
     public static final BlockStorage[] EMPTY_BLOCK_STORAGE;
-
     public static final int EMPTY_CHUNK_SECTION_SIZE;
     private static final ConcurrentHashMap<Integer, byte[]> EMPTY_CHUNK_PAYLOAD_CACHE = new ConcurrentHashMap<>(3);
 

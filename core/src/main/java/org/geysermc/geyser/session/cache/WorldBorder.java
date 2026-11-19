@@ -25,6 +25,9 @@
 
 package org.geysermc.geyser.session.cache;
 
+import org.geysermc.geyser.entity.spawn.EntitySpawnContext;
+import lombok.Getter;
+import lombok.Setter;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.cloudburstmc.math.GenericMath;
 import org.cloudburstmc.math.vector.Vector2d;
@@ -35,8 +38,6 @@ import org.cloudburstmc.protocol.bedrock.data.LevelEvent;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket;
-import lombok.Getter;
-import lombok.Setter;
 import org.geysermc.geyser.entity.EntityDefinitions;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
@@ -145,7 +146,7 @@ public class WorldBorder {
      * @return true as long as the player entity is within the world limits.
      */
     public boolean isInsideBorderBoundaries() {
-        return isInsideBorderBoundaries(session.getPlayerEntity().getPosition());
+        return isInsideBorderBoundaries(session.getPlayerEntity().position());
     }
 
     public boolean isInsideBorderBoundaries(Vector3f position) {
@@ -189,7 +190,7 @@ public class WorldBorder {
      * warning blocks set and spawn collision entities.
      */
     public boolean isCloseToBorderBoundaries() {
-        Vector3f position = session.getPlayerEntity().getPosition();
+        Vector3f position = session.getPlayerEntity().position();
         return !(position.getX() > minX + CLOSE_TO_BORDER && position.getX() < maxX - CLOSE_TO_BORDER
             && position.getZ() > minZ + CLOSE_TO_BORDER && position.getZ() < maxZ - CLOSE_TO_BORDER);
     }
@@ -202,7 +203,7 @@ public class WorldBorder {
      * @return true as long the entity is within the world limits and not in the warning zone at the edge to the border.
      */
     public boolean isWithinWarningBoundaries() {
-        Vector3f entityPosition = session.getPlayerEntity().getPosition();
+        Vector3f entityPosition = session.getPlayerEntity().position();
         return entityPosition.getX() > warningMinX && entityPosition.getX() < warningMaxX && entityPosition.getZ() > warningMinZ && entityPosition.getZ() < warningMaxZ;
     }
 
@@ -355,7 +356,7 @@ public class WorldBorder {
             return;
         }
         currentWallTick = 0;
-        Vector3f entityPosition = session.getPlayerEntity().getPosition();
+        Vector3f entityPosition = session.getPlayerEntity().position();
         float particlePosX = entityPosition.getX();
         float particlePosY = entityPosition.getY();
         float particlePosZ = entityPosition.getZ();
@@ -553,9 +554,7 @@ public class WorldBorder {
      * Responsible for spawning the world border collision entity, and setting flags.
      */
     private Entity buildCollisionEntity() {
-        Entity entity = new Entity(session, 0, session.getEntityCache().getNextEntityId().incrementAndGet(), null,
-            EntityDefinitions.ARMOR_STAND, session.getPlayerEntity().getPosition().down(BORDER_COLLISION_Y_DISTANCE),
-            Vector3f.ZERO, 0, 0, 0); // Armor stand is only a placeholder; its hitbox metadata is replaced below.
+        Entity entity = new Entity(new EntitySpawnContext(session, EntityDefinitions.ARMOR_STAND, 0, null)); // Armor stand is only a placeholder; its hitbox metadata is replaced below.
         entity.setPosition(session.getPlayerEntity().getPosition().down(BORDER_COLLISION_Y_DISTANCE)); // Initial position, will change.
         entity.setFlag(EntityFlag.COLLIDABLE, true);
         entity.setFlag(EntityFlag.INVISIBLE, true);

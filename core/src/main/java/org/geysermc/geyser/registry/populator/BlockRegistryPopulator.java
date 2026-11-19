@@ -31,7 +31,6 @@ import com.google.common.collect.Interners;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
@@ -196,7 +195,6 @@ public final class BlockRegistryPopulator {
             }
 
             Object2ObjectMap<CustomBlockState, GeyserBedrockBlock> customBlockStateDefinitions = Object2ObjectMaps.emptyMap();
-            Int2ObjectMap<GeyserBedrockBlock> extendedCollisionBoxes = new Int2ObjectOpenHashMap<>();
             if (BlockRegistries.CUSTOM_BLOCKS.get().length != 0) {
                 customBlockStateDefinitions = new Object2ObjectOpenHashMap<>(customExtBlockStates.size());
                 for (int i = 0; i < customExtBlockStates.size(); i++) {
@@ -214,13 +212,6 @@ public final class BlockRegistryPopulator {
                     }
 
                     customBlockStateDefinitions.put(blockState, bedrockBlock);
-
-                    Set<Integer> extendedCollisionjavaIds = BlockRegistries.EXTENDED_COLLISION_BOXES.getOrDefault(blockState.block(), null);
-                    if (extendedCollisionjavaIds != null) {
-                        for (int javaId : extendedCollisionjavaIds) {
-                            extendedCollisionBoxes.put(javaId, bedrockBlock);
-                        }
-                    }
                 }
 
                 remappedVanillaIds = new int[vanillaBlockStates.size()];
@@ -433,7 +424,6 @@ public final class BlockRegistryPopulator {
                     .remappedVanillaIds(remappedVanillaIds)
                     .blockProperties(customBlockProperties)
                     .customBlockStateDefinitions(customBlockStateDefinitions)
-                    .extendedCollisionBoxes(extendedCollisionBoxes)
                     .build());
 
             customRuntimeIdList.sort(Comparator.comparingInt(GeyserBedrockBlock::getRuntimeId));

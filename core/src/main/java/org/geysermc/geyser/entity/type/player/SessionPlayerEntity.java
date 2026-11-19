@@ -25,6 +25,7 @@
 
 package org.geysermc.geyser.entity.type.player;
 
+import org.geysermc.geyser.entity.EntityDefinitions;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Getter;
 import lombok.Setter;
@@ -39,6 +40,7 @@ import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateAttributesPacket;
 import org.geysermc.geyser.entity.attribute.GeyserAttributeType;
+import org.geysermc.geyser.entity.spawn.EntitySpawnContext;
 import org.geysermc.geyser.entity.type.BoatEntity;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.LivingEntity;
@@ -144,7 +146,7 @@ public class SessionPlayerEntity extends PlayerEntity {
     private Integer removedPlayerVehicleId;
 
     public SessionPlayerEntity(GeyserSession session) {
-        super(session, -1, -10, null, Vector3f.ZERO, Vector3f.ZERO, 0, 0, 0, null, null);
+        super(new EntitySpawnContext(session, EntityDefinitions.PLAYER, -1, -10L), null, null);
 
         valid = true;
     }
@@ -189,6 +191,15 @@ public class SessionPlayerEntity extends PlayerEntity {
             }
         }
         this.position = position;
+    }
+
+    public void setPositionManual(Vector3f position) {
+        this.position = position;
+
+        // Player is "above" the void so they're not supposed to no clip.
+        if (session.isNoClip() && position.getY() >= session.getBedrockDimension().minY() - 5) {
+            session.setNoClip(false);
+        }
     }
 
     @Override
@@ -242,8 +253,15 @@ public class SessionPlayerEntity extends PlayerEntity {
      *
      * @param position the new Java feet position
      */
-    public void setPositionManual(Vector3f position) {
-        this.position = position;
+    public void setPositionFromBedrockPos(Vector3f position) {
+        // Special handling: position while sleeping
+        if (bedPosition != null && getFlag(EntityFlag.SLEEPING)) {
+            this.position = position.down(0.2f);
+        } else if (this.vehicle != null) {
+            this.position = position.down(this.vehicle.getOffset());
+        } else {
+            this.position = position.down(offset);
+        }
 
         // Player is "above" the void so they're not supposed to no clip.
         if (session.isNoClip() && position.getY() >= session.getBedrockDimension().minY() - 5) {

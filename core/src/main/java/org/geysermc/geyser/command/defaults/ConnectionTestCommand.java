@@ -32,7 +32,6 @@ import org.geysermc.geyser.api.util.TriState;
 import org.geysermc.geyser.command.GeyserCommand;
 import org.geysermc.geyser.command.GeyserCommandSource;
 import org.geysermc.geyser.configuration.GeyserConfig;
-import org.geysermc.geyser.util.LoopbackUtil;
 import org.geysermc.geyser.util.WebUtils;
 import org.incendo.cloud.CommandManager;
 import org.incendo.cloud.context.CommandContext;
@@ -155,12 +154,6 @@ public class ConnectionTestCommand extends GeyserCommand {
                     return;
                 }
 
-                // Issue: does Loopback need applying?
-                if (LoopbackUtil.needsLoopback(GeyserImpl.getInstance().getLogger())) {
-                    source.sendMessage("Loopback is not applied on this computer! You will have issues connecting from the same computer. " +
-                            "See here for steps on how to resolve: " + "https://wiki.geysermc.org/geyser/fixing-unable-to-connect-to-world/#using-geyser-on-the-same-computer");
-                }
-
                 // Generate some random, unique bits that another server wouldn't provide
                 byte[] randomBytes = new byte[2];
                 this.random.nextBytes(randomBytes);
@@ -184,7 +177,7 @@ public class ConnectionTestCommand extends GeyserCommand {
                     JsonObject cache = output.getAsJsonObject("cache");
                     String when;
                     if (cache.get("fromCache").isJsonPrimitive()) {
-                        when = cache.get("secondsSince").getAsBoolean() + " seconds ago";
+                        when = cache.get("secondsSince").getAsInt() + " seconds ago";
                     } else {
                         when = "now";
                     }

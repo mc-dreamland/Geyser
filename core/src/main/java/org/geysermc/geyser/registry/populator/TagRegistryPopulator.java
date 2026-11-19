@@ -35,6 +35,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import org.cloudburstmc.protocol.bedrock.codec.v819.Bedrock_v819;
 import org.cloudburstmc.protocol.bedrock.codec.v860.Bedrock_v860;
+import org.cloudburstmc.protocol.bedrock.codec.v898.Bedrock_v898;
 import org.geysermc.geyser.GeyserBootstrap;
 import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.item.type.Item;
@@ -69,7 +70,8 @@ public final class TagRegistryPopulator {
         // Netease: keep older palettes and vers/1.21.11 palettes available in one merged tag registry chain.
         List<ObjectIntPair<String>> paletteVersions = List.of(
             ObjectIntPair.of("1_21_90", Bedrock_v819.CODEC.getProtocolVersion()),
-            ObjectIntPair.of("1_21_120", Bedrock_v860.CODEC.getProtocolVersion())
+            ObjectIntPair.of("1_21_120", Bedrock_v860.CODEC.getProtocolVersion()),
+            ObjectIntPair.of("1_21_130", Bedrock_v898.CODEC.getProtocolVersion())
         );
         Type type = new TypeToken<Map<String, List<String>>>() {}.getType();
 

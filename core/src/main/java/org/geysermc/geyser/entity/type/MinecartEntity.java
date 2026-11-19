@@ -31,9 +31,8 @@ import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.packet.MoveEntityDeltaPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket;
-import org.geysermc.geyser.entity.EntityDefinition;
 import org.geysermc.geyser.entity.EntityDefinitions;
-import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.entity.spawn.EntitySpawnContext;
 import org.geysermc.geyser.util.InteractionResult;
 import org.geysermc.geyser.util.InteractiveTag;
 import org.geysermc.geyser.util.MathUtils;
@@ -44,7 +43,6 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.Clie
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
 
 public class MinecartEntity extends Entity implements Tickable {
     private static final int POS_ROT_LERP_TICKS = 3;
@@ -66,8 +64,8 @@ public class MinecartEntity extends Entity implements Tickable {
     private int steps;
     protected boolean dirtyYaw, dirtyHeadYaw, dirtyPitch;
 
-    public MinecartEntity(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, float pitch, float headYaw) {
-        super(session, entityId, geyserId, uuid, definition, position.add(0d, definition.offset(), 0d), motion, yaw, pitch, headYaw);
+    public MinecartEntity(EntitySpawnContext context) {
+        super(context);
     }
 
     public void setCustomBlock(IntEntityMetadata entityMetadata) {
@@ -123,7 +121,7 @@ public class MinecartEntity extends Entity implements Tickable {
             setOnGround(isOnGround);
 
             this.lerpPosition = steps == 0
-                    ? position.down(definition.offset()).add(relX, relY, relZ)
+                    ? position.add(relX, relY, relZ)
                     : lerpPosition.add(relX, relY, relZ);
             this.steps = 3;
         } else {
@@ -141,13 +139,13 @@ public class MinecartEntity extends Entity implements Tickable {
 
             float time = 1.0f / this.steps;
             float lerpXTotal = GenericMath.lerp(this.position.getX(), this.lerpPosition.getX(), time);
-            float lerpYTotal = GenericMath.lerp(this.position.getY() - definition.offset(), this.lerpPosition.getY(), time) + definition.offset();
+            float lerpYTotal = GenericMath.lerp(this.position.getY(), this.lerpPosition.getY(), time);
             float lerpZTotal = GenericMath.lerp(this.position.getZ(), this.lerpPosition.getZ(), time);
 
             MoveEntityDeltaPacket moveEntityPacket = new MoveEntityDeltaPacket();
             moveEntityPacket.setRuntimeEntityId(geyserId);
             moveEntityPacket.setX(lerpXTotal);
-            moveEntityPacket.setY(lerpYTotal);
+            moveEntityPacket.setY(lerpYTotal + offset);
             moveEntityPacket.setZ(lerpZTotal);
             moveEntityPacket.setYaw(this.yaw);
             moveEntityPacket.setPitch(this.pitch);
@@ -215,9 +213,10 @@ public class MinecartEntity extends Entity implements Tickable {
             MoveEntityDeltaPacket moveEntityPacket = new MoveEntityDeltaPacket();
             moveEntityPacket.setRuntimeEntityId(geyserId);
 
-            moveEntityPacket.setX(position.getX());
-            moveEntityPacket.setY(position.getY() + definition.offset());
-            moveEntityPacket.setZ(position.getZ());
+            Vector3f bedrockPosition = bedrockPosition();
+            moveEntityPacket.setX(bedrockPosition.getX());
+            moveEntityPacket.setY(bedrockPosition.getY());
+            moveEntityPacket.setZ(bedrockPosition.getZ());
             moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.HAS_X);
             moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.HAS_Y);
             moveEntityPacket.getFlags().add(MoveEntityDeltaPacket.Flag.HAS_Z);
@@ -303,12 +302,7 @@ public class MinecartEntity extends Entity implements Tickable {
     }
 
     @Override
-    public void moveAbsoluteRaw(Vector3f position, float yaw, float pitch, float headYaw, boolean isOnGround, boolean teleported) {
-        super.moveAbsoluteRaw(position.up(this.definition.offset()), yaw, pitch, headYaw, isOnGround, teleported);
-    }
-
-    @Override
-    public Vector3f getBedrockRotation() {
+    public Vector3f bedrockRotation() {
         // Note: minecart rotation on rails does not care about the actual rotation value
         return Vector3f.from(0, getYaw(), 0);
     }

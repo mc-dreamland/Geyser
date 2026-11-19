@@ -39,17 +39,16 @@ public class JavaPlayerLookAtTranslator extends PacketTranslator<ClientboundPlay
         var targetPosition = targetPosition(session, packet);
         var selfPosition = session.getPlayerEntity().getPosition().up(session.getEyeHeight());
 
-        var xDelta = targetPosition.getX() - selfPosition.getX();
-        var yDelta = targetPosition.getY() - selfPosition.getY();
-        var zDelta = targetPosition.getZ() - selfPosition.getZ();
-        var sqrt = Math.sqrt(xDelta * xDelta + zDelta * zDelta);
+        float xDelta = targetPosition.getX() - selfPosition.getX();
+        float yDelta = targetPosition.getY() - selfPosition.getY();
+        float zDelta = targetPosition.getZ() - selfPosition.getZ();
+        double sqrt = Math.sqrt(xDelta * xDelta + zDelta * zDelta);
 
-        var pitch = MathUtils.wrapDegrees(-Math.toDegrees(Math.atan2(yDelta, sqrt)));
-        var yaw = MathUtils.wrapDegrees(Math.toDegrees(Math.atan2(zDelta, xDelta)) - 90.0);
+        float pitch = MathUtils.wrapDegrees(-Math.toDegrees(Math.atan2(yDelta, sqrt)));
+        float yaw = MathUtils.wrapDegrees(Math.toDegrees(Math.atan2(zDelta, xDelta)) - 90.0);
 
-        var self = session.getPlayerEntity();
         // headYaw is also set to yaw in this packet
-        self.updateOwnRotation(yaw, pitch, yaw);
+        session.getPlayerEntity().updateOwnRotation(yaw, pitch, yaw);
     }
 
     public Vector3f targetPosition(GeyserSession session, ClientboundPlayerLookAtPacket packet) {
@@ -58,8 +57,9 @@ public class JavaPlayerLookAtTranslator extends PacketTranslator<ClientboundPlay
             var target = session.getEntityCache().getEntityByJavaId(entityId);
             if (target != null) {
                 return switch (packet.getTargetEntityOrigin()) {
-                    case FEET -> target.getPosition();
-                    case EYES -> target.getPosition().add(0, target.getBoundingBoxHeight(), 0);
+                    case FEET -> target.position();
+                    // FIXME should be entity#eyeHeight, not bounding box height
+                    case EYES -> target.position().add(0, target.getBoundingBoxHeight(), 0);
                 };
             }
         }

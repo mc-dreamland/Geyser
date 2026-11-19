@@ -155,7 +155,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
             entity.setMotion(deltaMovement);
             // Our motion got reset by the teleport but the deltaMovement is not 0 so send a motion packet to fix that.
             SetEntityMotionPacket entityMotionPacket = new SetEntityMotionPacket();
-            entityMotionPacket.setRuntimeEntityId(entity.getGeyserId());
+            entityMotionPacket.setRuntimeEntityId(entity.geyserId());
             entityMotionPacket.setMotion(entity.getMotion());
             session.sendUpstreamPacket(entityMotionPacket);
         }

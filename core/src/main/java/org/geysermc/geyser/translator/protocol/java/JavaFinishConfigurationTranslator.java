@@ -90,5 +90,6 @@ public class JavaFinishConfigurationTranslator extends PacketTranslator<Clientbo
         // and this packet indirectly creates the new one.
         // This makes this packet a good place to reset the scoreboard.
         session.getWorldCache().resetScoreboard();
+        session.getComponentCache().resolveComponents();
     }
 }

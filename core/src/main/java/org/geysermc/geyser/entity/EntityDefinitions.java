@@ -73,7 +73,7 @@ import org.geysermc.geyser.entity.type.SpawnerMinecartEntity;
 import org.geysermc.geyser.entity.type.TNTEntity;
 import org.geysermc.geyser.entity.type.TextDisplayEntity;
 import org.geysermc.geyser.entity.type.ThrowableEggEntity;
-import org.geysermc.geyser.entity.type.ThrowableEntity;
+import org.geysermc.geyser.entity.type.ProjectileEntity;
 import org.geysermc.geyser.entity.type.ThrowableItemEntity;
 import org.geysermc.geyser.entity.type.ThrownPotionEntity;
 import org.geysermc.geyser.entity.type.TridentEntity;
@@ -259,7 +259,7 @@ public final class EntityDefinitions {
     public static final EntityDefinition<LeashKnotEntity> LEASH_KNOT;
     public static final EntityDefinition<LightningEntity> LIGHTNING_BOLT;
     public static final EntityDefinition<LlamaEntity> LLAMA;
-    public static final EntityDefinition<ThrowableEntity> LLAMA_SPIT;
+    public static final EntityDefinition<ProjectileEntity> LLAMA_SPIT;
     public static final EntityDefinition<MagmaCubeEntity> MAGMA_CUBE;
     public static final EntityDefinition<BoatEntity> MANGROVE_BOAT;
     public static final EntityDefinition<ChestBoatEntity> MANGROVE_CHEST_BOAT;
@@ -293,7 +293,7 @@ public final class EntityDefinitions {
     public static final EntityDefinition<SheepEntity> SHEEP;
     public static final EntityDefinition<ShulkerEntity> SHULKER;
     public static final EntityDefinition<SnifferEntity> SNIFFER;
-    public static final EntityDefinition<ThrowableEntity> SHULKER_BULLET;
+    public static final EntityDefinition<ProjectileEntity> SHULKER_BULLET;
     public static final EntityDefinition<MonsterEntity> SILVERFISH;
     public static final EntityDefinition<SkeletonEntity> SKELETON;
     public static final EntityDefinition<SkeletonHorseEntity> SKELETON_HORSE;
@@ -348,8 +348,8 @@ public final class EntityDefinitions {
         EntityDefinition<Entity> entityBase = EntityDefinition.builder(Entity::new)
                 .addTranslator(MetadataTypes.BYTE, Entity::setFlags)
                 .addTranslator(MetadataTypes.INT, Entity::setAir) // Air/bubbles
-                .addTranslator(MetadataTypes.OPTIONAL_COMPONENT, Entity::setDisplayName)
-                .addTranslator(MetadataTypes.BOOLEAN, Entity::setDisplayNameVisible)
+                .addTranslator(MetadataTypes.OPTIONAL_COMPONENT, Entity::setCustomName)
+                .addTranslator(MetadataTypes.BOOLEAN, Entity::setCustomNameVisible)
                 .addTranslator(MetadataTypes.BOOLEAN, Entity::setSilent)
                 .addTranslator(MetadataTypes.BOOLEAN, Entity::setGravity)
                 .addTranslator(MetadataTypes.POSE, (entity, entityMetadata) -> entity.setPose(entityMetadata.getValue()))
@@ -425,11 +425,11 @@ public final class EntityDefinitions {
             LIGHTNING_BOLT = EntityDefinition.inherited(LightningEntity::new, entityBase)
                     .type(EntityType.LIGHTNING_BOLT)
                     .build();
-            LLAMA_SPIT = EntityDefinition.inherited(ThrowableEntity::new, entityBase)
+            LLAMA_SPIT = EntityDefinition.inherited(ProjectileEntity::new, entityBase)
                     .type(EntityType.LLAMA_SPIT)
                     .heightAndWidth(0.25f)
                     .build();
-            SHULKER_BULLET = EntityDefinition.inherited(ThrowableEntity::new, entityBase)
+            SHULKER_BULLET = EntityDefinition.inherited(ProjectileEntity::new, entityBase)
                     .type(EntityType.SHULKER_BULLET)
                     .heightAndWidth(0.3125f)
                     .build();
@@ -460,7 +460,6 @@ public final class EntityDefinitions {
             TEXT_DISPLAY = EntityDefinition.inherited(TextDisplayEntity::new, displayBase)
                     .type(EntityType.TEXT_DISPLAY)
                     .identifier("minecraft:armor_stand")
-                    .offset(-0.5f)
                     .addTranslator(MetadataTypes.COMPONENT, TextDisplayEntity::setText)
                     .addTranslator(null) // Line width
                     .addTranslator(null) // Background color
@@ -536,7 +535,7 @@ public final class EntityDefinitions {
             EntityDefinition<AbstractArrowEntity> abstractArrowBase = EntityDefinition.inherited(AbstractArrowEntity::new, entityBase)
                     .addTranslator(MetadataTypes.BYTE, AbstractArrowEntity::setArrowFlags)
                     .addTranslator(null) // "Piercing level"
-                    .addTranslator(null) // If the arrow is in the ground
+                    .addTranslator(MetadataTypes.BOOLEAN, AbstractArrowEntity::setInGround) // If the arrow is in the ground
                     .build();
             ARROW = EntityDefinition.inherited(ArrowEntity::new, abstractArrowBase)
                     .type(EntityType.ARROW)
@@ -758,7 +757,6 @@ public final class EntityDefinitions {
             CREEPER = EntityDefinition.inherited(CreeperEntity::new, mobEntityBase)
                     .type(EntityType.CREEPER)
                     .height(1.7f).width(0.6f)
-                    .offset(1.62f)
                     .addTranslator(MetadataTypes.INT, CreeperEntity::setSwelling)
                     .addTranslator(MetadataTypes.BOOLEAN, (entity, entityMetadata) -> entity.setFlag(EntityFlag.POWERED, ((BooleanEntityMetadata) entityMetadata).getPrimitiveValue()))
                     .addTranslator(MetadataTypes.BOOLEAN, CreeperEntity::setIgnited)
@@ -786,7 +784,6 @@ public final class EntityDefinitions {
             GIANT = EntityDefinition.inherited(GiantEntity::new, mobEntityBase)
                     .type(EntityType.GIANT)
                     .height(1.8f).width(1.6f)
-                    .offset(1.62f)
                     .identifier("minecraft:zombie")
                     .build();
             IRON_GOLEM = EntityDefinition.inherited(IronGolemEntity::new, mobEntityBase)
@@ -797,7 +794,6 @@ public final class EntityDefinitions {
             PHANTOM = EntityDefinition.inherited(PhantomEntity::new, mobEntityBase)
                     .type(EntityType.PHANTOM)
                     .height(0.5f).width(0.9f)
-                    .offset(0.6f)
                     .addTranslator(MetadataTypes.INT, PhantomEntity::setPhantomScale)
                     .build();
             SILVERFISH = EntityDefinition.inherited(MonsterEntity::new, mobEntityBase)
@@ -814,7 +810,6 @@ public final class EntityDefinitions {
             SKELETON = EntityDefinition.inherited(SkeletonEntity::new, mobEntityBase)
                     .type(EntityType.SKELETON)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .addTranslator(MetadataTypes.BOOLEAN, SkeletonEntity::setConvertingToStray)
                     .build();
             SNOW_GOLEM = EntityDefinition.inherited(SnowGolemEntity::new, mobEntityBase)
@@ -825,7 +820,6 @@ public final class EntityDefinitions {
             SPIDER = EntityDefinition.inherited(SpiderEntity::new, mobEntityBase)
                     .type(EntityType.SPIDER)
                     .height(0.9f).width(1.4f)
-                    .offset(1f)
                     .addTranslator(MetadataTypes.BYTE, SpiderEntity::setSpiderFlags)
                     .build();
             CAVE_SPIDER = EntityDefinition.inherited(SpiderEntity::new, SPIDER)
@@ -835,12 +829,10 @@ public final class EntityDefinitions {
             STRAY = EntityDefinition.inherited(AbstractSkeletonEntity::new, mobEntityBase)
                     .type(EntityType.STRAY)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .build();
             PARCHED = EntityDefinition.inherited(AbstractSkeletonEntity::new, mobEntityBase)
                     .type(EntityType.PARCHED)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .build();
             VEX = EntityDefinition.inherited(VexEntity::new, mobEntityBase)
                     .type(EntityType.VEX)
@@ -872,7 +864,6 @@ public final class EntityDefinitions {
             ZOMBIE = EntityDefinition.inherited(ZombieEntity::new, mobEntityBase)
                     .type(EntityType.ZOMBIE)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .addTranslator(MetadataTypes.BOOLEAN, ZombieEntity::setZombieBaby)
                     .addTranslator(null) // "set special type", doesn't do anything
                     .addTranslator(MetadataTypes.BOOLEAN, ZombieEntity::setConvertingToDrowned)
@@ -880,7 +871,6 @@ public final class EntityDefinitions {
             ZOMBIE_VILLAGER = EntityDefinition.inherited(ZombieVillagerEntity::new, ZOMBIE)
                     .type(EntityType.ZOMBIE_VILLAGER)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .identifier("minecraft:zombie_villager_v2")
                     .addTranslator(MetadataTypes.BOOLEAN, ZombieVillagerEntity::setTransforming)
                     .addTranslator(MetadataTypes.VILLAGER_DATA, ZombieVillagerEntity::setZombieVillagerData)
@@ -888,7 +878,6 @@ public final class EntityDefinitions {
             ZOMBIFIED_PIGLIN = EntityDefinition.inherited(ZombifiedPiglinEntity::new, ZOMBIE) //TODO test how zombie entity metadata is handled?
                     .type(EntityType.ZOMBIFIED_PIGLIN)
                     .height(1.95f).width(0.6f)
-                    .offset(1.62f)
                     .identifier("minecraft:zombie_pigman")
                     .build();
 
@@ -982,7 +971,6 @@ public final class EntityDefinitions {
             PILLAGER = EntityDefinition.inherited(PillagerEntity::new, raidParticipantEntityBase)
                     .type(EntityType.PILLAGER)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .addTranslator(MetadataTypes.BOOLEAN, PillagerEntity::setChargingCrossbow)
                     .build();
             RAVAGER = EntityDefinition.inherited(RavagerEntity::new, raidParticipantEntityBase)
@@ -992,12 +980,10 @@ public final class EntityDefinitions {
             VINDICATOR = EntityDefinition.inherited(VindicatorEntity::new, raidParticipantEntityBase)
                     .type(EntityType.VINDICATOR)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .build();
             WITCH = EntityDefinition.inherited(raidParticipantEntityBase.factory(), raidParticipantEntityBase)
                     .type(EntityType.WITCH)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .addTranslator(null) // Using item
                     .build();
         }
@@ -1144,14 +1130,12 @@ public final class EntityDefinitions {
             VILLAGER = EntityDefinition.inherited(VillagerEntity::new, abstractVillagerEntityBase)
                     .type(EntityType.VILLAGER)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .identifier("minecraft:villager_v2")
                     .addTranslator(MetadataTypes.VILLAGER_DATA, VillagerEntity::setVillagerData)
                     .build();
             WANDERING_TRADER = EntityDefinition.inherited(abstractVillagerEntityBase.factory(), abstractVillagerEntityBase)
                     .type(EntityType.WANDERING_TRADER)
                     .height(1.8f).width(0.6f)
-                    .offset(1.62f)
                     .build();
         }
 
@@ -1245,6 +1229,8 @@ public final class EntityDefinitions {
             ZOMBIE_NAUTILUS = EntityDefinition.inherited(ZombieNautilusEntity::new, abstractNautilusBase)
                 .type(EntityType.ZOMBIE_NAUTILUS)
                 .identifier("minecraft:zombie_nautilus")
+                .property(ZombieNautilusEntity.VARIANT_ENUM_PROPERTY)
+                .addTranslator(MetadataTypes.ZOMBIE_NAUTILUS_VARIANT, ZombieNautilusEntity::setVariant)
                 .build();
         }
 
@@ -1282,16 +1268,14 @@ public final class EntityDefinitions {
     }
 
     private static EntityDefinition<BoatEntity> buildBoat(EntityDefinition<BoatEntity> base, EntityType entityType, BoatEntity.BoatVariant variant) {
-        return EntityDefinition.inherited((session, javaId, bedrockId, uuid, definition, position, motion, yaw, pitch, headYaw) ->
-            new BoatEntity(session, javaId, bedrockId, uuid, definition, position, motion, yaw, variant), base)
+        return EntityDefinition.inherited((context) -> new BoatEntity(context, variant), base)
             .type(entityType)
             .identifier("minecraft:boat")
             .build();
     }
 
     private static EntityDefinition<ChestBoatEntity> buildChestBoat(EntityDefinition<ChestBoatEntity> base, EntityType entityType, BoatEntity.BoatVariant variant) {
-        return EntityDefinition.inherited((session, javaId, bedrockId, uuid, definition, position, motion, yaw, pitch, headYaw) ->
-                new ChestBoatEntity(session, javaId, bedrockId, uuid, definition, position, motion, yaw, variant), base)
+        return EntityDefinition.inherited((context) -> new ChestBoatEntity(context, variant), base)
             .type(entityType)
             .identifier("minecraft:chest_boat")
             .build();

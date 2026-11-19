@@ -119,7 +119,7 @@ public final class WaypointCache {
         Optional<PlayerEntity> player = uuid.flatMap(id -> Optional.ofNullable(session.getEntityCache().getPlayerEntity(id)));
         OptionalLong playerId = player.stream().mapToLong(PlayerEntity::getGeyserId).findFirst();
 
-        GeyserWaypoint tracked = GeyserWaypoint.create(session, uuid, playerId, waypoint);
+        GeyserWaypoint tracked = GeyserWaypoint.create(session, player, waypoint);
         if (tracked != null) {
             uuid.ifPresent(id -> waypointColors.put(id, tracked.color()));
             // Resend player entry with new waypoint colour

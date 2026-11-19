@@ -39,6 +39,8 @@ import org.geysermc.geyser.GeyserImpl;
 import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
 import org.geysermc.geyser.entity.type.player.SkullPlayerEntity;
+import org.geysermc.geyser.entity.EntityDefinitions;
+import org.geysermc.geyser.entity.spawn.EntitySpawnContext;
 import org.geysermc.geyser.level.block.property.Properties;
 import org.geysermc.geyser.level.block.type.BlockState;
 import org.geysermc.geyser.level.block.type.WallSkullBlock;
@@ -108,10 +110,12 @@ public class SkullCache {
         if (!texturesProperty.equals(skull.texturesProperty)) {
             skull.texturesProperty = texturesProperty;
             skull.skinHash = null;
+            skull.skinUrl = null;
             try {
                 SkinManager.GameProfileData gameProfileData = SkinManager.GameProfileData.loadFromJson(texturesProperty);
                 if (gameProfileData != null && gameProfileData.skinUrl() != null) {
                     String skinUrl = gameProfileData.skinUrl();
+                    skull.skinUrl = skinUrl;
                     skull.skinHash = skinUrl.substring(skinUrl.lastIndexOf('/') + 1);
                 } else {
                     session.getGeyser().getLogger().debug("Player skull with invalid Skin tag: " + position + " Textures: " + texturesProperty);
@@ -243,7 +247,7 @@ public class SkullCache {
         if (!cullingEnabled || totalSkullEntities < maxVisibleSkulls) {
             // Create a new entity
             long geyserId = session.getEntityCache().getNextEntityId().incrementAndGet();
-            skull.entity = new SkullPlayerEntity(session, geyserId);
+            skull.entity = new SkullPlayerEntity(new EntitySpawnContext(session, EntityDefinitions.PLAYER, 0, UUID.randomUUID()).geyserId(geyserId));
             skull.entity.spawnEntity();
             skull.entity.updateSkull(skull);
             totalSkullEntities++;
@@ -434,6 +438,7 @@ public class SkullCache {
         private String ownerName;
         private String texturesProperty;
         private String skinHash;
+        private String skinUrl;
 
         private BlockState blockState;
         private BlockDefinition blockDefinition;

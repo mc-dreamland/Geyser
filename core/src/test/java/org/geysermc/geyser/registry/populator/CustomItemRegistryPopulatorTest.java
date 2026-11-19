@@ -46,7 +46,7 @@ public class CustomItemRegistryPopulatorTest {
                 .build();
         NbtMapBuilder componentBuilder = NbtMap.builder();
 
-        CustomItemRegistryPopulator.addNeteaseFrameAnimationComponent(customItemData, componentBuilder);
+        CustomItemRegistryPopulator.addNeteaseFrameAnimationComponent(customItemData.neteaseFrameAnimation(), componentBuilder);
 
         NbtMap component = componentBuilder.build().getCompound("netease:frame_anim_in_scene");
         assertEquals(4, component.getInt("ticks_per_frame"));

@@ -25,9 +25,11 @@
 
 package org.geysermc.geyser.entity.type;
 
+import org.geysermc.geyser.entity.spawn.EntitySpawnContext;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import net.kyori.adventure.text.Component;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.cloudburstmc.math.GenericMath;
 import org.cloudburstmc.math.vector.Vector3f;
@@ -80,7 +82,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -114,8 +115,8 @@ public class LivingEntity extends Entity implements Tickable {
     private int lerpSteps;
     protected boolean dirtyYaw, dirtyHeadYaw, dirtyPitch;
 
-    public LivingEntity(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, float pitch, float headYaw) {
-        super(session, entityId, geyserId, uuid, definition, position, motion, yaw, pitch, headYaw);
+    public LivingEntity(EntitySpawnContext context) {
+        super(context);
         this.lerpPosition = position;
     }
 
@@ -208,8 +209,24 @@ public class LivingEntity extends Entity implements Tickable {
 
     @Override
     public void updateNametag(@Nullable Team team) {
+        // Java hides the name tag when a living entity has any passengers
         // if name not visible, don't mark it as visible
-        updateNametag(team, team == null || team.isVisibleFor(session.getPlayerEntity().getUsername()));
+        updateNametag(team, passengers.isEmpty() && (team == null || team.isVisibleFor(session.getPlayerEntity().getUsername())));
+    }
+
+    @Override
+    public void setPassengers(List<Entity> passengers) {
+        super.setPassengers(passengers);
+        updateNametag(session.getWorldCache().getScoreboard().getTeamFor(teamIdentifier()));
+    }
+
+    @Override
+    public void setCustomName(EntityMetadata<Optional<Component>, ?> entityMetadata) {
+        // Update custom name, but reset nametag to be empty when there are passengers
+        super.setCustomName(entityMetadata);
+        if (!passengers.isEmpty()) {
+            setNametag("", false);
+        }
     }
 
     public void setLivingEntityFlags(ByteEntityMetadata entityMetadata) {
@@ -308,6 +325,9 @@ public class LivingEntity extends Entity implements Tickable {
         if (optionalPos.isPresent()) {
             Vector3i bedPosition = optionalPos.get();
             dirtyMetadata.put(EntityDataTypes.BED_POSITION, bedPosition);
+            // Required to sync position of entity to bed
+            // 1.21.11 MojMap see LivingEntity#setPosToBed
+            this.setPosition(bedPosition.toFloat().add(0.5, 0.6875, 0.5));
             return bedPosition;
         } else {
             return null;
@@ -469,7 +489,7 @@ public class LivingEntity extends Entity implements Tickable {
             MoveEntityDeltaPacket moveEntityPacket = new MoveEntityDeltaPacket();
             moveEntityPacket.setRuntimeEntityId(geyserId);
             moveEntityPacket.setX(lerpXTotal);
-            moveEntityPacket.setY(lerpYTotal);
+            moveEntityPacket.setY(lerpYTotal + offset);
             moveEntityPacket.setZ(lerpZTotal);
             moveEntityPacket.setYaw(this.yaw);
             moveEntityPacket.setPitch(this.pitch);
@@ -713,12 +733,12 @@ public class LivingEntity extends Entity implements Tickable {
         return false;
     }
 
-    public final boolean isEquippableInSlot(GeyserItemStack item, EquipmentSlot var2) {
+    public final boolean isEquippableInSlot(GeyserItemStack item, EquipmentSlot slot) {
         Equippable equippable = item.getComponent(DataComponentTypes.EQUIPPABLE);
         if (equippable == null) {
-            return var2 == EquipmentSlot.MAIN_HAND && this.canUseSlot(EquipmentSlot.MAIN_HAND);
+            return slot == EquipmentSlot.MAIN_HAND && this.canUseSlot(EquipmentSlot.MAIN_HAND);
         } else {
-            return var2 == equippable.slot() && this.canUseSlot(equippable.slot()) && EntityUtils.equipmentUsableByEntity(session, equippable, this.definition.entityType());
+            return slot == equippable.slot() && this.canUseSlot(equippable.slot()) && EntityUtils.equipmentUsableByEntity(session, equippable, this.definition.entityType());
         }
     }
 

@@ -31,7 +31,6 @@ import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.geysermc.geyser.entity.EntityDefinitions;
-import org.geysermc.geyser.entity.type.BoatEntity;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.player.SessionPlayerEntity;
 import org.geysermc.geyser.level.physics.BoundingBox;
@@ -148,10 +147,7 @@ final class BedrockMovePlayer {
                     continue;
                 }
 
-                final BoundingBox entityBoundingBox = new BoundingBox(0, 0, 0, other.getBoundingBoxWidth(), other.getBoundingBoxHeight(), other.getBoundingBoxWidth());
-
-                // Also offset the position down for boat as their position is offset.
-                entityBoundingBox.translate(other.getPosition().down(other instanceof BoatEntity ? other.getDefinition().offset() : 0).toDouble());
+                final BoundingBox entityBoundingBox = new BoundingBox(other.position().up(other.getBoundingBoxHeight() / 2).toDouble(), other.getBoundingBoxWidth(), other.getBoundingBoxHeight(), other.getBoundingBoxWidth());
 
                 if (entityBoundingBox.checkIntersection(boundingBox)) {
                     possibleOnGround = true;

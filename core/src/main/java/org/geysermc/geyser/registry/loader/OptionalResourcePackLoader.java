@@ -98,7 +98,7 @@ public class OptionalResourcePackLoader implements RegistryLoader<Path, Map<UUID
 
         if (!Files.exists(directory)) {
             try {
-                Files.createDirectory(directory);
+                Files.createDirectories(directory);
             } catch (IOException e) {
                 GeyserImpl.getInstance().getLogger().error("Could not create packs directory", e);
             }
