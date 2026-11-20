@@ -30,10 +30,17 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueIoHandler;
+import io.netty.channel.local.LocalIoHandler;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.uring.IoUring;
+import io.netty.channel.uring.IoUringIoHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import lombok.Getter;
@@ -128,7 +135,15 @@ public final class GeyserServer {
             listenCount = Math.max(1, Math.min(20, threadCount / 2));
         }
         GeyserImpl.getInstance().getLogger().debug("Listen thread count: " + listenCount);
-        this.group = TRANSPORT.eventLoopGroupFactory().apply(listenCount, new DefaultThreadFactory("GeyserServer", true));
+        if (TransportHelper.NEW_NETTY) {
+            IoHandlerFactory ioFactory = getNativeHandlerFactory();
+            IoHandlerFactory localFactory = LocalIoHandler.newFactory();
+            // The Bedrock peer's EventLoop also runs the session tick and downstream LocalChannel.
+            this.group = new MultiThreadIoEventLoopGroup(listenCount, new DefaultThreadFactory("GeyserServer", true),
+                executor -> new IoHandlerWrapper(localFactory.newHandler(executor), ioFactory.newHandler(executor)));
+        } else {
+            this.group = TRANSPORT.eventLoopGroupFactory().apply(listenCount, new DefaultThreadFactory("GeyserServer", true));
+        }
 //        this.childGroup = TRANSPORT.eventLoopGroupFactory().apply(threadCount, new DefaultThreadFactory("GeyserServerChild", true));
 
 //        ServerBootstrap bootstrap = this.createBootstrap();
@@ -147,6 +162,15 @@ public final class GeyserServer {
         }
 
         this.broadcastPort = geyser.config().advanced().bedrock().broadcastPort();
+    }
+
+    private static IoHandlerFactory getNativeHandlerFactory() {
+        return switch (TRANSPORT.method()) {
+            case NIO -> NioIoHandler.newFactory();
+            case EPOLL -> EpollIoHandler.newFactory();
+            case KQUEUE -> KQueueIoHandler.newFactory();
+            case IO_URING -> IoUringIoHandler.newFactory();
+        };
     }
 
     public CompletableFuture<Void> bind(InetSocketAddress address) {
