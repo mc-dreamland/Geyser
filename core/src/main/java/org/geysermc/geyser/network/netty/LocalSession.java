@@ -32,6 +32,7 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
@@ -56,10 +57,12 @@ public final class LocalSession extends ClientNetworkSession {
     private static PreferredDirectByteBufAllocator PREFERRED_DIRECT_BYTE_BUF_ALLOCATOR = null;
 
     private final SocketAddress spoofedRemoteAddress;
+    private final EventLoop channelEventLoop;
 
     public LocalSession(SocketAddress targetAddress, String clientIp, MinecraftProtocol protocol, Executor packetHandlerExecutor) {
         super(targetAddress, protocol, packetHandlerExecutor, null, null);
         this.spoofedRemoteAddress = new InetSocketAddress(clientIp, 0);
+        this.channelEventLoop = packetHandlerExecutor instanceof EventLoop eventLoop ? eventLoop : null;
     }
 
     @Override
@@ -76,6 +79,11 @@ public final class LocalSession extends ClientNetworkSession {
 
     @Override
     protected EventLoopGroup getEventLoopGroup() {
+        if (channelEventLoop != null) {
+            // This loop belongs to the Bedrock server; disconnecting only closes this session's channel.
+            return channelEventLoop;
+        }
+
         if (DEFAULT_EVENT_LOOP_GROUP == null) {
             DEFAULT_EVENT_LOOP_GROUP = new DefaultEventLoopGroup(new DefaultThreadFactory(this.getClass(), true));
             Runtime.getRuntime().addShutdownHook(new Thread(
