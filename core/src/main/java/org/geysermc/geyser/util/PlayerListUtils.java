@@ -45,6 +45,9 @@ public class PlayerListUtils {
      * @param action  the action to perform with the player list
      */
     public static void batchSendPlayerList(GeyserSession session, List<PlayerListPacket.Entry> entries, PlayerListPacket.Action action) {
+        if (session.isClosed() || session.getUpstream().isClosed()) {
+            return;
+        }
         if (entries.size() > MAX_PLAYER_LIST_PACKET_ENTRIES) {
             int batches = entries.size() / MAX_PLAYER_LIST_PACKET_ENTRIES + (entries.size() % MAX_PLAYER_LIST_PACKET_ENTRIES > 0 ? 1 : 0);
             for (int i = 0; i < batches; i++) {
@@ -82,6 +85,9 @@ public class PlayerListUtils {
      * Sends the handshake immediately. The caller must already be executing on the session event loop.
      */
     public static void sendPlayerListAddAndConfirmSkinInEventLoop(GeyserSession session, PlayerListPacket.Entry entry) {
+        if (session.isClosed() || session.getUpstream().isClosed()) {
+            return;
+        }
         if (GameProtocol.isV860(session)) {
             EntityCache entityCache = session.getEntityCache();
             EntityCache.V860PlayerListAddAction action = entityCache.prepareV860PlayerListAdd(entry.getUuid(), entry.getSkin());

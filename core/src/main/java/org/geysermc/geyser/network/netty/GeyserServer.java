@@ -48,6 +48,7 @@ import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
 import org.cloudburstmc.netty.channel.raknet.RakChannelFactory;
 import org.cloudburstmc.netty.channel.raknet.config.RakChannelOption;
+import org.cloudburstmc.netty.channel.raknet.config.RakServerCookieMode;
 import org.cloudburstmc.netty.handler.codec.raknet.server.RakServerOfflineHandler;
 import org.cloudburstmc.netty.handler.codec.raknet.server.RakServerRateLimiter;
 import org.cloudburstmc.protocol.bedrock.BedrockPong;
@@ -60,7 +61,6 @@ import org.geysermc.geyser.network.CIDRMatcher;
 import org.geysermc.geyser.network.GameProtocol;
 import org.geysermc.geyser.network.GeyserServerInitializer;
 import org.geysermc.geyser.network.netty.handler.RakConnectionRequestHandler;
-import org.geysermc.geyser.network.netty.handler.RakGeyserRateLimiter;
 import org.geysermc.geyser.network.netty.handler.RakPingHandler;
 import org.geysermc.geyser.network.netty.proxy.ProxyServerHandler;
 import org.geysermc.geyser.ping.GeyserPingInfo;
@@ -76,6 +76,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -207,9 +208,6 @@ public final class GeyserServer {
         if (Boolean.parseBoolean(System.getProperty("Geyser.RakRateLimitingDisabled", "false")) || isWhitelistedProxyProtocol) {
             // We would already block any non-whitelisted IP addresses in onConnectionRequest so we can remove the rate limiter
             channel.pipeline().remove(RakServerRateLimiter.NAME);
-        } else {
-            // Use our own rate limiter to allow multiple players from the same IP
-            channel.pipeline().replace(RakServerRateLimiter.NAME, RakGeyserRateLimiter.NAME, new RakGeyserRateLimiter(channel));
         }
     }
 
@@ -264,15 +262,23 @@ public final class GeyserServer {
         boolean rakSendCookie = Boolean.parseBoolean(System.getProperty("Geyser.RakSendCookie", "true"));
         this.geyser.getLogger().debug("Setting RakNet send cookie to " + rakSendCookie);
 
-        return new ServerBootstrap()
+        ServerBootstrap bootstrap = new ServerBootstrap()
                 .channelFactory(RakChannelFactory.server(TRANSPORT.datagramChannelClass()))
                 .group(group.next())
                 .option(RakChannelOption.RAK_HANDLE_PING, true)
                 .option(RakChannelOption.RAK_MAX_MTU, this.geyser.config().advanced().bedrock().mtu())
                 .option(RakChannelOption.RAK_PACKET_LIMIT, rakPacketLimit)
                 .option(RakChannelOption.RAK_GLOBAL_PACKET_LIMIT, rakGlobalPacketLimit)
-                .option(RakChannelOption.RAK_SEND_COOKIE, rakSendCookie)
+                .option(RakChannelOption.RAK_SERVER_COOKIE_MODE,
+                        rakSendCookie ? RakServerCookieMode.ACTIVE : RakServerCookieMode.INVALID)
                 .childHandler(serverInitializer);
+        if (!rakSendCookie) {
+            // Without a cookie, RakNet cannot carry the negotiated version over to the child channel.
+            int rakNetProtocol = Objects.requireNonNull(GameProtocol.getBedrockCodec(GameProtocol.DEFAULT_BEDROCK_PROTOCOL))
+                    .getRaknetProtocolVersion();
+            bootstrap.childOption(RakChannelOption.RAK_PROTOCOL_VERSION, rakNetProtocol);
+        }
+        return bootstrap;
     }
 
     public boolean onConnectionRequest(InetSocketAddress inetSocketAddress) {

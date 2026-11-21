@@ -26,10 +26,10 @@
 package org.geysermc.geyser.session;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.cloudburstmc.protocol.bedrock.BedrockServerSession;
+import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.geysermc.geyser.network.GeyserBedrockPeer;
@@ -38,12 +38,17 @@ import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-@RequiredArgsConstructor
 public class UpstreamSession {
     @Getter private final BedrockServerSession session;
     @Getter @Setter
     private boolean initialized = false;
+    private volatile int protocolVersion;
     private Queue<BedrockPacket> postStartGamePackets = new ArrayDeque<>();
+
+    public UpstreamSession(BedrockServerSession session) {
+        this.session = session;
+        this.protocolVersion = session.getCodec().getProtocolVersion();
+    }
 
     public void sendPacket(@NonNull BedrockPacket packet) {
         if (!isClosed()) {
@@ -90,12 +95,17 @@ public class UpstreamSession {
     }
 
     /**
-     * Gets the session's protocol version.
+     * Gets the session's protocol version, even after the channel pipeline has been removed.
      *
      * @return the session's protocol version.
      */
     public int getProtocolVersion() {
-        return this.session.getCodec().getProtocolVersion();
+        return this.protocolVersion;
+    }
+
+    public void setCodec(BedrockCodec codec) {
+        this.session.setCodec(codec);
+        this.protocolVersion = codec.getProtocolVersion();
     }
 
     /**

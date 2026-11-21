@@ -54,6 +54,28 @@ public final class NeteaseContainerOpenSerializer {
         }
     };
 
+
+    public static final BedrockPacketSerializer<ContainerOpenPacket> V898 = new ContainerOpenSerializer_v291() {
+        @Override
+        public void serialize(ByteBuf buffer, BedrockCodecHelper helper, ContainerOpenPacket packet) {
+            super.serialize(buffer, helper, packet);
+            // NetEase v898 always writes all four extension fields, even for a standard container.
+            buffer.writeBoolean(false);
+            helper.writeString(buffer, "");
+            helper.writeString(buffer, "");
+            buffer.writeBoolean(false);
+        }
+
+        @Override
+        public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, ContainerOpenPacket packet) {
+            super.deserialize(buffer, helper, packet);
+            buffer.readBoolean();
+            helper.readString(buffer);
+            helper.readString(buffer);
+            buffer.readBoolean();
+        }
+    };
+
     private NeteaseContainerOpenSerializer() {
     }
 }

@@ -161,7 +161,10 @@ public class JavaPlayerInfoUpdateTranslator extends PacketTranslator<Clientbound
             );
 
             session.ensureInEventLoop(() -> {
-                PlayerListUtils.sendPlayerListAddAndConfirmSkin(session, updatedEntry);
+                if (session.isClosed() || session.getUpstream().isClosed()) {
+                    return;
+                }
+                PlayerListUtils.sendPlayerListAddAndConfirmSkinInEventLoop(session, updatedEntry);
                 session.getWaypointCache().listPlayer(entity);
             });
         });

@@ -18,6 +18,7 @@ plugins {
 dependencies {
     constraints {
         implementation(libs.raknet) // Ensure protocol does not override the RakNet version
+        implementation(libs.network.transport.common) // Use the transport-common snapshot from the same Network build
     }
 
     api(projects.common)

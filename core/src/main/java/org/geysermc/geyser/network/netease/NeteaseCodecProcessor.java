@@ -76,21 +76,20 @@ public final class NeteaseCodecProcessor {
         codecBuilder.updateSerializer(ClientCacheBlobStatusPacket.class, NeteaseClientCacheBlobStatusSerializer.INSTANCE);
         codecBuilder.updateSerializer(ClientCacheStatusPacket.class, ClientCacheStatusSerializer_v361.INSTANCE);
 
-        if (protocolVersion >= 898) {
-            codecBuilder.updateSerializer(AnimatePacket.class, NeteaseAnimateSerializer.V898);
-            codecBuilder.updateSerializer(CommandRequestPacket.class, NeteaseCommandRequestSerializer.V898);
-            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V819_860_898);
-            codecBuilder.updateSerializer(ResourcePackStackPacket.class, NeteaseResourcePackStackSerializer.V898);
-            codecBuilder.updateSerializer(TextPacket.class, NeteaseTextSerializer.V898);
-        } else if (protocolVersion >= 819) {
-            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V819_860_898);
-            codecBuilder.updateSerializer(TextPacket.class, NeteaseTextSerializer.INSTANCE);
-        }
 
         if (protocolVersion >= 860) {
             codecBuilder.updateSerializer(BiomeDefinitionListPacket.class, NeteaseBiomeDefinitionListSerializer.V860);
             codecBuilder.updateSerializer(ContainerOpenPacket.class, NeteaseContainerOpenSerializer.V860);
             codecBuilder.updateSerializer(SetPlayerInventoryOptionsPacket.class, NeteaseSetPlayerInventoryOptionsSerializer.V860);
+            codecBuilder.updateSerializer(PlayerAuthInputPacket.class, NeteasePlayerAuthInputSerializer.V860_898);
+        }
+
+        if (protocolVersion >= 898) {
+            codecBuilder.updateSerializer(AnimatePacket.class, NeteaseAnimateSerializer.V898);
+            codecBuilder.updateSerializer(CommandRequestPacket.class, NeteaseCommandRequestSerializer.V898);
+            codecBuilder.updateSerializer(ResourcePackStackPacket.class, NeteaseResourcePackStackSerializer.V898);
+            codecBuilder.updateSerializer(TextPacket.class, NeteaseTextSerializer.V898);
+            codecBuilder.updateSerializer(ContainerOpenPacket.class, NeteaseContainerOpenSerializer.V898);
         }
         //TODO 后续尽量将所有网易特性的包都由当前类进行注册
     }

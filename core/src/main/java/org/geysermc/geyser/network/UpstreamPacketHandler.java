@@ -141,7 +141,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                 // A note on the following line: various older client versions have different forms of DisconnectPacket.
                 // Using only the latest BedrockCompat for such clients leads to inaccurate disconnect messages: https://github.com/GeyserMC/Geyser/issues/4378
                 // This updates the BedrockCompat protocol if necessary:
-                session.getUpstream().getSession().setCodec(BedrockCompat.disconnectCompat(protocolVersion));
+                session.getUpstream().setCodec(BedrockCompat.disconnectCompat(protocolVersion));
 
                 session.disconnect(GeyserLocale.getLocaleStringLog("geyser.network.outdated.client", supportedVersions));
                 return false;
@@ -150,7 +150,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             }
         }
 
-        session.getUpstream().getSession().setCodec(packetCodec);
+        session.getUpstream().setCodec(packetCodec);
         return true;
     }
 
