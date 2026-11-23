@@ -25,22 +25,33 @@
 
 package org.geysermc.geyser.network.netty;
 
+import io.netty.channel.EventLoop;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.AttributeKey;
+import org.jspecify.annotations.NonNull;
 
 /**
  * If the incoming channel if an instance of LocalChannelWithRemoteAddress, this server creates a LocalChannelWrapper
  * for the other end and attaches the spoofed remote address
  */
 public class LocalServerChannelWrapper extends LocalServerChannel {
+
+    public static final AttributeKey<EventLoop> PEER_EVENT_LOOP = AttributeKey.valueOf(LocalServerChannelWrapper.class, "peerEventLoop");
+
     @Override
     protected LocalChannel newLocalChannel(LocalChannel peer) {
+        LocalChannel child = peer instanceof LocalChannelWithRemoteAddress
+            ? newChannelWrapper(peer)
+            : super.newLocalChannel(peer);
+        child.attr(PEER_EVENT_LOOP).set(peer.eventLoop());
+        return child;
+    }
+
+    private @NonNull LocalChannelWrapper newChannelWrapper(LocalChannel peer) {
         // LocalChannel here should be an instance of LocalChannelWithRemoteAddress, which we can use to set the "remote address" on the other end
-        if (peer instanceof LocalChannelWithRemoteAddress) {
-            LocalChannelWrapper channel = new LocalChannelWrapper(this, peer);
-            channel.wrapper().remoteAddress(((LocalChannelWithRemoteAddress) peer).spoofedRemoteAddress());
-            return channel;
-        }
-        return super.newLocalChannel(peer);
+        LocalChannelWrapper channel = new LocalChannelWrapper(this, peer);
+        channel.wrapper().remoteAddress(((LocalChannelWithRemoteAddress) peer).spoofedRemoteAddress());
+        return channel;
     }
 }

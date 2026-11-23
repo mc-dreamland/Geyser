@@ -32,6 +32,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoEventLoopGroup;
@@ -114,6 +115,15 @@ public class GeyserVelocityInjector extends GeyserInjector {
             @Override
             protected IoEventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory, Object... args) {
                 return new SingleThreadIoEventLoop(workerGroup, executor, wrapperFactory);
+            }
+
+            @Override
+            public ChannelFuture register(Channel channel) {
+                EventLoop loop = channel.attr(LocalServerChannelWrapper.PEER_EVENT_LOOP).get();
+                if (loop != null) {
+                    return loop.register(channel);
+                }
+                return super.register(channel);
             }
         };
 
