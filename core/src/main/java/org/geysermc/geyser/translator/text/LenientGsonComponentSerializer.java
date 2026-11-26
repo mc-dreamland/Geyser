@@ -25,23 +25,25 @@
 
 package org.geysermc.geyser.translator.text;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.Builder;
 import net.kyori.adventure.text.serializer.json.JSONOptions;
 import net.kyori.adventure.text.serializer.json.LegacyHoverEventSerializer;
 import net.kyori.option.OptionState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.UnaryOperator;
 
 /**
  * Works around Adventure treating every {@code click_event.payload} as a string.
@@ -49,7 +51,7 @@ import java.util.function.UnaryOperator;
  * {@code show_dialog}. Adventure cannot represent those actions yet, but the
  * unsupported event should not prevent the rest of the component from loading.
  */
-final class LenientGsonComponentSerializer implements GsonComponentSerializer {
+final class LenientGsonComponentSerializer implements InvocationHandler {
 
     private static final String CLICK_EVENT_SNAKE = "click_event";
     private static final String CLICK_EVENT_CAMEL = "clickEvent";
@@ -57,22 +59,43 @@ final class LenientGsonComponentSerializer implements GsonComponentSerializer {
 
     private final GsonComponentSerializer delegate;
 
-    LenientGsonComponentSerializer(GsonComponentSerializer delegate) {
+    private LenientGsonComponentSerializer(GsonComponentSerializer delegate) {
         this.delegate = delegate;
     }
 
-    @Override
-    public @NotNull Gson serializer() {
-        return delegate.serializer();
+    static GsonComponentSerializer wrap(GsonComponentSerializer delegate) {
+        // Have the JVM implement the runtime interface so the Adventure 4 bridge to
+        // Buildable.Builder is only present when that interface actually exists.
+        return (GsonComponentSerializer) Proxy.newProxyInstance(GsonComponentSerializer.class.getClassLoader(),
+                new Class<?>[]{GsonComponentSerializer.class}, new LenientGsonComponentSerializer(delegate));
     }
 
     @Override
-    public @NotNull UnaryOperator<GsonBuilder> populator() {
-        return delegate.populator();
+    public Object invoke(Object proxy, Method method, @Nullable Object[] args) throws Throwable {
+        return switch (method.getName()) {
+            case "deserialize" -> deserialize((String) args[0]);
+            case "deserializeOr" -> args[0] == null ? args[1] : deserialize((String) args[0]);
+            case "deserializeFromTree" -> deserializeFromTree((JsonElement) args[0]);
+            case "serialize" -> delegate.serialize((Component) args[0]);
+            case "serializeToTree" -> delegate.serializeToTree((Component) args[0]);
+            case "serializer" -> delegate.serializer();
+            case "populator" -> delegate.populator();
+            case "toBuilder" -> new LenientBuilder(AdventureBuilder.copy(delegate, GsonComponentSerializer.class, Builder.class));
+            case "equals" -> proxy == args[0];
+            case "hashCode" -> System.identityHashCode(proxy);
+            default -> invokeDelegate(method, args);
+        };
     }
 
-    @Override
-    public @NotNull Component deserialize(@NotNull String input) {
+    private Object invokeDelegate(Method method, @Nullable Object[] args) throws Throwable {
+        try {
+            return method.invoke(delegate, args);
+        } catch (InvocationTargetException e) {
+            throw e.getCause();
+        }
+    }
+
+    private Component deserialize(String input) {
         try {
             return delegate.deserialize(input);
         } catch (JsonParseException exception) {
@@ -81,33 +104,12 @@ final class LenientGsonComponentSerializer implements GsonComponentSerializer {
         }
     }
 
-    @Override
-    public @Nullable Component deserializeOr(@Nullable String input, @Nullable Component fallback) {
-        return input == null ? fallback : deserialize(input);
-    }
-
-    @Override
-    public @NotNull Component deserializeFromTree(@NotNull JsonElement input) {
+    private Component deserializeFromTree(JsonElement input) {
         try {
             return delegate.deserializeFromTree(input);
         } catch (JsonParseException exception) {
             return deserializeWithoutObjectClickEventPayloads(input, exception);
         }
-    }
-
-    @Override
-    public @NotNull String serialize(@NotNull Component component) {
-        return delegate.serialize(component);
-    }
-
-    @Override
-    public @NotNull JsonElement serializeToTree(@NotNull Component component) {
-        return delegate.serializeToTree(component);
-    }
-
-    @Override
-    public @NotNull Builder toBuilder() {
-        return new LenientBuilder(delegate.toBuilder());
     }
 
     private Component deserializeWithoutObjectClickEventPayloads(JsonElement input, JsonParseException originalException) {
@@ -224,7 +226,7 @@ final class LenientGsonComponentSerializer implements GsonComponentSerializer {
 
         @Override
         public @NotNull GsonComponentSerializer build() {
-            return new LenientGsonComponentSerializer(delegate.build());
+            return wrap(delegate.build());
         }
     }
 }

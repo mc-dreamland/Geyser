@@ -81,8 +81,8 @@ public class MessageTranslator {
     private static final Pattern LOCALIZATION_PATTERN = Pattern.compile("%(?:(\\d+)\\$)?s");
 
     static {
-        GSON_SERIALIZER = new LenientGsonComponentSerializer(DefaultComponentSerializer.get()
-                .toBuilder()
+        GSON_SERIALIZER = LenientGsonComponentSerializer.wrap(AdventureBuilder.copy(DefaultComponentSerializer.get(),
+                GsonComponentSerializer.class, GsonComponentSerializer.Builder.class)
                 // Use a custom legacy hover event deserializer since we don't use any of this data anyway, and
                 // fixes issues where legacy hover events throw deserialization errors
                 .legacyHoverEventSerializer(new DummyLegacyHoverEventSerializer())
@@ -110,7 +110,8 @@ public class MessageTranslator {
         formats.add(CharacterAndFormat.characterAndFormat('u', TextColor.color(154, 92, 198))); // Amethyst
         formats.add(CharacterAndFormat.characterAndFormat('v', TextColor.color(235, 114, 20))); // Resin
 
-        ComponentFlattener flattener = ComponentFlattener.basic().toBuilder()
+        ComponentFlattener flattener = AdventureBuilder.copy(ComponentFlattener.basic(),
+                ComponentFlattener.class, ComponentFlattener.Builder.class)
             .nestingLimit(30)
             .complexMapper(TranslatableComponent.class, (translatable, consumer) -> {
                 final String translated = translatable.key();
@@ -151,7 +152,8 @@ public class MessageTranslator {
             })
             .build();
 
-        BEDROCK_SERIALIZER = LegacyComponentSerializer.legacySection().toBuilder()
+        BEDROCK_SERIALIZER = AdventureBuilder.copy(LegacyComponentSerializer.legacySection(),
+                LegacyComponentSerializer.class, LegacyComponentSerializer.Builder.class)
                 .formats(formats)
                 .flattener(flattener)
                 .build();

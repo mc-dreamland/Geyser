@@ -17,6 +17,8 @@ Special thanks to the DragonProxy project for being a trailblazer in protocol tr
 ## Supported Versions
 Geyser is currently supporting Minecraft Bedrock 1.21.111 - 1.21.130 and Minecraft Java 1.21.11. For more information, please see [here](https://geysermc.org/wiki/geyser/supported-versions/).
 
+The same `Geyser-Velocity.jar` supports Velocity 3.5.0-SNAPSHOT on Java 21 and Velocity 4.3.x on Java 25. Place it in the proxy's `plugins` folder.
+
 ## Setting Up
 Take a look [here](https://geysermc.org/wiki/geyser/setup/) for how to set up Geyser.
 

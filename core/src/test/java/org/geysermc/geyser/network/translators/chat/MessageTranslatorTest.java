@@ -25,9 +25,12 @@
 
 package org.geysermc.geyser.network.translators.chat;
 
+import com.google.gson.JsonParser;
 import java.util.HashMap;
 import java.util.Map;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.geysermc.geyser.translator.text.MessageTranslator;
+import org.geysermc.mcprotocollib.protocol.data.DefaultComponentSerializer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -86,6 +89,17 @@ public class MessageTranslatorTest {
             String bedrockMessage = MessageTranslator.convertJsonMessage(entry.getKey(), "en_US");
             Assertions.assertEquals(entry.getValue(), bedrockMessage, "Translation of messages is incorrect");
         }
+    }
+
+    @Test
+    void copiedSerializerKeepsTextWithObjectClickPayload() {
+        var serializer = DefaultComponentSerializer.get().toBuilder().build();
+        var component = serializer.deserializeFromTree(JsonParser.parseString("""
+                {"text":"parent","extra":[{"text":"child","click_event":{
+                  "action":"custom","id":"geysermc:test","payload":{"nested":[1]}
+                }}]}
+                """));
+        Assertions.assertEquals("parentchild", PlainTextComponentSerializer.plainText().serialize(component));
     }
 
     @Test
